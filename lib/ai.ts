@@ -16,27 +16,42 @@ export async function getMotivationalMessage(context: {
 Seja direto, encorajador e bíblico quando apropriado. Sem formatação markdown.`;
 
   try {
-    // Server-side: call Gemini API directly (cron route has no base URL for /api/ai)
-    if (typeof window === "undefined" && process.env.GEMINI_API_KEY) {
-      return await callGeminiDirect(prompt);
+    // Server-side: call Gemini API directly
+    if (typeof window === "undefined") {
+      const apiKey = process.env.GEMINI_API_KEY || await getGeminiKeyFromDB();
+      if (apiKey) {
+        const text = await callGeminiWithKey(prompt, apiKey);
+        if (text) return text;
+      }
+    } else {
+      // Client-side: use API proxy
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (data.text) return data.text;
     }
-
-    // Client-side: use API proxy
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    if (data.text) return data.text;
     return getStaticMotivation(context.streak);
   } catch (e) {
     return getStaticMotivation(context.streak);
   }
 }
 
-async function callGeminiDirect(prompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY!;
+async function getGeminiKeyFromDB(): Promise<string | null> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return null;
+    const sb = createClient(url, key);
+    const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).single();
+    return data?.gemini_api_key || null;
+  } catch { return null; }
+}
+
+async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string | null> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
     {
@@ -49,7 +64,7 @@ async function callGeminiDirect(prompt: string): Promise<string> {
     }
   );
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
 export async function getBibleVerseOfDay(): Promise<{ verse: string; reference: string }> {

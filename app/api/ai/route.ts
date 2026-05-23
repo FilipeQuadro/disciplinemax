@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+async function getApiKey(): Promise<string | null> {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  // Fallback: ler do Supabase
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return null;
+    const sb = createClient(url, key);
+    const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).single();
+    return data?.gemini_api_key || null;
+  } catch { return null; }
+}
 
 export async function POST(req: Request) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = await getApiKey();
   if (!apiKey) {
     return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
   }
