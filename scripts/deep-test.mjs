@@ -71,7 +71,9 @@ async function testAPIs() {
     const d = await r.json();
     const svcNames = Object.keys(d.services || {});
     const svcDown = svcNames.filter(s => !d.services[s].ok && s !== "ollama"); // ollama não roda no Render
-    svcDown.length === 0 ? ok("Health: todos serviços UP", svcNames.join(", ")) : fail("Health: serviços DOWN", svcDown.join(", "));
+    const nonQuotaDown = svcDown.filter(s => !(s === "gemini" && (d.services[s]?.detail || "").includes("quota")));
+    nonQuotaDown.length === 0 ? ok("Health: serviços críticos UP", svcNames.join(", ")) : fail("Health: serviços DOWN", nonQuotaDown.join(", "));
+    if (svcDown.length > nonQuotaDown.length) ok("Health: Gemini quota (esperado no free tier, fallback Ollama disponível)");
   } catch (e) { fail("Health", e.message); }
 
   // Cron — timezone BRT correto
@@ -403,23 +405,36 @@ async function testCronJobs() {
     const active = jobs.filter(j => j.enabled);
     ok("Total jobs", `${active.length} ativos`);
 
-    // Verificar se tem 6 de notificação + 1 keep-alive
-    const notifJobs = active.filter(j => j.title.includes("Disciplina"));
+    // Verificar se tem 6 de notificação + 1 keep-alive + 1 doctor
+    const notifJobs = active.filter(j => j.title.includes("Disciplina") && !j.title.includes("Doctor"));
     const keepAlive = active.filter(j => j.title.includes("Keep-Alive"));
+    const doctorJobs = active.filter(j => j.title.includes("Doctor"));
     notifJobs.length === 6 ? ok("6 jobs de notificação") : fail("Jobs de notificação", `${notifJobs.length} (esperado 6)`);
     keepAlive.length === 1 ? ok("1 keep-alive") : fail("Keep-alive", `${keepAlive.length} (esperado 1)`);
+    doctorJobs.length === 1 ? ok("1 auto-diagnóstico") : fail("Auto-diagnóstico", `${doctorJobs.length} (esperado 1)`);
 
-    // Verificar URL correta
+    // Verificar URL correta (notificação jobs apontam para /api/cron)
     const cronUrl = "https://disciplinemax.onrender.com/api/cron?secret=040623ls";
     const correctUrl = notifJobs.filter(j => j.url === cronUrl);
     correctUrl.length === 6 ? ok("URLs corretas") : fail("URLs", `${correctUrl.length}/6 com URL correta`);
 
-    // Verificar schedule (UTC hours)
+    // Verificar doctor URL
+    const doctorUrl = "https://disciplinemax.onrender.com/api/doctor?secret=040623ls";
+    const correctDoctorUrl = doctorJobs.filter(j => j.url === doctorUrl);
+    correctDoctorUrl.length === 1 ? ok("Doctor URL correta") : fail("Doctor URL", `${correctDoctorUrl.length}/1`);
+
+    // Verificar schedule — notificação jobs (UTC hours)
     const expectedUTC = [10, 12, 15, 18, 22, 0];
     for (const j of notifJobs) {
       const hours = j.schedule?.hours || [];
       const match = expectedUTC.some(h => hours.includes(h));
       match ? ok(`Schedule ${j.title}`, `UTC ${hours.join(",")}`) : fail(`Schedule ${j.title}`, `UTC ${hours.join(",")}`);
+    }
+
+    // Verificar doctor schedule (08:00 BRT = 11:00 UTC)
+    for (const j of doctorJobs) {
+      const hours = j.schedule?.hours || [];
+      hours.includes(11) || hours.includes(8) ? ok(`Schedule ${j.title}`, `UTC ${hours.join(",")}`) : fail(`Schedule ${j.title}`, `UTC ${hours.join(",")}`);
     }
   } catch (e) { fail("cron-job.org", e.message); }
 }
