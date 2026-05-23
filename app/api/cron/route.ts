@@ -28,8 +28,16 @@ export async function GET(req: Request) {
   }
 
   const now = new Date();
-  const hour = now.getHours();
   const today = now.toISOString().split("T")[0];
+
+  // Usar timezone BRT para bater com notification_times salvos no banco
+  const brtFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const brtTime = brtFormatter.format(now);
+  const brtHour = parseInt(brtTime.split(":")[0], 10);
+  const brtHHMM = brtTime; // ex: "07:00"
 
   // Buscar todas as configurações de usuários
   const { data: allSettings } = await supabase.from("user_settings").select("*");
@@ -69,18 +77,17 @@ export async function GET(req: Request) {
     // Se tudo foi feito, não enviar lembretes
     if (allGoalsMet) continue;
 
-    // Decidir tipo de mensagem
+    // Decidir tipo de mensagem — comparar em BRT
     let shouldNotify = false;
     let notifTimes = settings.notification_times || ["07:00", "12:00", "19:00"];
-    const currentHHMM = `${String(hour).padStart(2, "0")}:00`;
-    shouldNotify = notifTimes.some((t: string) => t.startsWith(currentHHMM.slice(0, 2)));
+    shouldNotify = notifTimes.some((t: string) => t === brtHHMM);
 
     if (!shouldNotify) continue;
 
     // Telegram
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       let message = "";
-      if (hour < 9) {
+      if (brtHour < 9) {
         const motivation = await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false });
         message = buildMorningMessage({
           booksPages: userBooks.map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
@@ -94,7 +101,7 @@ export async function GET(req: Request) {
             .map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
           biblePending: !bibleGoalMet,
           bibleChaptersLeft: Math.max(0, bibleGoalChapters - bibleChaptersRead),
-          hour,
+          hour: brtHour,
         });
       }
       try {
@@ -107,7 +114,7 @@ export async function GET(req: Request) {
     // WhatsApp
     if (settings.whatsapp_number && settings.callmebot_api_key) {
       let message = "";
-      if (hour < 9) {
+      if (brtHour < 9) {
         const motivation = await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false });
         message = buildMorningMessage({
           booksPages: userBooks.map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
@@ -121,7 +128,7 @@ export async function GET(req: Request) {
             .map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
           biblePending: !bibleGoalMet,
           bibleChaptersLeft: Math.max(0, bibleGoalChapters - bibleChaptersRead),
-          hour,
+          hour: brtHour,
         });
       }
       await sendWhatsAppMessage(settings.whatsapp_number, settings.callmebot_api_key, message);

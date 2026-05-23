@@ -44,7 +44,7 @@ export default function ConfiguracoesPage() {
   }, []);
 
   async function loadSettings() {
-    const { data } = await supabase.from("user_settings").select("*").single() as { data: any | null };
+    const { data } = await supabase.from("user_settings").select("*").maybeSingle() as { data: any | null };
     if (data) { setSettings(data); setForm({ ...form, ...data }); }
   }
 

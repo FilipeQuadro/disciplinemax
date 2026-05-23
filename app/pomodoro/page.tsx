@@ -48,8 +48,6 @@ export default function PomodoroPage() {
       intervalRef.current = setInterval(() => {
         setPomodoroTimeLeft((prev: number) => {
           if (prev <= 1) {
-            clearInterval(intervalRef.current);
-            handleTimerEnd();
             return 0;
           }
           return prev - 1;
@@ -60,6 +58,13 @@ export default function PomodoroPage() {
     }
     return () => clearInterval(intervalRef.current);
   }, [pomodoroActive]);
+
+  // Handle timer reaching zero — outside state updater
+  useEffect(() => {
+    if (pomodoroTimeLeft === 0 && pomodoroActive) {
+      handleTimerEnd();
+    }
+  }, [pomodoroTimeLeft]);
 
   async function handleTimerEnd() {
     setPomodoroActive(false);

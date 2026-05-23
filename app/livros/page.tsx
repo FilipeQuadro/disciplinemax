@@ -271,7 +271,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           </div>
 
           {/* Alertas */}
-          {book.target_date && pagesNeededPerDay && pagesNeededPerDay > book.daily_goal && (
+          {book.target_date && daysUntilTarget !== null && daysUntilTarget > 0 && pagesNeededPerDay && pagesNeededPerDay > book.daily_goal && (
             <p className="text-xs text-orange-400 mt-2 flex items-center gap-1">
               ⚠️ Para terminar em {format(parseISO(book.target_date), "dd/MM")} você precisa ler {pagesNeededPerDay} pgs/dia
             </p>

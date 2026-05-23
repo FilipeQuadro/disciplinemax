@@ -7,13 +7,7 @@ export async function getMotivationalMessage(context: {
   bibleChapters: number;
   completedToday: boolean;
 }): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return getStaticMotivation(context.streak);
-  }
-
-  try {
-    const prompt = `Você é um mentor de disciplina e leitura. Gere uma mensagem motivacional CURTA (máx 2 frases) em português para alguém que:
+  const prompt = `Você é um mentor de disciplina e leitura. Gere uma mensagem motivacional CURTA (máx 2 frases) em português para alguém que:
 - Tem ${context.streak} dias consecutivos de leitura
 - Leu ${context.booksRead} livros este mês
 - Leu ${context.bibleChapters} capítulos da Bíblia hoje
@@ -21,20 +15,15 @@ export async function getMotivationalMessage(context: {
 
 Seja direto, encorajador e bíblico quando apropriado. Sem formatação markdown.`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
-        }),
-      }
-    );
-
+  try {
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || getStaticMotivation(context.streak);
+    if (data.text) return data.text;
+    return getStaticMotivation(context.streak);
   } catch (e) {
     return getStaticMotivation(context.streak);
   }

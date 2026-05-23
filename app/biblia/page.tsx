@@ -48,7 +48,7 @@ export default function BibliaPage() {
   }, []);
 
   async function loadGoal() {
-    const { data } = await supabase.from("bible_goals").select("*").single() as { data: { daily_chapters: number; plan_name?: string } | null };
+    const { data } = await supabase.from("bible_goals").select("*").maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
     if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
   }
 

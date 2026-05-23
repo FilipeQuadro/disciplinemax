@@ -65,7 +65,7 @@ export default function DashboardPage() {
   const totalPagesGoal = books.reduce((sum, b) => sum + b.daily_goal, 0);
   const pagesReadToday = books.reduce((sum, b) => sum + b.pages_read_today, 0);
   const bibleGoalMet = bibleGoal ? todayBibleChapters >= bibleGoal.daily_chapters : false;
-  const pomodoroGoal = settings?.pomodoro_duration ? 4 : 4;
+  const pomodoroGoal = settings?.pomodoros_until_long ?? 4;
   const allGoalsMet = pagesReadToday >= totalPagesGoal && bibleGoalMet;
 
   return (
@@ -302,19 +302,37 @@ function ConsistencyCalendar() {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    // Simular últimos 35 dias
-    const arr = [];
-    for (let i = 34; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      arr.push({
-        date: format(d, "yyyy-MM-dd"),
-        done: Math.random() > 0.3,
-        partial: Math.random() > 0.6,
-      });
+    async function loadCalendar() {
+      const days = 35;
+      const arr = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        arr.push({
+          date: format(d, "yyyy-MM-dd"),
+          done: false,
+          partial: false,
+        });
+      }
+
+      const startDate = arr[0].date;
+      const { data: stats } = await supabase
+        .from("daily_stats")
+        .select("date, goals_completed")
+        .gte("date", startDate) as { data: { date: string; goals_completed: boolean }[] | null };
+
+      if (stats) {
+        for (const entry of arr) {
+          const stat = stats.find((s: any) => s.date === entry.date);
+          if (stat) {
+            entry.done = stat.goals_completed || false;
+            entry.partial = !stat.goals_completed;
+          }
+        }
+      }
+      setData(arr);
     }
-    setData(arr);
-    // Na produção, buscar do Supabase
+    loadCalendar();
   }, []);
 
   return (
