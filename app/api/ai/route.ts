@@ -2,6 +2,22 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { callOllama } from "@/lib/ai";
 
+const STATIC_MESSAGES = [
+  "Hoje é o primeiro dia do resto da sua jornada. Comece agora! 🚀",
+  "A consistência é o segredo dos grandes. Continue firme! 💪",
+  "Você está construindo um hábito poderoso. Não desista! 🔥",
+  "O sucesso é a soma de pequenos esforços repetidos dia após dia. 📖",
+  "Mas os que esperam no SENHOR renovam as suas forças. Isaías 40:31 ✨",
+  "Tudo posso naquele que me fortalece. Filipenses 4:13 🙏",
+  "Sê forte e corajoso! Não se apavore nem desanime. Josué 1:9 🦁",
+  "A leitura diária transforma a mente e fortalece o espírito. 📚",
+];
+
+function getStaticMessage(): string {
+  const hour = new Date().getHours();
+  return STATIC_MESSAGES[hour % STATIC_MESSAGES.length];
+}
+
 async function getApiKey(): Promise<string | null> {
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
   try {
@@ -43,13 +59,17 @@ export async function POST(req: Request) {
     }
 
     // 2. Ollama (local, sem limites)
-    const ollamaText = await callOllama(prompt);
-    if (ollamaText) {
-      return NextResponse.json({ text: ollamaText, provider: "ollama" });
-    }
+    try {
+      const ollamaText = await callOllama(prompt);
+      if (ollamaText) {
+        return NextResponse.json({ text: ollamaText, provider: "ollama" });
+      }
+    } catch { /* fallback to static */ }
 
-    return NextResponse.json({ text: null, provider: "none" });
-  } catch (e) {
-    return NextResponse.json({ error: "AI call failed" }, { status: 500 });
+    // 3. Static fallback — never return null or error
+    return NextResponse.json({ text: getStaticMessage(), provider: "static" });
+  } catch {
+    // Even on unexpected errors, return a static message instead of 500
+    return NextResponse.json({ text: getStaticMessage(), provider: "static" });
   }
 }
