@@ -15,7 +15,11 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { clsx } from "clsx";
 
 export default function DashboardPage() {
-  const { books, setBooks, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings } = useStore();
+  const {
+    books, setBooks, streak, setStreak, todayStats, setTodayStats,
+    bibleGoal, setBibleGoal, todayBibleChapters, setTodayBibleChapters,
+    pomodoroCount, settings, setSettings,
+  } = useStore();
   const [verse, setVerse] = useState<{ verse: string; reference: string } | null>(null);
   const [motivation, setMotivation] = useState("");
   const [weekStats, setWeekStats] = useState<any[]>([]);
@@ -24,33 +28,61 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      // Carregar livros do Supabase ao montar
-      const { data: booksData } = await supabase.from("books").select("*").order("created_at");
-      if (booksData) setBooks(booksData as any[]);
+      // Carregar todos os dados do Supabase ao montar
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+
+      const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
+        supabase.from("books").select("*").order("created_at"),
+        supabase.from("bible_goals").select("*").maybeSingle(),
+        supabase.from("user_settings").select("*").maybeSingle(),
+        supabase.from("daily_stats").select("*").eq("date", todayStr).maybeSingle(),
+        supabase.from("bible_readings").select("id").gte("read_at", todayStr),
+      ]);
+
+      if (booksRes.data) setBooks(booksRes.data as any[]);
+      if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
+      if (settingsRes.data) setSettings(settingsRes.data as any);
+      if (statsRes.data) setTodayStats(statsRes.data as any);
+      setTodayBibleChapters(bibleReadingsRes.data?.length ?? 0);
+
+      // Calcular streak
+      const { data: recentStats } = await supabase
+        .from("daily_stats")
+        .select("date, goals_completed")
+        .order("date", { ascending: false })
+        .limit(30);
+      if (recentStats) {
+        let s = 0;
+        for (const stat of recentStats as any[]) {
+          if (stat.goals_completed) s++;
+          else break;
+        }
+        setStreak(s);
+      }
 
       const v = await getBibleVerseOfDay();
       setVerse(v);
       const m = await getMotivationalMessage({
-        streak,
-        booksRead: booksData?.length ?? books.length,
-        bibleChapters: todayBibleChapters,
-        completedToday: todayStats?.goals_completed ?? false,
+        streak: streak,
+        booksRead: booksRes.data?.length ?? books.length,
+        bibleChapters: bibleReadingsRes.data?.length ?? todayBibleChapters,
+        completedToday: (statsRes.data as any)?.goals_completed ?? false,
       });
       setMotivation(m);
 
       // Carregar stats da semana
       const start = startOfWeek(today, { weekStartsOn: 0 });
-      const { data } = await supabase
+      const { data: weekData } = await supabase
         .from("daily_stats")
         .select("*")
         .gte("date", format(start, "yyyy-MM-dd"))
         .order("date") as { data: any[] | null };
 
-      if (data) {
-        const weekData = Array.from({ length: 7 }, (_, i) => {
+      if (weekData) {
+        const formatted = Array.from({ length: 7 }, (_, i) => {
           const d = addDays(start, i);
           const dateStr = format(d, "yyyy-MM-dd");
-          const stat = data.find((s: any) => s.date === dateStr);
+          const stat = weekData.find((s: any) => s.date === dateStr);
           return {
             day: format(d, "EEE", { locale: ptBR }),
             pages: stat?.books_pages_read || 0,
@@ -58,7 +90,7 @@ export default function DashboardPage() {
             pomodoros: stat?.pomodoros_completed || 0,
           };
         });
-        setWeekStats(weekData);
+        setWeekStats(formatted);
       }
       setLoading(false);
     }
