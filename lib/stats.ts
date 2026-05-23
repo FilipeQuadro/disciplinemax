@@ -35,7 +35,7 @@ export async function upsertTodayStats(updates: Partial<Record<string, any>>) {
 
   const payload = {
     id: crypto.randomUUID(),
-    user_id: "user",
+    user_id: "default_user",
     date: today,
     books_pages_read: 0,
     bible_chapters_read: 0,

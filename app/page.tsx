@@ -39,7 +39,21 @@ export default function DashboardPage() {
         supabase.from("bible_readings").select("id").gte("read_at", todayStr),
       ]);
 
-      if (booksRes.data) setBooks(booksRes.data as any[]);
+      if (booksRes.data) {
+        // Reset diário: se não tem stats de hoje, zerar pages_read_today
+        const needsReset = !statsRes.data && booksRes.data.some((b: any) => b.pages_read_today > 0);
+        if (needsReset) {
+          const resetBooks = booksRes.data.map((b: any) => ({ ...b, pages_read_today: 0 }));
+          setBooks(resetBooks as any[]);
+          for (const b of booksRes.data as any[]) {
+            if (b.pages_read_today > 0) {
+              await (supabase.from("books") as any).update({ pages_read_today: 0 }).eq("id", b.id);
+            }
+          }
+        } else {
+          setBooks(booksRes.data as any[]);
+        }
+      }
       if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
       if (settingsRes.data) setSettings(settingsRes.data as any);
       if (statsRes.data) setTodayStats(statsRes.data as any);

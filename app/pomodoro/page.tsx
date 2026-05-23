@@ -77,7 +77,7 @@ export default function PomodoroPage() {
       // Salvar sessão
       const session = {
         id: crypto.randomUUID(),
-        user_id: "user",
+        user_id: "default_user",
         duration_minutes: customFocus,
         break_minutes: 0,
         completed: true,
