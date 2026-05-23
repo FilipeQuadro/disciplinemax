@@ -37,7 +37,7 @@ export async function GET(req: Request) {
   });
   const brtTime = brtFormatter.format(now);
   const brtHour = parseInt(brtTime.split(":")[0], 10);
-  const brtHHMM = brtTime; // ex: "07:00"
+  const brtMinute = parseInt(brtTime.split(":")[1], 10);
 
   // Buscar todas as configurações de usuários
   const { data: allSettings } = await supabase.from("user_settings").select("*");
@@ -77,12 +77,27 @@ export async function GET(req: Request) {
     // Se tudo foi feito, não enviar lembretes
     if (allGoalsMet) continue;
 
-    // Decidir tipo de mensagem — comparar em BRT
+    // Decidir tipo de mensagem — comparar em BRT com tolerância de 30 min
     let shouldNotify = false;
     let notifTimes = settings.notification_times || ["07:00", "12:00", "19:00"];
-    shouldNotify = notifTimes.some((t: string) => t === brtHHMM);
+    const matchedTime = notifTimes.find((t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      const notifMinutes = h * 60 + m;
+      const currentMinutes = brtHour * 60 + brtMinute;
+      return currentMinutes >= notifMinutes && currentMinutes < notifMinutes + 30;
+    });
+    shouldNotify = !!matchedTime;
+
+    // Evitar notificação duplicada: se já enviou para este horário hoje, pular
+    const lastNotifKey = `${today}_${matchedTime}`;
+    if (shouldNotify && settings.last_notif_key === lastNotifKey) {
+      shouldNotify = false;
+    }
 
     if (!shouldNotify) continue;
+
+    // Marcar como enviado ANTES de notificar (evitar race condition)
+    await supabase.from("user_settings").update({ last_notif_key: lastNotifKey } as any).eq("user_id", userId);
 
     // Telegram
     if (settings.telegram_bot_token && settings.telegram_chat_id) {

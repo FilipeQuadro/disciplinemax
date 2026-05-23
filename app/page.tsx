@@ -15,7 +15,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { clsx } from "clsx";
 
 export default function DashboardPage() {
-  const { books, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings } = useStore();
+  const { books, setBooks, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings } = useStore();
   const [verse, setVerse] = useState<{ verse: string; reference: string } | null>(null);
   const [motivation, setMotivation] = useState("");
   const [weekStats, setWeekStats] = useState<any[]>([]);
@@ -24,11 +24,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      // Carregar livros do Supabase ao montar
+      const { data: booksData } = await supabase.from("books").select("*").order("created_at");
+      if (booksData) setBooks(booksData as any[]);
+
       const v = await getBibleVerseOfDay();
       setVerse(v);
       const m = await getMotivationalMessage({
         streak,
-        booksRead: books.length,
+        booksRead: booksData?.length ?? books.length,
         bibleChapters: todayBibleChapters,
         completedToday: todayStats?.goals_completed ?? false,
       });
