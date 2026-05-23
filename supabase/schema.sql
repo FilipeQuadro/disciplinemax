@@ -153,6 +153,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- TABELA: notifications_sent (Dedup de notificações)
+-- ============================================
+CREATE TABLE IF NOT EXISTS notifications_sent (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id TEXT DEFAULT 'default_user',
+  notif_key TEXT NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, notif_key)
+);
+
+-- ============================================
 -- REALTIME: Habilitar sincronização em tempo real
 -- ============================================
 ALTER TABLE books REPLICA IDENTITY FULL;

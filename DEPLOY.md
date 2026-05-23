@@ -27,6 +27,10 @@
 - Vá em **Database → Replication**
 - Ative as tabelas: `books`, `bible_readings`, `pomodoro_sessions`, `daily_stats`
 
+### RLS + Dedup de notificações (obrigatório):
+- Vá em **SQL Editor** → Cole o conteúdo de `supabase/rls-policies.sql` → Execute
+- Isso cria: RLS policies para todas as tabelas, coluna `last_notif_key`, e tabela `notifications_sent` (dedup)
+
 ### Cron diário (reset de páginas):
 - Vá em **Edge Functions** → criar função `daily-reset`
 - Chamar a função `reset_daily_pages()` todo dia à meia-noite
@@ -171,6 +175,8 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY=BK...
 VAPID_PRIVATE_KEY=xxx...
 CRON_SECRET=meu_segredo_123
 GEMINI_API_KEY=AIzaSy...
+TELEGRAM_BOT_TOKEN=123456789:ABCdef...
+TELEGRAM_CHAT_ID=-1234567890
 ```
 
 > Variáveis com prefixo `NEXT_PUBLIC_` são expostas no browser. As demais ficam só no servidor.

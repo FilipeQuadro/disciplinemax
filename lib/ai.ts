@@ -16,6 +16,12 @@ export async function getMotivationalMessage(context: {
 Seja direto, encorajador e bíblico quando apropriado. Sem formatação markdown.`;
 
   try {
+    // Server-side: call Gemini API directly (cron route has no base URL for /api/ai)
+    if (typeof window === "undefined" && process.env.GEMINI_API_KEY) {
+      return await callGeminiDirect(prompt);
+    }
+
+    // Client-side: use API proxy
     const res = await fetch("/api/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -27,6 +33,23 @@ Seja direto, encorajador e bíblico quando apropriado. Sem formatação markdown
   } catch (e) {
     return getStaticMotivation(context.streak);
   }
+}
+
+async function callGeminiDirect(prompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY!;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
+      }),
+    }
+  );
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
 export async function getBibleVerseOfDay(): Promise<{ verse: string; reference: string }> {

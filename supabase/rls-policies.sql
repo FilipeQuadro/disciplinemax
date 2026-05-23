@@ -7,9 +7,17 @@
 -- ============================================
 
 -- ============================================
--- 1. Schema: adicionar colunas que faltam
+-- 1. Schema: adicionar colunas/tabelas que faltam
 -- ============================================
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS last_notif_key TEXT DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS notifications_sent (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id TEXT DEFAULT 'default_user',
+  notif_key TEXT NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, notif_key)
+);
 
 -- ============================================
 -- 2. Habilitar RLS em todas as tabelas
@@ -21,6 +29,7 @@ ALTER TABLE daily_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pomodoro_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications_sent ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 3. RLS Policies (anon = chave pública, sem autenticação)
@@ -84,6 +93,11 @@ SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon sel
 SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon insert on notification_subscriptions', 'INSERT', 'true', 'true');
 SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon update on notification_subscriptions', 'UPDATE', 'true', 'true');
 SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon delete on notification_subscriptions', 'DELETE', 'true', 'true');
+
+-- NOTIFICATIONS_SENT
+SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon select on notifications_sent', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon insert on notifications_sent', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon delete on notifications_sent', 'DELETE', 'true', 'true');
 
 -- Limpar helper
 DROP FUNCTION IF EXISTS create_policy_if_not_exists(TEXT, TEXT, TEXT, TEXT, TEXT);

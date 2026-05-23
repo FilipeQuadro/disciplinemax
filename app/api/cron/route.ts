@@ -41,6 +41,10 @@ export async function GET(req: Request) {
   const brtMinute = parseInt(brtTime.split(":")[1], 10);
   const currentMinutes = brtHour * 60 + brtMinute;
 
+  // Limpar notifications_sent antigos (> 7 dias) para evitar acúmulo
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("notifications_sent").delete().lt("sent_at", sevenDaysAgo);
+
   // Buscar dados
   const { data: allSettings } = await supabase.from("user_settings").select("*");
   const { data: allBooks } = await supabase.from("books").select("*");
@@ -86,21 +90,27 @@ export async function GET(req: Request) {
 
     if (!matchedTime) continue;
 
-    // Dedup (in-memory + DB fallback via last_notif_key se a coluna existir)
+    // Dedup: consultar notifications_sent no DB (persistente entre restarts)
     const dedupKey = `${userId}_${today}_${matchedTime}`;
     if (notifCache.has(dedupKey)) continue;
-    // DB dedup: se last_notif_key existe e bate, pular
-    if (settings.last_notif_key === `${today}_${matchedTime}`) continue;
+
+    const { data: alreadySent } = await supabase
+      .from("notifications_sent")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("notif_key", `${today}_${matchedTime}`)
+      .maybeSingle();
+    if (alreadySent) { notifCache.add(dedupKey); continue; }
 
     notifCache.add(dedupKey);
 
-    // Tentar persistir dedup no DB (silently ignora se coluna não existe)
+    // Persistir dedup no DB
     try {
-      await supabase.from("user_settings").update({
-        last_notif_key: `${today}_${matchedTime}`,
-        updated_at: now.toISOString(),
-      } as any).eq("user_id", userId);
-    } catch (e) { /* coluna pode não existir ainda */ }
+      await supabase.from("notifications_sent").insert({
+        user_id: userId,
+        notif_key: `${today}_${matchedTime}`,
+      } as any);
+    } catch (e) { /* UNIQUE constraint = já existe, seguro ignorar */ }
 
     // Construir mensagem
     const isMorning = brtHour < 9;
