@@ -40,7 +40,7 @@ export default function LivrosPage() {
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
     setLoading(true);
     try {
-      const payload = { ...form, pages_read_today: 0 };
+      const payload = { ...form, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
         const { error } = await (supabase.from("books") as any).update(payload).eq("id", editingId);
         if (!error) { toast.success("Livro atualizado!"); await loadBooks(); setEditingId(null); }
