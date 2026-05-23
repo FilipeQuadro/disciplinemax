@@ -12,24 +12,8 @@ const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null as any;
 
-// In-memory dedup: evita notificações duplicadas dentro do ciclo de vida da função
-const notifCache = new Map<string, number>();
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
-
-function isAlreadyNotified(userId: string, date: string, time: string): boolean {
-  const key = `${userId}_${date}_${time}`;
-  if (notifCache.has(key)) return true;
-  // Limpar entradas velhas
-  const cutoff = Date.now() - CACHE_TTL;
-  notifCache.forEach((ts, k) => {
-    if (ts < cutoff) notifCache.delete(k);
-  });
-  return false;
-}
-
-function markNotified(userId: string, date: string, time: string): void {
-  notifCache.set(`${userId}_${date}_${time}`, Date.now());
-}
+// Dedup em memória — funciona enquanto a instância está quente
+const notifCache = new Set<string>();
 
 export async function GET(req: Request) {
   if (!supabase) {
@@ -65,7 +49,7 @@ export async function GET(req: Request) {
     .from("daily_stats").select("*").eq("date", today);
   const { data: allSubs } = await supabase.from("notification_subscriptions").select("*");
 
-  // Configurar VAPID
+  // VAPID
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(
       "mailto:app@disciplinaapp.com",
@@ -92,7 +76,7 @@ export async function GET(req: Request) {
 
     if (booksGoalMet && bibleGoalMet) continue;
 
-    // Matching com tolerância de 30 min
+    // Matching com tolerância de 30 min — se o cron rodar até 29 min depois, dispara
     const notifTimes: string[] = settings.notification_times || ["07:00", "12:00", "19:00"];
     const matchedTime = notifTimes.find((t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -102,15 +86,23 @@ export async function GET(req: Request) {
 
     if (!matchedTime) continue;
 
-    // Dedup: já notificou este horário hoje
-    if (isAlreadyNotified(userId, today, matchedTime)) continue;
-    markNotified(userId, today, matchedTime);
+    // Dedup (in-memory + DB fallback via last_notif_key se a coluna existir)
+    const dedupKey = `${userId}_${today}_${matchedTime}`;
+    if (notifCache.has(dedupKey)) continue;
+    // DB dedup: se last_notif_key existe e bate, pular
+    if (settings.last_notif_key === `${today}_${matchedTime}`) continue;
 
-    // Persistir dedup no DB (se a coluna existir)
-    const lastNotifKey = `${today}_${matchedTime}`;
-    await supabase.from("user_settings").update({ last_notif_key: lastNotifKey } as any).eq("user_id", userId);
+    notifCache.add(dedupKey);
 
-    // Construir mensagem (1x só, usada em Telegram e WhatsApp)
+    // Tentar persistir dedup no DB (silently ignora se coluna não existe)
+    try {
+      await supabase.from("user_settings").update({
+        last_notif_key: `${today}_${matchedTime}`,
+        updated_at: now.toISOString(),
+      } as any).eq("user_id", userId);
+    } catch (e) { /* coluna pode não existir ainda */ }
+
+    // Construir mensagem
     const isMorning = brtHour < 9;
     const message = isMorning
       ? buildMorningMessage({
