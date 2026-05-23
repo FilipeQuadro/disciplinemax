@@ -40,9 +40,6 @@ export async function POST(req: Request) {
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    if (!text && data.error) {
-      return NextResponse.json({ text: null, debug: data.error.message }, { status: 200 });
-    }
     return NextResponse.json({ text });
   } catch (e) {
     return NextResponse.json({ error: "Gemini API call failed" }, { status: 500 });
