@@ -5,14 +5,11 @@ import { Capacitor } from "@capacitor/core";
 import { registerServiceWorker, setupPeriodicSync } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 
-// Horários padrão de notificação
-const DEFAULT_TIMES = ["07:00", "12:00", "15:00", "19:00", "21:00"];
-
 export function NotificationInit() {
-  const { notificationsEnabled, books, bibleGoal, todayBibleChapters } = useStore();
+  const { notificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
+  const notifTimes = settings?.notification_times || ["07:00", "12:00", "19:00"];
 
   useEffect(() => {
-    // Registrar SW silenciosamente
     registerServiceWorker().then((reg) => {
       if (reg) setupPeriodicSync(reg);
     });
@@ -26,7 +23,6 @@ export function NotificationInit() {
 
       try {
         const { PushNotifications } = await import("@capacitor/push-notifications");
-
         const permission = await PushNotifications.requestPermissions();
         if (permission.receive !== "granted") return;
 
@@ -59,44 +55,60 @@ export function NotificationInit() {
     registerCapacitorPush();
   }, []);
 
+  // Notificações browser — usa horários do settings com tolerância de 2 min
   useEffect(() => {
     if (!notificationsEnabled) return;
     if (typeof window === "undefined" || Notification.permission !== "granted") return;
 
-    // Agenda notificações nos horários configurados
+    const lastNotified = new Map<string, string>(); // date_time → evitar duplicata
+
     const checkAndSchedule = () => {
       const now = new Date();
-      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      
+      const brt = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit", minute: "2-digit", hour12: false,
+      }).format(now);
+      const [brtH, brtM] = brt.split(":").map(Number);
+      const currentMinutes = brtH * 60 + brtM;
+      const today = now.toISOString().split("T")[0];
+
       const totalPagesGoal = books.reduce((s, b) => s + b.daily_goal, 0);
       const totalPagesRead = books.reduce((s, b) => s + b.pages_read_today, 0);
       const booksGoalMet = totalPagesRead >= totalPagesGoal;
       const bibleGoalMet = bibleGoal ? todayBibleChapters >= bibleGoal.daily_chapters : true;
-      const allDone = booksGoalMet && bibleGoalMet;
 
-      if (allDone) return; // Não notificar se tudo foi feito
+      if (booksGoalMet && bibleGoalMet) return;
 
-      if (DEFAULT_TIMES.includes(currentTime)) {
-        const pending = [];
-        if (!booksGoalMet) pending.push(`📚 ${totalPagesGoal - totalPagesRead} páginas de livros`);
-        if (!bibleGoalMet) pending.push(`✝️ ${(bibleGoal?.daily_chapters || 0) - todayBibleChapters} capítulos da Bíblia`);
-        
-        if (pending.length > 0) {
-          new Notification("🎯 Metas pendentes!", {
-            body: "Faltam: " + pending.join(" · "),
-            icon: "/icon-192.png",
-            tag: "disciplina-scheduled",
-            requireInteraction: true,
-          });
-        }
+      const matched = notifTimes.find((t) => {
+        const [h, m] = t.split(":").map(Number);
+        const nm = h * 60 + m;
+        return currentMinutes >= nm && currentMinutes < nm + 2;
+      });
+
+      if (!matched) return;
+
+      const dedupKey = `${today}_${matched}`;
+      if (lastNotified.get(today) === matched) return;
+      lastNotified.set(today, matched);
+
+      const pending = [];
+      if (!booksGoalMet) pending.push(`📚 ${totalPagesGoal - totalPagesRead} páginas de livros`);
+      if (!bibleGoalMet) pending.push(`✝️ ${(bibleGoal?.daily_chapters || 0) - todayBibleChapters} capítulos da Bíblia`);
+
+      if (pending.length > 0) {
+        new Notification("🎯 Metas pendentes!", {
+          body: "Faltam: " + pending.join(" · "),
+          icon: "/icon-192.png",
+          tag: "disciplina-scheduled",
+          requireInteraction: true,
+        });
       }
     };
 
-    // Checar a cada minuto
     const interval = setInterval(checkAndSchedule, 60000);
-    checkAndSchedule(); // checar imediatamente ao ativar
+    checkAndSchedule();
     return () => clearInterval(interval);
-  }, [notificationsEnabled, books, bibleGoal, todayBibleChapters]);
+  }, [notificationsEnabled, books, bibleGoal, todayBibleChapters, notifTimes]);
 
   return null;
 }

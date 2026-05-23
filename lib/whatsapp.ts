@@ -56,7 +56,7 @@ export function buildMorningMessage(data: {
   }
 
   msg += `💡 _${data.motivational}_\n\n`;
-  msg += `👉 Acesse: disciplina-app.vercel.app`;
+  msg += `👉 Acesse: disciplinemax.onrender.com`;
 
   return msg;
 }

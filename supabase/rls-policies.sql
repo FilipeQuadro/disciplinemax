@@ -2,19 +2,18 @@
 -- Setup completo para DisciplinaApp
 -- Rodar UMA VEZ no Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/sigpkpgibybgnszpxyzq/sql
+--
+-- Pode rodar quantas vezes quiser — é idempotente.
 -- ============================================
 
 -- ============================================
--- 1. Adicionar coluna last_notif_key em user_settings
---    (controle de notificação duplicada pelo cron)
+-- 1. Schema: adicionar colunas que faltam
 -- ============================================
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS last_notif_key TEXT DEFAULT NULL;
 
 -- ============================================
--- 2. RLS Policies
+-- 2. Habilitar RLS em todas as tabelas
 -- ============================================
-
--- Garantir que RLS está habilitado em todas as tabelas
 ALTER TABLE books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bible_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bible_readings ENABLE ROW LEVEL SECURITY;
@@ -24,49 +23,67 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
--- Como o app NÃO tem autenticação (user_id = "default_user"),
--- as policies permitem tudo para o role anon (chave pública).
--- Quando implementar auth, trocar para policies baseadas em user_id.
+-- 3. RLS Policies (anon = chave pública, sem autenticação)
+--    Quando implementar auth, trocar para policies baseadas em auth.uid()
 -- ============================================
 
+-- Helper: cria policy se não existe (evita erro ao rodar novamente)
+CREATE OR REPLACE FUNCTION create_policy_if_not_exists(
+  p_table TEXT, p_name TEXT, p_cmd TEXT, p_using TEXT, p_with_check TEXT
+) RETURNS VOID AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = p_table AND policyname = p_name
+  ) THEN
+    EXECUTE format(
+      'CREATE POLICY %I ON public.%I FOR %s TO anon USING (%s) WITH CHECK (%s)',
+      p_name, p_table, p_cmd, p_using, p_with_check
+    );
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 -- BOOKS
-CREATE POLICY "Allow anon select on books" ON books FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on books" ON books FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on books" ON books FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on books" ON books FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('books', 'Allow anon select on books', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('books', 'Allow anon insert on books', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('books', 'Allow anon update on books', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('books', 'Allow anon delete on books', 'DELETE', 'true', 'true');
 
 -- BIBLE_GOALS
-CREATE POLICY "Allow anon select on bible_goals" ON bible_goals FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on bible_goals" ON bible_goals FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on bible_goals" ON bible_goals FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on bible_goals" ON bible_goals FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('bible_goals', 'Allow anon select on bible_goals', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_goals', 'Allow anon insert on bible_goals', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_goals', 'Allow anon update on bible_goals', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_goals', 'Allow anon delete on bible_goals', 'DELETE', 'true', 'true');
 
 -- BIBLE_READINGS
-CREATE POLICY "Allow anon select on bible_readings" ON bible_readings FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on bible_readings" ON bible_readings FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on bible_readings" ON bible_readings FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on bible_readings" ON bible_readings FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('bible_readings', 'Allow anon select on bible_readings', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_readings', 'Allow anon insert on bible_readings', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_readings', 'Allow anon update on bible_readings', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('bible_readings', 'Allow anon delete on bible_readings', 'DELETE', 'true', 'true');
 
 -- DAILY_STATS
-CREATE POLICY "Allow anon select on daily_stats" ON daily_stats FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on daily_stats" ON daily_stats FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on daily_stats" ON daily_stats FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on daily_stats" ON daily_stats FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('daily_stats', 'Allow anon select on daily_stats', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('daily_stats', 'Allow anon insert on daily_stats', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('daily_stats', 'Allow anon update on daily_stats', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('daily_stats', 'Allow anon delete on daily_stats', 'DELETE', 'true', 'true');
 
 -- POMODORO_SESSIONS
-CREATE POLICY "Allow anon select on pomodoro_sessions" ON pomodoro_sessions FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on pomodoro_sessions" ON pomodoro_sessions FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on pomodoro_sessions" ON pomodoro_sessions FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on pomodoro_sessions" ON pomodoro_sessions FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('pomodoro_sessions', 'Allow anon select on pomodoro_sessions', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('pomodoro_sessions', 'Allow anon insert on pomodoro_sessions', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('pomodoro_sessions', 'Allow anon update on pomodoro_sessions', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('pomodoro_sessions', 'Allow anon delete on pomodoro_sessions', 'DELETE', 'true', 'true');
 
 -- USER_SETTINGS
-CREATE POLICY "Allow anon select on user_settings" ON user_settings FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on user_settings" ON user_settings FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on user_settings" ON user_settings FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on user_settings" ON user_settings FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('user_settings', 'Allow anon select on user_settings', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('user_settings', 'Allow anon insert on user_settings', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('user_settings', 'Allow anon update on user_settings', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('user_settings', 'Allow anon delete on user_settings', 'DELETE', 'true', 'true');
 
 -- NOTIFICATION_SUBSCRIPTIONS
-CREATE POLICY "Allow anon select on notification_subscriptions" ON notification_subscriptions FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow anon insert on notification_subscriptions" ON notification_subscriptions FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Allow anon update on notification_subscriptions" ON notification_subscriptions FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon delete on notification_subscriptions" ON notification_subscriptions FOR DELETE TO anon USING (true);
+SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon select on notification_subscriptions', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon insert on notification_subscriptions', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon update on notification_subscriptions', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('notification_subscriptions', 'Allow anon delete on notification_subscriptions', 'DELETE', 'true', 'true');
+
+-- Limpar helper
+DROP FUNCTION IF EXISTS create_policy_if_not_exists(TEXT, TEXT, TEXT, TEXT, TEXT);

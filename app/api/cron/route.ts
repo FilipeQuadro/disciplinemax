@@ -1,5 +1,3 @@
-// Rota executada pelo Vercel Cron Jobs (gratuito)
-// Configurar em vercel.json: cron a cada hora
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendWhatsAppMessage, buildMorningMessage, buildReminderMessage } from "@/lib/whatsapp";
@@ -14,11 +12,30 @@ const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null as any;
 
-// Verificar autorização do cron
+// In-memory dedup: evita notificações duplicadas dentro do ciclo de vida da função
+const notifCache = new Map<string, number>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+
+function isAlreadyNotified(userId: string, date: string, time: string): boolean {
+  const key = `${userId}_${date}_${time}`;
+  if (notifCache.has(key)) return true;
+  // Limpar entradas velhas
+  const cutoff = Date.now() - CACHE_TTL;
+  notifCache.forEach((ts, k) => {
+    if (ts < cutoff) notifCache.delete(k);
+  });
+  return false;
+}
+
+function markNotified(userId: string, date: string, time: string): void {
+  notifCache.set(`${userId}_${date}_${time}`, Date.now());
+}
+
 export async function GET(req: Request) {
   if (!supabase) {
     return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
   }
+
   const authHeader = req.headers.get("authorization");
   const url = new URL(req.url);
   const querySecret = url.searchParams.get("secret");
@@ -30,7 +47,7 @@ export async function GET(req: Request) {
   const now = new Date();
   const today = now.toISOString().split("T")[0];
 
-  // Usar timezone BRT para bater com notification_times salvos no banco
+  // BRT timezone
   const brtFormatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: "America/Sao_Paulo",
     hour: "2-digit", minute: "2-digit", hour12: false,
@@ -38,8 +55,9 @@ export async function GET(req: Request) {
   const brtTime = brtFormatter.format(now);
   const brtHour = parseInt(brtTime.split(":")[0], 10);
   const brtMinute = parseInt(brtTime.split(":")[1], 10);
+  const currentMinutes = brtHour * 60 + brtMinute;
 
-  // Buscar todas as configurações de usuários
+  // Buscar dados
   const { data: allSettings } = await supabase.from("user_settings").select("*");
   const { data: allBooks } = await supabase.from("books").select("*");
   const { data: allBibleGoals } = await supabase.from("bible_goals").select("*");
@@ -57,7 +75,6 @@ export async function GET(req: Request) {
   }
 
   const apnsProvider = createApnsProvider();
-
   const results = [];
 
   for (const settings of (allSettings || [])) {
@@ -72,53 +89,46 @@ export async function GET(req: Request) {
     const bibleGoalChapters = bibleGoal?.daily_chapters || 0;
     const booksGoalMet = totalPagesRead >= totalPagesGoal;
     const bibleGoalMet = bibleChaptersRead >= bibleGoalChapters;
-    const allGoalsMet = booksGoalMet && bibleGoalMet;
 
-    // Se tudo foi feito, não enviar lembretes
-    if (allGoalsMet) continue;
+    if (booksGoalMet && bibleGoalMet) continue;
 
-    // Decidir tipo de mensagem — comparar em BRT com tolerância de 30 min
-    let shouldNotify = false;
-    let notifTimes = settings.notification_times || ["07:00", "12:00", "19:00"];
+    // Matching com tolerância de 30 min
+    const notifTimes: string[] = settings.notification_times || ["07:00", "12:00", "19:00"];
     const matchedTime = notifTimes.find((t: string) => {
       const [h, m] = t.split(":").map(Number);
       const notifMinutes = h * 60 + m;
-      const currentMinutes = brtHour * 60 + brtMinute;
       return currentMinutes >= notifMinutes && currentMinutes < notifMinutes + 30;
     });
-    shouldNotify = !!matchedTime;
 
-    // Evitar notificação duplicada: se já enviou para este horário hoje, pular
+    if (!matchedTime) continue;
+
+    // Dedup: já notificou este horário hoje
+    if (isAlreadyNotified(userId, today, matchedTime)) continue;
+    markNotified(userId, today, matchedTime);
+
+    // Persistir dedup no DB (se a coluna existir)
     const lastNotifKey = `${today}_${matchedTime}`;
-    if (shouldNotify && settings.last_notif_key === lastNotifKey) {
-      shouldNotify = false;
-    }
-
-    if (!shouldNotify) continue;
-
-    // Marcar como enviado ANTES de notificar (evitar race condition)
     await supabase.from("user_settings").update({ last_notif_key: lastNotifKey } as any).eq("user_id", userId);
 
-    // Telegram
-    if (settings.telegram_bot_token && settings.telegram_chat_id) {
-      let message = "";
-      if (brtHour < 9) {
-        const motivation = await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false });
-        message = buildMorningMessage({
+    // Construir mensagem (1x só, usada em Telegram e WhatsApp)
+    const isMorning = brtHour < 9;
+    const message = isMorning
+      ? buildMorningMessage({
           booksPages: userBooks.map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
           bibleChapters: bibleGoalChapters,
           pomodoroGoal: 4,
-          motivational: motivation,
-        });
-      } else {
-        message = buildReminderMessage({
+          motivational: await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false }),
+        })
+      : buildReminderMessage({
           pendingBooks: userBooks.filter((b: any) => b.pages_read_today < b.daily_goal)
             .map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
           biblePending: !bibleGoalMet,
           bibleChaptersLeft: Math.max(0, bibleGoalChapters - bibleChaptersRead),
           hour: brtHour,
         });
-      }
+
+    // Telegram
+    if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
         await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
       } catch (e) {
@@ -128,36 +138,18 @@ export async function GET(req: Request) {
 
     // WhatsApp
     if (settings.whatsapp_number && settings.callmebot_api_key) {
-      let message = "";
-      if (brtHour < 9) {
-        const motivation = await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false });
-        message = buildMorningMessage({
-          booksPages: userBooks.map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
-          bibleChapters: bibleGoalChapters,
-          pomodoroGoal: 4,
-          motivational: motivation,
-        });
-      } else {
-        message = buildReminderMessage({
-          pendingBooks: userBooks.filter((b: any) => b.pages_read_today < b.daily_goal)
-            .map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
-          biblePending: !bibleGoalMet,
-          bibleChaptersLeft: Math.max(0, bibleGoalChapters - bibleChaptersRead),
-          hour: brtHour,
-        });
-      }
       await sendWhatsAppMessage(settings.whatsapp_number, settings.callmebot_api_key, message);
     }
 
     // Push notifications
     const userSubs = (allSubs || []).filter((s: any) => s.user_id === userId);
+    const pushBody = `Ainda faltam ${totalPagesGoal - totalPagesRead} páginas e ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos hoje.`;
+
     for (const sub of userSubs) {
       if (sub.platform === "apns" && sub.device_token && apnsProvider) {
         try {
           await sendApnsNotification(apnsProvider, sub.device_token, {
-            title: "🎯 Metas pendentes!",
-            body: `Ainda faltam ${totalPagesGoal - totalPagesRead} páginas e ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos hoje.`,
-            url: "/",
+            title: "🎯 Metas pendentes!", body: pushBody, url: "/",
           });
         } catch (e) {
           await supabase.from("notification_subscriptions").delete().eq("device_token", sub.device_token);
@@ -166,13 +158,7 @@ export async function GET(req: Request) {
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            JSON.stringify({
-              title: "🎯 Metas pendentes!",
-              body: `Ainda faltam ${totalPagesGoal - totalPagesRead} páginas e ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos hoje.`,
-              tag: "cron-reminder",
-              requireInteraction: true,
-              url: "/",
-            })
+            JSON.stringify({ title: "🎯 Metas pendentes!", body: pushBody, tag: "cron-reminder", requireInteraction: true, url: "/" })
           );
         } catch (e) {
           await supabase.from("notification_subscriptions").delete().eq("endpoint", sub.endpoint);
@@ -180,8 +166,8 @@ export async function GET(req: Request) {
       }
     }
 
-    results.push({ userId, notified: true });
+    results.push({ userId, matchedTime });
   }
 
-  return NextResponse.json({ ok: true, processed: results.length, time: now.toISOString() });
+  return NextResponse.json({ ok: true, processed: results.length, brtTime, results, time: now.toISOString() });
 }
