@@ -37,7 +37,7 @@ ALTER TABLE notifications_sent ENABLE ROW LEVEL SECURITY;
 -- ============================================
 
 -- Helper: cria policy se não existe (evita erro ao rodar novamente)
--- SELECT e DELETE não suportam WITH CHECK, só USING
+-- SELECT/DELETE: USING only | INSERT: WITH CHECK only | UPDATE: USING + WITH CHECK
 CREATE OR REPLACE FUNCTION create_policy_if_not_exists(
   p_table TEXT, p_name TEXT, p_cmd TEXT, p_using TEXT, p_with_check TEXT
 ) RETURNS VOID AS $$
@@ -45,10 +45,15 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = p_table AND policyname = p_name
   ) THEN
-    IF p_cmd IN ('SELECT', 'DELETE') THEN
+    IF p_cmd = 'SELECT' OR p_cmd = 'DELETE' THEN
       EXECUTE format(
         'CREATE POLICY %I ON public.%I FOR %s TO anon USING (%s)',
         p_name, p_table, p_cmd, p_using
+      );
+    ELSIF p_cmd = 'INSERT' THEN
+      EXECUTE format(
+        'CREATE POLICY %I ON public.%I FOR %s TO anon WITH CHECK (%s)',
+        p_name, p_table, p_cmd, p_with_check
       );
     ELSE
       EXECUTE format(
