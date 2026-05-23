@@ -16,13 +16,18 @@ export async function getMotivationalMessage(context: {
 Seja direto, encorajador e bíblico quando apropriado. Sem formatação markdown.`;
 
   try {
-    // Server-side: call Gemini API directly
+    // Server-side: try Gemini → Ollama → static
     if (typeof window === "undefined") {
+      // 1. Gemini (env var or DB)
       const apiKey = process.env.GEMINI_API_KEY || await getGeminiKeyFromDB();
       if (apiKey) {
         const text = await callGeminiWithKey(prompt, apiKey);
         if (text) return text;
       }
+
+      // 2. Ollama (local, sem limites)
+      const ollamaText = await callOllama(prompt);
+      if (ollamaText) return ollamaText;
     } else {
       // Client-side: use API proxy
       const res = await fetch("/api/ai", {
@@ -52,19 +57,34 @@ async function getGeminiKeyFromDB(): Promise<string | null> {
 }
 
 async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string | null> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-    {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
+        }),
+      }
+    );
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch { return null; }
+}
+
+export async function callOllama(prompt: string, model = "llama3.2:3b"): Promise<string | null> {
+  try {
+    const res = await fetch("http://localhost:11434/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
-      }),
-    }
-  );
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      body: JSON.stringify({ model, prompt, stream: false, options: { num_predict: 100, temperature: 0.8 } }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const data = await res.json();
+    return data.response?.trim() || null;
+  } catch { return null; }
 }
 
 export async function getBibleVerseOfDay(): Promise<{ verse: string; reference: string }> {
