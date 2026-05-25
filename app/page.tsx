@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
   BookOpen, BookMarked, Timer, Flame, Target, CheckCircle2,
-  TrendingUp, Calendar, Zap, ChevronRight, Star
+  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
@@ -24,11 +24,12 @@ export default function DashboardPage() {
   const [motivation, setMotivation] = useState("");
   const [weekStats, setWeekStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const today = new Date();
 
   useEffect(() => {
+    setMounted(true);
     async function load() {
-      // Carregar todos os dados do Supabase ao montar
       const todayStr = format(new Date(), "yyyy-MM-dd");
 
       const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
@@ -40,7 +41,6 @@ export default function DashboardPage() {
       ]);
 
       if (booksRes.data) {
-        // Reset diário: se não tem stats de hoje, zerar pages_read_today
         const needsReset = !statsRes.data && booksRes.data.some((b: any) => b.pages_read_today > 0);
         if (needsReset) {
           const resetBooks = booksRes.data.map((b: any) => ({ ...b, pages_read_today: 0 }));
@@ -59,7 +59,6 @@ export default function DashboardPage() {
       if (statsRes.data) setTodayStats(statsRes.data as any);
       setTodayBibleChapters(bibleReadingsRes.data?.length ?? 0);
 
-      // Calcular streak
       const { data: recentStats } = await supabase
         .from("daily_stats")
         .select("date, goals_completed")
@@ -84,7 +83,6 @@ export default function DashboardPage() {
       });
       setMotivation(m);
 
-      // Carregar stats da semana
       const start = startOfWeek(today, { weekStartsOn: 0 });
       const { data: weekData } = await supabase
         .from("daily_stats")
@@ -118,8 +116,10 @@ export default function DashboardPage() {
   const pomodoroGoal = settings?.pomodoros_until_long ?? 4;
   const allGoalsMet = pagesReadToday >= totalPagesGoal && bibleGoalMet;
 
+  if (!mounted) return null;
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-enter stagger-children">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -127,17 +127,17 @@ export default function DashboardPage() {
             {getGreeting()},{" "}
             <span className="gradient-text">Discípulo!</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             {format(today, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
         </div>
         {allGoalsMet ? (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shimmer">
             <CheckCircle2 size={16} className="text-emerald-400" />
             <span className="text-sm font-medium text-emerald-400">Metas concluídas!</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 border border-orange-500/30">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/15">
             <Target size={16} className="text-orange-400" />
             <span className="text-sm font-medium text-orange-400">Em andamento</span>
           </div>
@@ -146,15 +146,15 @@ export default function DashboardPage() {
 
       {/* Versículo do dia */}
       {verse && (
-        <div className="glass rounded-2xl p-5 border-l-4 border-amber-500/60 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent" />
+        <div className="glass rounded-2xl p-5 border-l-4 border-amber-500/50 relative overflow-hidden shimmer">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-violet-500/5" />
           <div className="relative">
-            <p className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-amber-400/70 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Star size={12} />
               Versículo do Dia
             </p>
-            <p className="text-white font-medium italic">"{verse.verse}"</p>
-            <p className="text-amber-400/70 text-sm mt-1">— {verse.reference}</p>
+            <p className="text-white font-medium italic text-lg leading-relaxed">"{verse.verse}"</p>
+            <p className="text-amber-400/60 text-sm mt-2">— {verse.reference}</p>
           </div>
         </div>
       )}
@@ -164,51 +164,57 @@ export default function DashboardPage() {
         <StatCard
           icon={<Flame size={20} className="text-orange-400" />}
           label="Streak"
-          value={`${streak} dias`}
-          sub="consecutivos"
-          color="from-orange-500/20 to-red-500/20"
-          border="border-orange-500/20"
+          value={`${streak}`}
+          sub="dias consecutivos"
+          color="from-orange-500/15 to-red-500/10"
+          border="border-orange-500/15"
+          glowColor="rgba(249,115,22,0.1)"
         />
         <StatCard
           icon={<BookOpen size={20} className="text-violet-400" />}
           label="Páginas Hoje"
           value={`${pagesReadToday}/${totalPagesGoal}`}
           sub={`de ${books.length} livros`}
-          color="from-violet-500/20 to-purple-500/20"
-          border="border-violet-500/20"
+          color="from-violet-500/15 to-purple-500/10"
+          border="border-violet-500/15"
           progress={totalPagesGoal > 0 ? (pagesReadToday / totalPagesGoal) * 100 : 0}
           progressColor="bg-violet-500"
+          glowColor="rgba(139,92,246,0.1)"
         />
         <StatCard
           icon={<BookMarked size={20} className="text-amber-400" />}
           label="Bíblia Hoje"
           value={`${todayBibleChapters}/${bibleGoal?.daily_chapters ?? 0}`}
           sub="capítulos"
-          color="from-amber-500/20 to-yellow-500/20"
-          border="border-amber-500/20"
+          color="from-amber-500/15 to-yellow-500/10"
+          border="border-amber-500/15"
           progress={bibleGoal ? (todayBibleChapters / bibleGoal.daily_chapters) * 100 : 0}
           progressColor="bg-amber-500"
+          glowColor="rgba(245,158,11,0.1)"
         />
         <StatCard
           icon={<Timer size={20} className="text-red-400" />}
           label="Pomodoros"
           value={`${pomodoroCount}/${pomodoroGoal}`}
           sub="sessões de foco"
-          color="from-red-500/20 to-rose-500/20"
-          border="border-red-500/20"
+          color="from-red-500/15 to-rose-500/10"
+          border="border-red-500/15"
           progress={(pomodoroCount / pomodoroGoal) * 100}
           progressColor="bg-red-500"
+          glowColor="rgba(239,68,68,0.1)"
         />
       </div>
 
       {/* Motivação da IA */}
       {motivation && (
-        <div className="glass rounded-2xl p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-violet-600 flex items-center justify-center shrink-0">
-            <Zap size={14} className="text-white" />
+        <div className="glass rounded-2xl p-4 flex items-start gap-3 glow-border">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-violet-600 flex items-center justify-center shrink-0 shadow-lg shadow-sky-500/20">
+            <Sparkles size={16} className="text-white" />
           </div>
           <div>
-            <p className="text-xs text-sky-400 font-semibold mb-1">IA Motivacional</p>
+            <p className="text-xs text-sky-400 font-semibold mb-1 flex items-center gap-1.5">
+              <Zap size={10} /> IA Motivacional
+            </p>
             <p className="text-slate-300 text-sm leading-relaxed">{motivation}</p>
           </div>
         </div>
@@ -221,14 +227,14 @@ export default function DashboardPage() {
             <BookOpen size={16} className="text-violet-400" />
             Livros em Leitura
           </h2>
-          <Link href="/livros" className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">
+          <Link href="/livros" className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors">
             Ver todos <ChevronRight size={12} />
           </Link>
         </div>
         {books.length === 0 ? (
           <div className="card text-center py-8">
-            <BookOpen size={32} className="text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">Nenhum livro cadastrado</p>
+            <BookOpen size={32} className="text-slate-700 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm">Nenhum livro cadastrado</p>
             <Link href="/livros" className="btn-primary mt-3 inline-flex text-sm">
               Adicionar Livro
             </Link>
@@ -244,7 +250,7 @@ export default function DashboardPage() {
 
       {/* Gráfico da semana */}
       {weekStats.length > 0 && (
-        <div className="card">
+        <div className="card shimmer">
           <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
             <TrendingUp size={16} className="text-sky-400" />
             Progresso da Semana
@@ -253,18 +259,18 @@ export default function DashboardPage() {
             <AreaChart data={weekStats} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorPages" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorChapters" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="day" tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: "#1a1a26", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
+                contentStyle={{ background: "#12121c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
                 labelStyle={{ color: "#94a3b8" }}
                 itemStyle={{ color: "#f1f5f9" }}
               />
@@ -288,15 +294,20 @@ function getGreeting() {
   return "Boa noite";
 }
 
-function StatCard({ icon, label, value, sub, color, border, progress, progressColor }: any) {
+function StatCard({ icon, label, value, sub, color, border, progress, progressColor, glowColor }: any) {
   return (
-    <div className={clsx("glass-hover rounded-2xl p-4 bg-gradient-to-br", color, "border", border)}>
+    <div className={clsx(
+      "rounded-2xl p-4 bg-gradient-to-br border transition-all duration-300 hover:scale-[1.02] cursor-default",
+      color, border
+    )}
+    style={{ ["--tw-shadow-color" as string]: glowColor }}
+    >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-slate-400 font-medium">{label}</span>
+        <span className="text-xs text-slate-500 font-medium">{label}</span>
         {icon}
       </div>
-      <p className="text-xl font-bold text-white">{value}</p>
-      <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
+      <p className="text-xl font-bold text-white count-up">{value}</p>
+      <p className="text-xs text-slate-600 mt-0.5">{sub}</p>
       {progress !== undefined && (
         <div className="progress-bar mt-3">
           <div
@@ -315,15 +326,18 @@ function BookMiniCard({ book }: { book: any }) {
   const done = pagesLeft <= 0;
 
   return (
-    <div className={clsx("glass-hover rounded-xl p-4", done && "border border-emerald-500/30 bg-emerald-500/5")}>
+    <div className={clsx(
+      "glass rounded-xl p-4 transition-all duration-300 hover:scale-[1.01] glow-border",
+      done && "border-emerald-500/20 bg-emerald-500/3"
+    )}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm truncate">{book.title}</p>
-          <p className="text-xs text-slate-500">{book.current_page}/{book.total_pages} pgs</p>
+          <p className="text-xs text-slate-600">{book.current_page}/{book.total_pages} pgs</p>
         </div>
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-          style={{ background: book.color + "33", color: book.color }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm"
+          style={{ background: book.color + "22", color: book.color }}
         >
           {progress}%
         </div>
@@ -335,13 +349,13 @@ function BookMiniCard({ book }: { book: any }) {
         />
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-slate-600">
           Hoje: {book.pages_read_today}/{book.daily_goal} pgs
         </span>
         {done ? (
-          <span className="badge bg-emerald-500/20 text-emerald-400">✓ Feito</span>
+          <span className="badge bg-emerald-500/15 text-emerald-400">✓ Feito</span>
         ) : (
-          <span className="badge bg-orange-500/20 text-orange-400">{pagesLeft} faltam</span>
+          <span className="badge bg-orange-500/15 text-orange-400">{pagesLeft} faltam</span>
         )}
       </div>
     </div>
@@ -389,7 +403,7 @@ function ConsistencyCalendar() {
     <div className="card">
       <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
         <Calendar size={16} className="text-sky-400" />
-        Calendário de Consistência (Últimos 35 dias)
+        Calendário de Consistência
       </h2>
       <div className="flex flex-wrap gap-1.5">
         {data.map((d, i) => (
@@ -397,24 +411,24 @@ function ConsistencyCalendar() {
             key={i}
             title={d.date}
             className={clsx(
-              "w-7 h-7 rounded-md transition-all duration-200 hover:scale-110 cursor-default",
-              d.done ? "bg-emerald-500/80" : d.partial ? "bg-emerald-500/30" : "bg-white/5"
+              "w-7 h-7 rounded-md transition-all duration-200 hover:scale-125 cursor-default",
+              d.done ? "bg-emerald-500/70 shadow-sm shadow-emerald-500/20" : d.partial ? "bg-emerald-500/20" : "bg-white/3"
             )}
           />
         ))}
       </div>
       <div className="flex items-center gap-4 mt-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-500/80" />
-          <span className="text-xs text-slate-500">Meta cumprida</span>
+          <div className="w-3 h-3 rounded bg-emerald-500/70" />
+          <span className="text-xs text-slate-600">Meta cumprida</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-500/30" />
-          <span className="text-xs text-slate-500">Parcial</span>
+          <div className="w-3 h-3 rounded bg-emerald-500/20" />
+          <span className="text-xs text-slate-600">Parcial</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-white/5" />
-          <span className="text-xs text-slate-500">Sem registro</span>
+          <div className="w-3 h-3 rounded bg-white/3" />
+          <span className="text-xs text-slate-600">Sem registro</span>
         </div>
       </div>
     </div>
