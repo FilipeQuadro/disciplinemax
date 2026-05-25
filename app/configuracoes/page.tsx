@@ -55,7 +55,7 @@ export default function ConfiguracoesPage() {
       if (reg) { await subscribeToPush(reg); }
       setNotifPerm("granted");
       setNotificationsEnabled(true);
-      toast.success("✅ Notificações ativadas! O sistema vai te lembrar das suas metas.");
+      toast.success("✅ Notificações ativadas!");
     } else {
       toast.error("Permissão negada. Ative nas configurações do navegador.");
     }
@@ -68,36 +68,29 @@ export default function ConfiguracoesPage() {
     setTestingWa(true);
     const result = await sendWhatsAppMessage(
       form.whatsapp_number, form.callmebot_api_key,
-      "✅ *DisciplinaApp* configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚"
+      "✅ *DisciplinaMax* configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚"
     );
     setTestingWa(false);
-
     if (result.ok) {
-      toast.success("WhatsApp conectado! Mensagem enviada ✅");
-      return;
+      toast.success("WhatsApp conectado! ✅");
+    } else {
+      const detail = result.responseText || result.error || "Verifique o número e a chave.";
+      toast.error(`Erro: ${detail}`);
     }
-
-    const detail = result.responseText || result.error || "Verifique o número e a chave.";
-    toast.error(`Erro ao enviar: ${detail}`);
   }
 
   async function testTelegram() {
     if (!form.telegram_bot_token || !form.telegram_chat_id) {
-      toast.error("Preencha o token do bot e o chat_id do Telegram"); return;
+      toast.error("Preencha o token e o chat_id"); return;
     }
     setTestingTg(true);
     try {
-      await sendTelegramMessage(
-        form.telegram_bot_token,
-        form.telegram_chat_id,
-        "✅ DisciplinaApp configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚"
-      );
-      toast.success("Telegram conectado! Mensagem enviada ✅");
+      await sendTelegramMessage(form.telegram_bot_token, form.telegram_chat_id,
+        "✅ DisciplinaMax configurado com sucesso! 🎯📚");
+      toast.success("Telegram conectado! ✅");
     } catch (e: any) {
-      toast.error(`Erro ao enviar Telegram: ${e?.message || e}`);
-    } finally {
-      setTestingTg(false);
-    }
+      toast.error(`Erro: ${e?.message || e}`);
+    } finally { setTestingTg(false); }
   }
 
   async function saveSettings() {
@@ -116,46 +109,39 @@ export default function ConfiguracoesPage() {
   }));
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-2xl">
+    <div className="space-y-6 page-enter stagger-children max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Settings size={24} className="text-slate-400" /> Configurações
+        <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+          <Settings size={24} style={{ color: "#8B95A5" }} /> Configurações
         </h1>
-        <p className="text-slate-400 text-sm mt-1">Personalize o sistema para funcionar do seu jeito</p>
+        <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Personalize o sistema para funcionar do seu jeito</p>
       </div>
 
       {/* Notificações Push */}
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
-          <Bell size={18} className="text-sky-400" /> Notificações Push
+          <Bell size={18} style={{ color: "#D4AF37" }} /> Notificações Push
         </h2>
-        <p className="text-sm text-slate-400 mb-4">Receba alertas no celular e PC enquanto as metas não forem cumpridas</p>
+        <p className="text-sm mb-4" style={{ color: "#8B95A5" }}>Receba alertas enquanto as metas não forem cumpridas</p>
 
-        <div className={clsx("flex items-center justify-between p-4 rounded-xl border",
-          notifPerm === "granted"
-            ? "bg-emerald-500/10 border-emerald-500/30"
-            : "bg-orange-500/10 border-orange-500/30")}>
+        <div className="flex items-center justify-between p-4 rounded-xl"
+          style={{
+            background: notifPerm === "granted" ? "rgba(58,186,180,0.06)" : "rgba(232,132,74,0.06)",
+            border: notifPerm === "granted" ? "1px solid rgba(58,186,180,0.2)" : "1px solid rgba(232,132,74,0.2)",
+          }}>
           <div className="flex items-center gap-3">
-            {notifPerm === "granted" ? (
-              <Check size={20} className="text-emerald-400" />
-            ) : (
-              <AlertCircle size={20} className="text-orange-400" />
-            )}
+            {notifPerm === "granted" ? <Check size={20} style={{ color: "#3ABAB4" }} /> : <AlertCircle size={20} style={{ color: "#E8844A" }} />}
             <div>
               <p className="text-sm font-medium text-white">
                 {notifPerm === "granted" ? "Notificações ativas!" : "Notificações desativadas"}
               </p>
-              <p className="text-xs text-slate-500">
-                {notifPerm === "granted"
-                  ? "O sistema vai te lembrar das metas o dia todo"
-                  : "Ative para receber lembretes automáticos"}
+              <p className="text-xs" style={{ color: "#555E6E" }}>
+                {notifPerm === "granted" ? "Lembretes ativos o dia todo" : "Ative para receber lembretes automáticos"}
               </p>
             </div>
           </div>
           {notifPerm !== "granted" && (
-            <button onClick={enableNotifications} className="btn-primary text-sm">
-              Ativar
-            </button>
+            <button onClick={enableNotifications} className="btn-primary text-sm">Ativar</button>
           )}
         </div>
 
@@ -169,8 +155,7 @@ export default function ConfiguracoesPage() {
                     ...p,
                     notification_times: p.notification_times.map((x, idx) => idx === i ? e.target.value : x)
                   }))} />
-                <button onClick={() => removeNotifTime(i)}
-                  className="text-red-400 hover:text-red-300 text-sm">× Remover</button>
+                <button onClick={() => removeNotifTime(i)} className="text-sm" style={{ color: "#D94F4F" }}>× Remover</button>
               </div>
             ))}
             <button onClick={addNotifTime} className="btn-ghost text-sm mt-1">+ Adicionar horário</button>
@@ -181,20 +166,19 @@ export default function ConfiguracoesPage() {
       {/* WhatsApp */}
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
-          <MessageSquare size={18} className="text-emerald-400" /> WhatsApp (CallMeBot)
+          <MessageSquare size={18} style={{ color: "#3ABAB4" }} /> WhatsApp (CallMeBot)
         </h2>
-        <p className="text-sm text-slate-400 mb-1">Receba lembretes automáticos no WhatsApp — 100% gratuito</p>
+        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Receba lembretes automáticos — 100% gratuito</p>
         <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
-          className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 mb-4">
+          className="text-xs flex items-center gap-1 mb-4" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Como obter sua chave gratuita
         </a>
-
         <div className="space-y-3">
           <div>
             <label className="label">Número WhatsApp (com código do país)</label>
             <input className="input" placeholder="55119XXXXXXXX" value={form.whatsapp_number}
               onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} />
-            <p className="text-xs text-slate-500 mt-1">Ex: 5511987654321 (Brasil = 55)</p>
+            <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Ex: 5511987654321 (Brasil = 55)</p>
           </div>
           <div>
             <label className="label">Chave API CallMeBot</label>
@@ -207,22 +191,23 @@ export default function ConfiguracoesPage() {
         </div>
       </section>
 
+      {/* Telegram */}
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
-          <MessageSquare size={18} className="text-cyan-400" /> Telegram
+          <MessageSquare size={18} style={{ color: "#7C6BBD" }} /> Telegram
         </h2>
-        <p className="text-sm text-slate-400 mb-4">Receba lembretes gratuitos pelo Telegram usando um bot.</p>
+        <p className="text-sm mb-4" style={{ color: "#8B95A5" }}>Receba lembretes gratuitos pelo Telegram</p>
         <div className="space-y-3">
           <div>
             <label className="label">Telegram bot token</label>
-            <input className="input" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" value={form.telegram_bot_token}
+            <input className="input" placeholder="123456:ABC-DEF1234ghIkl..." value={form.telegram_bot_token}
               onChange={(e) => setForm((p) => ({ ...p, telegram_bot_token: e.target.value }))} />
           </div>
           <div>
             <label className="label">Telegram chat_id</label>
             <input className="input" placeholder="123456789" value={form.telegram_chat_id}
               onChange={(e) => setForm((p) => ({ ...p, telegram_chat_id: e.target.value }))} />
-            <p className="text-xs text-slate-500 mt-1">Use o chat_id do seu usuário ou grupo.</p>
+            <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Use o chat_id do seu usuário ou grupo.</p>
           </div>
           <button onClick={testTelegram} disabled={testingTg} className="btn-ghost text-sm">
             {testingTg ? "Enviando..." : "📱 Testar envio Telegram"}
@@ -233,7 +218,7 @@ export default function ConfiguracoesPage() {
       {/* Pomodoro */}
       <section className="card">
         <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Timer size={18} className="text-red-400" /> Pomodoro
+          <Timer size={18} style={{ color: "#D94F4F" }} /> Pomodoro
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -255,7 +240,7 @@ export default function ConfiguracoesPage() {
       {/* Metas */}
       <section className="card">
         <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Smartphone size={18} className="text-violet-400" /> Metas Padrão
+          <Smartphone size={18} style={{ color: "#7C6BBD" }} /> Metas Padrão
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -276,14 +261,14 @@ export default function ConfiguracoesPage() {
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
           🤖 Google Gemini (IA Motivacional)
         </h2>
-        <p className="text-sm text-slate-400 mb-1">Chave gratuita para mensagens personalizadas da IA</p>
+        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
         <a href="https://aistudio.google.com/app/apikey" target="_blank"
-          className="text-xs text-sky-400 flex items-center gap-1 mb-3">
+          className="text-xs flex items-center gap-1 mb-3" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Obter chave gratuita no Google AI Studio
         </a>
         <input className="input" placeholder="AIzaSy..." value={form.gemini_api_key}
           onChange={(e) => setForm((p) => ({ ...p, gemini_api_key: e.target.value }))} />
-        <p className="text-xs text-slate-500 mt-1">Sem chave, mensagens estáticas são usadas</p>
+        <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Sem chave, mensagens estáticas são usadas</p>
       </section>
 
       {/* Salvar */}

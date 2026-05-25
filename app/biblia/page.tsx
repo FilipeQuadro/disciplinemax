@@ -96,10 +96,10 @@ export default function BibliaPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BookMarked size={24} className="text-amber-400" /> Leitura Bíblica
+          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <BookMarked size={24} style={{ color: "#D4AF37" }} /> Leitura Bíblica
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Acompanhe sua jornada na Palavra</p>
+          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Acompanhe sua jornada na Palavra</p>
         </div>
         <button onClick={() => setShowGoalForm(!showGoalForm)} className="btn-ghost text-sm flex items-center gap-2">
           <Sparkles size={14} /> Configurar <ChevronDown size={14} className={clsx("transition-transform duration-300", showGoalForm && "rotate-180")} />
@@ -108,43 +108,56 @@ export default function BibliaPage() {
 
       {/* Versículo */}
       {verse && (
-        <div className="rounded-2xl p-5 relative overflow-hidden border border-amber-500/15 shimmer"
-          style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(139,92,246,0.03) 100%)" }}>
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-              <Star size={18} className="text-amber-400" />
-            </div>
-            <div>
-              <p className="text-[10px] text-amber-400/60 font-semibold uppercase tracking-widest mb-2">Versículo do Dia</p>
-              <p className="text-white font-medium italic text-lg leading-relaxed">"{verse.verse}"</p>
-              <p className="text-amber-400/50 text-sm mt-2">— {verse.reference}</p>
-            </div>
+        <div className="rounded-2xl p-5 relative overflow-hidden shimmer"
+          style={{
+            background: "linear-gradient(145deg, rgba(212,175,55,0.06) 0%, rgba(20,24,32,0.9) 60%, rgba(124,107,189,0.03) 100%)",
+            border: "1px solid rgba(212,175,55,0.15)",
+          }}
+        >
+          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
+          <div className="relative">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
+              <Star size={11} /> Versículo do Dia
+            </p>
+            <p className="text-white font-serif italic text-lg leading-relaxed">"{verse.verse}"</p>
+            <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
           </div>
         </div>
       )}
 
       {/* Status */}
       <div className={clsx(
-        "glass rounded-2xl p-5 flex items-center justify-between glow-border transition-all duration-300",
-        goalMet ? "border-emerald-500/20 bg-emerald-500/[0.03]" : "border-amber-500/10"
-      )}>
+        "rounded-2xl p-5 flex items-center justify-between glow-border transition-all duration-300",
+      )}
+        style={{
+          background: goalMet
+            ? "linear-gradient(145deg, rgba(58,186,180,0.06) 0%, rgba(20,24,32,0.9) 100%)"
+            : "linear-gradient(145deg, rgba(212,175,55,0.04) 0%, rgba(20,24,32,0.9) 100%)",
+          border: goalMet ? "1px solid rgba(58,186,180,0.15)" : "1px solid rgba(212,175,55,0.1)",
+        }}
+      >
         <div className="flex items-center gap-4">
-          <div className={clsx("w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold transition-all duration-500",
-            goalMet ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/10 text-amber-400")}>
+          <div className={clsx("w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold transition-all duration-500")}
+            style={{
+              background: goalMet ? "rgba(58,186,180,0.12)" : "rgba(212,175,55,0.08)",
+              color: goalMet ? "#3ABAB4" : "#D4AF37",
+            }}
+          >
             {goalMet ? "✓" : todayBibleChapters}
           </div>
           <div>
             <p className="font-semibold text-white">
               {goalMet ? "Meta bíblica cumprida! 🙌" : `${todayBibleChapters} de ${bibleGoal?.daily_chapters ?? 0} capítulos`}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm" style={{ color: "#8B95A5" }}>
               {goalMet ? "A Palavra habita em você abundantemente." : `Faltam ${chaptersLeft} capítulo(s)`}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold gradient-text">{pct}%</p>
-          <p className="text-[10px] text-slate-600">do dia</p>
+          <p className="text-3xl font-bold gradient-text-gold">{pct}%</p>
+          <p className="text-[10px]" style={{ color: "#555E6E" }}>do dia</p>
         </div>
       </div>
 
@@ -158,8 +171,12 @@ export default function BibliaPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {READING_PLANS.map((plan) => (
                   <button key={plan.id} onClick={() => setGoalForm((p) => ({ ...p, plan_name: plan.id, daily_chapters: plan.chapters || p.daily_chapters }))}
-                    className={clsx("p-3 rounded-xl border text-left transition-all duration-200", goalForm.plan_name === plan.id
-                      ? "border-amber-500/40 bg-amber-500/[0.06] text-amber-300" : "border-white/5 hover:border-white/10 text-slate-500")}>
+                    className={clsx("p-3 rounded-xl border text-left transition-all duration-200")}
+                    style={{
+                      borderColor: goalForm.plan_name === plan.id ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.05)",
+                      background: goalForm.plan_name === plan.id ? "rgba(212,175,55,0.05)" : "transparent",
+                      color: goalForm.plan_name === plan.id ? "#D4AF37" : "#8B95A5",
+                    }}>
                     <p className="text-sm font-medium">{plan.name}</p>
                     {plan.duration && <p className="text-[10px] opacity-50">{plan.chapters} cap/dia · {plan.duration}</p>}
                   </button>
@@ -170,10 +187,10 @@ export default function BibliaPage() {
               <label className="label">Capítulos por dia</label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: Math.max(1, p.daily_chapters - 1) }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold text-slate-400 hover:text-white transition-colors">−</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "#8B95A5" }}>−</button>
                 <span className="text-2xl font-bold text-white w-12 text-center">{goalForm.daily_chapters}</span>
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: p.daily_chapters + 1 }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold text-slate-400 hover:text-white transition-colors">+</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "#8B95A5" }}>+</button>
               </div>
             </div>
             <button onClick={saveGoal} className="btn-primary">Salvar Plano</button>
@@ -184,7 +201,7 @@ export default function BibliaPage() {
       {/* Registrar */}
       <div className="card">
         <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Plus size={16} className="text-amber-400" /> Registrar Leitura
+          <Plus size={16} style={{ color: "#D4AF37" }} /> Registrar Leitura
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -212,26 +229,27 @@ export default function BibliaPage() {
       {/* Histórico */}
       <div>
         <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-          <Calendar size={16} className="text-amber-400" /> Leituras Recentes
+          <Calendar size={16} style={{ color: "#D4AF37" }} /> Leituras Recentes
         </h3>
         <div className="space-y-2">
           {history.length === 0 ? (
-            <div className="card text-center py-8 text-slate-600">Nenhuma leitura registrada</div>
+            <div className="card text-center py-8" style={{ color: "#555E6E" }}>Nenhuma leitura registrada</div>
           ) : (
             history.map((r: any) => (
               <div key={r.id} className="glass-hover rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <BookMarked size={14} className="text-amber-400" />
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: "rgba(212,175,55,0.08)" }}>
+                    <BookMarked size={14} style={{ color: "#D4AF37" }} />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{r.book_name} {r.chapter}</p>
-                    {r.notes && <p className="text-xs text-slate-600 truncate max-w-xs">{r.notes}</p>}
+                    {r.notes && <p className="text-xs truncate max-w-xs" style={{ color: "#555E6E" }}>{r.notes}</p>}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-slate-600">{format(new Date(r.read_at), "dd/MM HH:mm")}</p>
-                  <span className="badge bg-emerald-500/10 text-emerald-400 text-[10px] mt-0.5">✓ Lido</span>
+                  <p className="text-[10px]" style={{ color: "#555E6E" }}>{format(new Date(r.read_at), "dd/MM HH:mm")}</p>
+                  <span className="badge text-[10px] mt-0.5" style={{ background: "rgba(58,186,180,0.1)", color: "#3ABAB4" }}>✓ Lido</span>
                 </div>
               </div>
             ))
@@ -243,7 +261,7 @@ export default function BibliaPage() {
       {weeklyStats.length > 0 && (
         <div className="card shimmer">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp size={16} className="text-amber-400" /> Capítulos por Dia
+            <TrendingUp size={16} style={{ color: "#D4AF37" }} /> Capítulos por Dia
           </h3>
           <div className="flex items-end gap-2 h-24">
             {weeklyStats.map((s: any, i: number) => {
@@ -252,10 +270,14 @@ export default function BibliaPage() {
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
-                    <div className="w-full rounded-t-md bg-gradient-to-t from-amber-600/40 to-amber-400/70 transition-all duration-700"
-                      style={{ height: `${pct}%`, minHeight: s.bible_chapters_read > 0 ? "4px" : "0" }} />
+                    <div className="w-full rounded-t-md transition-all duration-700"
+                      style={{
+                        height: `${pct}%`,
+                        minHeight: s.bible_chapters_read > 0 ? "4px" : "0",
+                        background: "linear-gradient(to top, rgba(212,175,55,0.3), rgba(212,175,55,0.6))",
+                      }} />
                   </div>
-                  <p className="text-[10px] text-slate-600">{format(new Date(s.date), "dd/MM")}</p>
+                  <p className="text-[10px]" style={{ color: "#555E6E" }}>{format(new Date(s.date), "dd/MM")}</p>
                   <p className="text-[10px] font-semibold text-white">{s.bible_chapters_read || 0}</p>
                 </div>
               );

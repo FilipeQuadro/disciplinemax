@@ -6,13 +6,13 @@ export function BackgroundParticles() {
   const [particles, setParticles] = useState<Array<{ id: number; size: number; left: string; duration: string; delay: string; color: string }>>([]);
 
   useEffect(() => {
-    const colors = ["#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981"];
-    const p = Array.from({ length: 12 }, (_, i) => ({
+    const colors = ["#D4AF37", "#7C6BBD", "#3ABAB4", "#E8844A"];
+    const p = Array.from({ length: 10 }, (_, i) => ({
       id: i,
-      size: Math.random() * 4 + 2,
+      size: Math.random() * 3 + 1.5,
       left: `${Math.random() * 100}%`,
-      duration: `${Math.random() * 15 + 15}s`,
-      delay: `${Math.random() * 10}s`,
+      duration: `${Math.random() * 20 + 20}s`,
+      delay: `${Math.random() * 15}s`,
       color: colors[i % colors.length],
     }));
     setParticles(p);

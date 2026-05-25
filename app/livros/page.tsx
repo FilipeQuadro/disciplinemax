@@ -11,7 +11,7 @@ import { toast } from "react-hot-toast";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { clsx } from "clsx";
 
-const BOOK_COLORS = ["#8b5cf6", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#ef4444"];
+const BOOK_COLORS = ["#7C6BBD", "#3ABAB4", "#D4AF37", "#E8844A", "#D94F4F", "#7C6BBD"];
 
 const emptyBook = {
   title: "", author: "", total_pages: 200, current_page: 0,
@@ -87,10 +87,10 @@ export default function LivrosPage() {
     <div className="space-y-6 page-enter stagger-children">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BookOpen size={24} className="text-violet-400" /> Meus Livros
+          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <BookOpen size={24} style={{ color: "#7C6BBD" }} /> Meus Livros
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Até 4 livros em leitura simultânea</p>
+          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Até 4 livros em leitura simultânea</p>
         </div>
         {books.length < 4 && !showForm && (
           <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyBook }); }}
@@ -144,7 +144,7 @@ export default function LivrosPage() {
               <div className="flex gap-2 mt-1">
                 {BOOK_COLORS.map((c) => (
                   <button key={c} onClick={() => setForm((p) => ({ ...p, color: c }))}
-                    className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-white/50 ring-offset-2 ring-offset-[#12121c]")}
+                    className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2")}
                     style={{ background: c }} />
                 ))}
               </div>
@@ -163,11 +163,12 @@ export default function LivrosPage() {
 
       {books.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
-            <BookOpen size={28} className="text-violet-400" />
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: "rgba(124,107,189,0.08)" }}>
+            <BookOpen size={28} style={{ color: "#7C6BBD" }} />
           </div>
-          <h3 className="text-slate-400 font-medium mb-2">Nenhum livro ainda</h3>
-          <p className="text-slate-600 text-sm">Adicione até 4 livros para acompanhar</p>
+          <h3 className="font-medium mb-2" style={{ color: "#8B95A5" }}>Nenhum livro ainda</h3>
+          <p className="text-sm" style={{ color: "#555E6E" }}>Adicione até 4 livros para acompanhar</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -199,9 +200,15 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
     ? Math.ceil(pagesLeft / Math.max(1, differenceInDays(parseISO(book.target_date), new Date()))) : null;
 
   return (
-    <div className="glass rounded-2xl p-5 glow-border transition-all duration-300" style={{ borderLeft: `4px solid ${book.color}40` }}>
+    <div className="rounded-2xl p-5 glow-border transition-all duration-300"
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.05)",
+        borderLeft: `3px solid ${book.color}40`,
+      }}>
       <div className="flex items-start gap-4">
-        <div className="shrink-0 w-14 h-20 rounded-xl overflow-hidden shadow-lg" style={{ background: book.color + "18" }}>
+        <div className="shrink-0 w-14 h-20 rounded-xl overflow-hidden"
+          style={{ background: book.color + "10" }}>
           {book.cover_url ? (
             <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
           ) : (
@@ -214,13 +221,13 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-bold text-white">{book.title}</h3>
-              {book.author && <p className="text-xs text-slate-600">{book.author}</p>}
+              {book.author && <p className="text-xs" style={{ color: "#555E6E" }}>{book.author}</p>}
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-600 hover:text-slate-300 transition-colors">
+              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
                 <Edit2 size={13} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors">
+              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "#555E6E" }}>
                 <Trash2 size={13} />
               </button>
             </div>
@@ -228,40 +235,41 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
             <MiniStat label="Progresso" value={`${progress}%`} color={book.color} />
-            <MiniStat label="Página" value={`${book.current_page}/${book.total_pages}`} color="#64748b" />
-            <MiniStat label="Meta hoje" value={`${book.pages_read_today}/${book.daily_goal}`} color={dailyLeft === 0 ? "#10b981" : "#f59e0b"} />
-            {finishDate && <MiniStat label="Previsão" value={format(finishDate, "dd/MM")} color="#0ea5e9" />}
+            <MiniStat label="Página" value={`${book.current_page}/${book.total_pages}`} color="#8B95A5" />
+            <MiniStat label="Meta hoje" value={`${book.pages_read_today}/${book.daily_goal}`} color={dailyLeft === 0 ? "#3ABAB4" : "#D4AF37"} />
+            {finishDate && <MiniStat label="Previsão" value={format(finishDate, "dd/MM")} color="#3ABAB4" />}
           </div>
 
-          <div className="progress-bar mt-3 h-1.5">
-            <div className="progress-fill h-full rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${book.color}, ${book.color}aa)` }} />
+          <div className="progress-bar mt-3">
+            <div className="progress-fill"
+              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${book.color}, ${book.color}88)` }} />
           </div>
 
           {book.target_date && daysUntilTarget !== null && daysUntilTarget > 0 && pagesNeededPerDay && pagesNeededPerDay > book.daily_goal && (
-            <p className="text-xs text-orange-400/80 mt-2 flex items-center gap-1">
+            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "rgba(232,132,74,0.8)" }}>
               ⚡ Para terminar em {format(parseISO(book.target_date), "dd/MM")}: {pagesNeededPerDay} pgs/dia
             </p>
           )}
 
           <div className="flex items-center gap-2 mt-4">
-            <div className="flex items-center gap-0.5 bg-white/3 border border-white/5 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-0.5 rounded-xl overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <button onClick={() => onReadingChange(Math.max(0, readingValue - 5))}
-                className="px-3 py-2 text-slate-500 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">−</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#555E6E" }}>−</button>
               <input type="number" value={readingValue} onChange={(e) => onReadingChange(+e.target.value)}
                 className="w-14 text-center bg-transparent text-white text-sm py-2 focus:outline-none" placeholder="0" />
               <button onClick={() => onReadingChange(readingValue + 5)}
-                className="px-3 py-2 text-slate-500 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">+</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#555E6E" }}>+</button>
             </div>
-            <span className="text-xs text-slate-600">págs</span>
+            <span className="text-xs" style={{ color: "#555E6E" }}>págs</span>
             <button onClick={onLog} disabled={!readingValue}
               className="btn-primary text-xs py-2 px-4 disabled:opacity-30">
               + Registrar
             </button>
             {dailyLeft > 0 ? (
-              <span className="text-xs text-orange-400/70 ml-auto">{dailyLeft} faltam</span>
+              <span className="text-xs ml-auto" style={{ color: "rgba(232,132,74,0.7)" }}>{dailyLeft} faltam</span>
             ) : (
-              <span className="text-xs text-emerald-400 ml-auto flex items-center gap-1">
+              <span className="text-xs ml-auto flex items-center gap-1" style={{ color: "#3ABAB4" }}>
                 <Check size={10} /> Meta! ✨
               </span>
             )}
@@ -274,8 +282,8 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
 
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-white/3 rounded-lg p-2 border border-white/[0.03]">
-      <p className="text-[10px] text-slate-600 mb-0.5">{label}</p>
+    <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)" }}>
+      <p className="text-[10px] mb-0.5" style={{ color: "#555E6E" }}>{label}</p>
       <p className="text-sm font-semibold" style={{ color }}>{value}</p>
     </div>
   );

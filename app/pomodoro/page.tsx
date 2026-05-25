@@ -9,9 +9,9 @@ import { format } from "date-fns";
 import { clsx } from "clsx";
 
 const COLORS = {
-  focus: { primary: "#ef4444", bg: "from-red-500/10 to-rose-500/5", border: "border-red-500/15", ring: "#ef4444" },
-  shortBreak: { primary: "#10b981", bg: "from-emerald-500/10 to-green-500/5", border: "border-emerald-500/15", ring: "#10b981" },
-  longBreak: { primary: "#0ea5e9", bg: "from-sky-500/10 to-blue-500/5", border: "border-sky-500/15", ring: "#0ea5e9" },
+  focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
+  shortBreak: { primary: "#3ABAB4", bg: "linear-gradient(145deg, rgba(58,186,180,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(58,186,180,0.12)", ring: "#3ABAB4" },
+  longBreak: { primary: "#7C6BBD", bg: "linear-gradient(145deg, rgba(124,107,189,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(124,107,189,0.12)", ring: "#7C6BBD" },
 };
 
 export default function PomodoroPage() {
@@ -105,7 +105,7 @@ export default function PomodoroPage() {
   const seconds = pomodoroTimeLeft % 60;
   const colors = COLORS[mode];
 
-  const size = 260; const strokeWidth = 6; const r = (size - strokeWidth) / 2;
+  const size = 260; const strokeWidth = 5; const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -117,10 +117,10 @@ export default function PomodoroPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Timer size={24} className="text-red-400" /> Pomodoro
+          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <Timer size={24} style={{ color: "#D94F4F" }} /> Pomodoro
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Técnica de foco profundo</p>
+          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Técnica de foco profundo</p>
         </div>
         <button onClick={() => setShowSettings(!showSettings)} className="btn-ghost text-sm">⚙️ Tempos</button>
       </div>
@@ -136,40 +136,48 @@ export default function PomodoroPage() {
         </div>
       )}
 
-      {/* Modo selector */}
-      <div className="flex gap-1 p-1 bg-white/3 rounded-2xl border border-white/5">
+      {/* Mode selector */}
+      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
         {(["focus", "shortBreak", "longBreak"] as const).map((m) => (
           <button key={m} onClick={() => { if (!pomodoroActive) setMode(m); }} disabled={pomodoroActive}
-            className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
-              mode === m ? "bg-white/10 text-white shadow-sm" : "text-slate-600 hover:text-slate-400 disabled:cursor-not-allowed")}>
+            className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300")}
+            style={{
+              background: mode === m ? "rgba(255,255,255,0.06)" : "transparent",
+              color: mode === m ? "#F0F0F0" : "#555E6E",
+              cursor: pomodoroActive ? "not-allowed" : "pointer",
+            }}>
             {m === "focus" ? "🎯 Foco" : m === "shortBreak" ? "☕ Pausa" : "🎉 Longa"}
           </button>
         ))}
       </div>
 
       {/* Timer */}
-      <div className={clsx("glass rounded-2xl bg-gradient-to-br flex flex-col items-center py-8 border", colors.bg, colors.border)}>
+      <div className="rounded-2xl flex flex-col items-center py-8"
+        style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
         <input className="input text-center mb-6 max-w-xs text-sm" placeholder="Em que está trabalhando?"
           value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} />
 
         <div className="relative" style={{ width: size, height: size }}>
           <svg width={size} height={size} className="timer-ring absolute top-0 left-0">
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={strokeWidth} />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth={strokeWidth} />
             <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.ring} strokeWidth={strokeWidth}
               strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-              style={{ transition: "stroke-dashoffset 1s linear", filter: `drop-shadow(0 0 12px ${colors.ring}60)` }} />
+              style={{ transition: "stroke-dashoffset 1s linear", filter: `drop-shadow(0 0 12px ${colors.ring}50)` }} />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-6xl font-bold text-white font-mono tracking-tight">
               {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
             </div>
-            <p className="text-slate-500 text-sm mt-2">
+            <p className="text-sm mt-2" style={{ color: "#555E6E" }}>
               {mode === "focus" ? "Foco" : mode === "shortBreak" ? "Pausa curta" : "Pausa longa"}
             </p>
             <div className="flex gap-1.5 mt-3">
               {Array.from({ length: pomosUntilLong }).map((_, i) => (
-                <div key={i} className={clsx("w-2 h-2 rounded-full transition-all duration-300",
-                  i < (pomodoroCount % pomosUntilLong) ? "bg-red-400 shadow-sm shadow-red-400/50" : "bg-white/10")} />
+                <div key={i} className={clsx("w-2 h-2 rounded-full transition-all duration-300")}
+                  style={{
+                    background: i < (pomodoroCount % pomosUntilLong) ? colors.ring : "rgba(255,255,255,0.08)",
+                    boxShadow: i < (pomodoroCount % pomosUntilLong) ? `0 0 6px ${colors.ring}50` : "none",
+                  }} />
               ))}
             </div>
           </div>
@@ -177,16 +185,18 @@ export default function PomodoroPage() {
 
         {/* Controls */}
         <div className="flex items-center gap-4 mt-6">
-          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-white transition-colors">
+          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
             <RotateCcw size={18} />
           </button>
           <button onClick={toggleTimer}
-            className={clsx("w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold transition-all duration-300 active:scale-95",
-              pomodoroActive ? "bg-slate-700/60 hover:bg-slate-600/60" : "")}
-            style={!pomodoroActive ? { background: colors.ring, boxShadow: `0 8px 40px ${colors.ring}40` } : {}}>
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold transition-all duration-300 active:scale-95"
+            style={!pomodoroActive ? {
+              background: colors.ring,
+              boxShadow: `0 8px 40px ${colors.ring}30`,
+            } : { background: "rgba(255,255,255,0.06)" }}>
             {pomodoroActive ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
           </button>
-          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-white transition-colors">
+          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
             <SkipForward size={18} />
           </button>
         </div>
@@ -195,13 +205,14 @@ export default function PomodoroPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { value: totalFocusToday, label: "Pomodoros hoje", color: "text-red-400" },
-          { value: totalMinutesToday, label: "Minutos focados", color: "text-sky-400" },
-          { value: pomodoroCount, label: "Total acumulado", color: "text-violet-400" },
+          { value: totalFocusToday, label: "Pomodoros hoje", color: "#D94F4F" },
+          { value: totalMinutesToday, label: "Minutos focados", color: "#3ABAB4" },
+          { value: pomodoroCount, label: "Total acumulado", color: "#7C6BBD" },
         ].map((stat, i) => (
-          <div key={i} className="glass rounded-2xl p-4 text-center glow-border">
-            <p className={clsx("text-3xl font-bold count-up", stat.color)}>{stat.value}</p>
-            <p className="text-[10px] text-slate-600 mt-1">{stat.label}</p>
+          <div key={i} className="rounded-2xl p-4 text-center glow-border"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <p className="text-3xl font-bold count-up" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>{stat.label}</p>
           </div>
         ))}
       </div>
@@ -210,21 +221,22 @@ export default function PomodoroPage() {
       {todaySessions.length > 0 && (
         <div>
           <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <BarChart3 size={16} className="text-red-400" /> Sessões de Hoje
+            <BarChart3 size={16} style={{ color: "#D94F4F" }} /> Sessões de Hoje
           </h3>
           <div className="space-y-2">
             {todaySessions.slice(-8).reverse().map((s) => (
               <div key={s.id} className="glass-hover rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-sm">🍅</div>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ background: "rgba(217,79,79,0.08)" }}>🍅</div>
                   <div>
                     <p className="text-sm font-medium text-white">{s.task_name || "Sessão de foco"}</p>
-                    <p className="text-[10px] text-slate-600">{format(new Date(s.started_at), "HH:mm")}</p>
+                    <p className="text-[10px]" style={{ color: "#555E6E" }}>{format(new Date(s.started_at), "HH:mm")}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-white">{s.duration_minutes} min</p>
-                  <span className="badge bg-emerald-500/10 text-emerald-400 text-[10px]">✓</span>
+                  <span className="badge text-[10px]" style={{ background: "rgba(58,186,180,0.1)", color: "#3ABAB4" }}>✓</span>
                 </div>
               </div>
             ))}

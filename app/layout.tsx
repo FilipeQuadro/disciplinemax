@@ -7,7 +7,7 @@ import { IntroScreen } from "@/components/IntroScreen";
 import { BackgroundParticles } from "@/components/BackgroundParticles";
 
 export const metadata: Metadata = {
-  title: "DisciplinaApp – Mentor de Estudos",
+  title: "DisciplinaMax – Mentor de Disciplina",
   description: "Seu assistente inteligente de leitura, foco e disciplina diária",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06060b",
+  themeColor: "#0B0E14",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -37,13 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="bg-[#06060b] text-slate-100 antialiased">
+      <body className="bg-[#0B0E14] text-slate-100 antialiased">
         <IntroScreen />
         <BackgroundParticles />
         <div className="flex h-screen overflow-hidden relative z-10">
           <Sidebar />
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
+            <div className="max-w-5xl mx-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
               {children}
             </div>
           </main>
@@ -53,15 +53,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           position="top-right"
           toastOptions={{
             style: {
-              background: "#12121c",
-              color: "#f1f5f9",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#141820",
+              color: "#F0F0F0",
+              border: "1px solid rgba(212,175,55,0.12)",
               borderRadius: "14px",
               fontSize: "14px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
             },
-            success: { iconTheme: { primary: "#10b981", secondary: "#f1f5f9" } },
-            error: { iconTheme: { primary: "#ef4444", secondary: "#f1f5f9" } },
+            success: { iconTheme: { primary: "#D4AF37", secondary: "#0B0E14" } },
+            error: { iconTheme: { primary: "#D94F4F", secondary: "#F0F0F0" } },
           }}
         />
       </body>

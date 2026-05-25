@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Target } from "lucide-react";
+import { FlameKindling } from "lucide-react";
 
 export function IntroScreen() {
   const [visible, setVisible] = useState(true);
@@ -10,7 +10,7 @@ export function IntroScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setFadeOut(true);
-      setTimeout(() => setVisible(false), 600);
+      setTimeout(() => setVisible(false), 800);
     }, 2800);
     return () => clearTimeout(timer);
   }, []);
@@ -20,10 +20,10 @@ export function IntroScreen() {
   return (
     <div className={`intro-screen ${fadeOut ? "fade-out" : ""}`}>
       <div className="intro-logo">
-        <Target size={36} className="text-white" />
+        <FlameKindling size={32} className="text-[#0B0E14]" />
       </div>
-      <p className="intro-title">DisciplinaApp</p>
-      <p className="intro-subtitle">Seu mentor de estudos e disciplina diária</p>
+      <p className="intro-title">DisciplinaMax</p>
+      <p className="intro-subtitle">Mentor de Disciplina</p>
       <div className="intro-loader">
         <div className="intro-loader-bar" />
       </div>
