@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS books (
   daily_goal INTEGER NOT NULL DEFAULT 20,
   pages_read_today INTEGER NOT NULL DEFAULT 0,
   target_date DATE,
-  color TEXT DEFAULT '#8b5cf6',
+  color TEXT DEFAULT '#7C6BBD',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

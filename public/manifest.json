@@ -1,11 +1,11 @@
 {
-  "name": "DisciplinaApp - Mentor de Estudos",
+  "name": "DisciplinaMax – Mentor de Disciplina",
   "short_name": "Disciplina",
-  "description": "Seu mentor de leitura, estudos e foco diário",
+  "description": "Seu mentor de leitura, foco e disciplina diária",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0ea5e9",
+  "background_color": "#0B0E14",
+  "theme_color": "#D4AF37",
   "orientation": "portrait-primary",
   "icons": [
     {
