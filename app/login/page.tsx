@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { FlameKindling, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { playIntroChime } from "@/components/IntroScreen";
+import { FlameKindling, Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
@@ -12,6 +13,12 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,9 +29,11 @@ export default function LoginPage() {
       if (isSignUp) {
         const { error: err } = await signUp(email, password, name);
         if (err) setError(err);
+        else playIntroChime();
       } else {
         const { error: err } = await signIn(email, password);
         if (err) setError(err);
+        else playIntroChime();
       }
     } finally {
       setLoading(false);
@@ -32,108 +41,144 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0E14" }}>
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
+    <div className="login-page">
+      {/* Particles */}
+      <div className="bg-particles">
+        {[...Array(8)].map((_, i) => (
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+            key={i}
+            className="bg-particle"
             style={{
-              background: "linear-gradient(135deg, #D4AF37, #F5D060)",
-              boxShadow: "0 0 40px rgba(212,175,55,0.2)",
+              width: Math.random() * 3 + 1.5,
+              height: Math.random() * 3 + 1.5,
+              left: `${Math.random() * 100}%`,
+              background: ["#D4AF37", "#7C6BBD", "#3ABAB4", "#E8844A"][i % 4],
+              animationDuration: `${Math.random() * 20 + 20}s`,
+              animationDelay: `${Math.random() * 10}s`,
             }}
-          >
-            <FlameKindling size={28} className="text-[#0B0E14]" />
+          />
+        ))}
+      </div>
+
+      {/* Ambient glow */}
+      <div className="login-ambient-glow" />
+
+      {/* Content */}
+      <div className={`login-container ${mounted ? "mounted" : ""}`}>
+        {/* Logo */}
+        <div className="login-logo-wrapper">
+          <div className="login-logo">
+            <FlameKindling size={30} className="text-[#0B0E14]" />
           </div>
-          <h1 className="font-serif text-2xl font-bold gradient-text-gold">DisciplinaMax</h1>
-          <p className="text-xs mt-1 tracking-[0.15em] uppercase" style={{ color: "#555E6E" }}>Mentor de Disciplina</p>
+          <h1 className="login-title">DisciplinaMax</h1>
+          <p className="login-subtitle">Mentor de Disciplina</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
-            <div>
-              <label className="label">Nome</label>
+        {/* Form Card */}
+        <div className="login-card">
+          <form onSubmit={handleSubmit} className="login-form stagger-children">
+            {isSignUp && (
+              <div className="login-field">
+                <label className="label">Nome</label>
+                <div className="relative">
+                  <User size={16} className="input-icon" />
+                  <input
+                    type="text"
+                    className="input pl-10"
+                    placeholder="Seu nome"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required={isSignUp}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="login-field">
+              <label className="label">Email</label>
               <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#555E6E" }} />
+                <Mail size={16} className="input-icon" />
                 <input
-                  type="text"
+                  type="email"
                   className="input pl-10"
-                  placeholder="Seu nome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required={isSignUp}
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="label">Email</label>
-            <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#555E6E" }} />
-              <input
-                type="email"
-                className="input pl-10"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+            <div className="login-field">
+              <label className="label">Senha</label>
+              <div className="relative">
+                <Lock size={16} className="input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="input pl-10 pr-10"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: "#555E6E" }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="label">Senha</label>
-            <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#555E6E" }} />
-              <input
-                type="password"
-                className="input pl-10"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-sm text-center" style={{ color: "#D94F4F" }}>{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full flex items-center justify-center gap-2 py-3"
-          >
-            {loading ? "Carregando..." : (
-              <>
-                {isSignUp ? "Criar Conta" : "Entrar"}
-                <ArrowRight size={16} />
-              </>
+            {error && (
+              <div className="login-error">
+                <p>{error}</p>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Toggle */}
-        <p className="text-center text-sm mt-6" style={{ color: "#8B95A5" }}>
-          {isSignUp ? "Já tem conta?" : "Ainda não tem conta?"}{" "}
-          <button
-            onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
-            className="font-medium hover:underline"
-            style={{ color: "#D4AF37" }}
-          >
-            {isSignUp ? "Entrar" : "Criar conta"}
-          </button>
-        </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2 py-3 login-submit"
+            >
+              {loading ? (
+                <div className="login-spinner" />
+              ) : (
+                <>
+                  {isSignUp ? "Criar Conta" : "Entrar"}
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
 
-        {/* Guest */}
-        <div className="mt-6 text-center">
-          <p className="text-xs mb-3" style={{ color: "#555E6E" }}>ou continue sem conta</p>
-          <a href="/" className="btn-ghost text-sm">
-            Entrar como convidado →
+          {/* Toggle */}
+          <div className="login-toggle">
+            <span style={{ color: "#8B95A5" }}>
+              {isSignUp ? "Já tem conta?" : "Ainda não tem conta?"}
+            </span>
+            <button
+              onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
+              className="login-toggle-btn"
+            >
+              {isSignUp ? "Entrar" : "Criar conta"}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="login-divider">
+            <div className="login-divider-line" />
+            <span>ou</span>
+            <div className="login-divider-line" />
+          </div>
+
+          {/* Guest */}
+          <a href="/" className="login-guest">
+            <FlameKindling size={14} />
+            Entrar como convidado
           </a>
         </div>
       </div>
