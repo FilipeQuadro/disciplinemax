@@ -133,10 +133,14 @@ export async function GET(req: Request) {
     results.cron = { ok: false, detail: "cannot query notifications_sent" };
   }
 
-  const allOk = Object.values(results).every((r) => r.ok);
+  // Ollama is optional (only runs locally), so exclude from overall status
+  const criticalOk = Object.entries(results)
+    .filter(([k]) => k !== "ollama")
+    .every(([, r]) => r.ok);
+
   return NextResponse.json({
-    ok: allOk,
+    ok: criticalOk,
     timestamp: new Date().toISOString(),
     services: results,
-  }, { status: allOk ? 200 : 503 });
+  }, { status: criticalOk ? 200 : 503 });
 }
