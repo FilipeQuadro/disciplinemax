@@ -85,7 +85,7 @@ async function testAPIs() {
     const brtMatch = d.brtTime?.match(/^\d{2}:\d{2}$/);
     brtMatch ? ok("Cron: BRT timezone", d.brtTime) : fail("Cron: BRT timezone inválido", d.brtTime);
     // Verificar que não processou duplicatas (processed deve ser 0 se já rodou antes)
-    typeof d.processed === "number" ? ok("Cron: processed", `${d.processed}`) : fail("Cron: sem campo processed");
+    (typeof d.sent === "number" && typeof d.skipped === "number") ? ok("Cron: sent/skipped", `${d.sent}/${d.skipped}`) : fail("Cron: sem campos sent/skipped");
   } catch (e) { fail("Cron", e.message); }
 
   // AI — Gemini retorna texto real em PT-BR (ou fallback estático)
@@ -153,14 +153,14 @@ async function testSupabase() {
   const tables = ["books", "bible_goals", "bible_readings", "daily_stats", "pomodoro_sessions", "user_settings", "notification_subscriptions", "notifications_sent"];
   for (const t of tables) {
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/${t}?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+      const r = await fetch(`${SB_URL}/rest/v1/${t}?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(10000) });
       r.ok ? ok(`SELECT ${t}`) : fail(`SELECT ${t}`, `HTTP ${r.status}`);
     } catch (e) { fail(`SELECT ${t}`, e.message); }
   }
 
   // B. user_settings — dados obrigatórios presentes
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/user_settings?user_id=eq.default_user&select=*`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/user_settings?user_id=eq.default_user&select=*`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     const s = d?.[0];
     if (!s) { fail("user_settings", "sem registro default_user"); }
@@ -177,7 +177,7 @@ async function testSupabase() {
 
   // C. bible_goals — dados válidos
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/bible_goals?user_id=eq.default_user&select=*`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/bible_goals?user_id=eq.default_user&select=*`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     const g = d?.[0];
     if (!g) { fail("bible_goals", "sem registro"); }
@@ -196,12 +196,12 @@ async function testSupabase() {
     const ir = await fetch(`${SB_URL}/rest/v1/notifications_sent`, {
       method: "POST", headers: { ...sbH, "Prefer": "return=representation" },
       body: JSON.stringify({ user_id: "default_user", notif_key: testKey }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     ir.ok ? ok("CRUD: INSERT notifications_sent") : fail("CRUD: INSERT", `HTTP ${ir.status}`);
 
     // SELECT (confirmar inseriu)
-    const sr = await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${testKey}`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const sr = await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${testKey}`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const sd = await sr.json();
     sd?.length === 1 ? ok("CRUD: SELECT confirma INSERT") : fail("CRUD: SELECT confirma INSERT", `${sd?.length} rows`);
 
@@ -209,13 +209,13 @@ async function testSupabase() {
     const ur = await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${testKey}`, {
       method: "PATCH", headers: { ...sbH, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: "test_updated" }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     ur.ok ? ok("CRUD: UPDATE notifications_sent") : fail("CRUD: UPDATE", `HTTP ${ur.status}`);
 
     // DELETE (cleanup)
     const dr = await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${testKey}`, {
-      method: "DELETE", headers: sbH, signal: AbortSignal.timeout(5000),
+      method: "DELETE", headers: sbH, signal: AbortSignal.timeout(10000),
     });
     dr.ok ? ok("CRUD: DELETE (cleanup)") : fail("CRUD: DELETE", `HTTP ${dr.status}`);
   } catch (e) { fail("CRUD notifications_sent", e.message); }
@@ -226,22 +226,22 @@ async function testSupabase() {
     await fetch(`${SB_URL}/rest/v1/notifications_sent`, {
       method: "POST", headers: { ...sbH, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: "default_user", notif_key: uniqueKey }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     const r2 = await fetch(`${SB_URL}/rest/v1/notifications_sent`, {
       method: "POST", headers: { ...sbH, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: "default_user", notif_key: uniqueKey }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     r2.status === 409 ? ok("UNIQUE constraint: duplicata rejeitada (409)") : fail("UNIQUE constraint", `esperava 409, veio ${r2.status}`);
     // cleanup
-    await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${uniqueKey}`, { method: "DELETE", headers: sbH, signal: AbortSignal.timeout(5000) });
+    await fetch(`${SB_URL}/rest/v1/notifications_sent?notif_key=eq.${uniqueKey}`, { method: "DELETE", headers: sbH, signal: AbortSignal.timeout(10000) });
   } catch (e) { fail("UNIQUE constraint", e.message); }
 
   // F. RLS — anon key funciona para todas as tabelas
   for (const t of tables) {
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/${t}?select=id&limit=1`, { headers: anonH, signal: AbortSignal.timeout(5000) });
+      const r = await fetch(`${SB_URL}/rest/v1/${t}?select=id&limit=1`, { headers: anonH, signal: AbortSignal.timeout(10000) });
       r.ok ? ok(`RLS anon: ${t}`) : fail(`RLS anon: ${t}`, `HTTP ${r.status}`);
     } catch (e) { fail(`RLS anon: ${t}`, e.message); }
   }
@@ -251,7 +251,7 @@ async function testSupabase() {
     const r = await fetch(`${SB_URL}/rest/v1/notifications_sent`, {
       method: "POST", headers: { ...anonH, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: "default_user", notif_key: `anon_test_${Date.now()}` }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     r.ok || r.status === 201 ? ok("RLS anon: INSERT funciona") : fail("RLS anon: INSERT", `HTTP ${r.status}`);
   } catch (e) { fail("RLS anon: INSERT", e.message); }
@@ -266,7 +266,7 @@ async function testTelegram() {
   // Buscar settings
   let botToken, chatId;
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/user_settings?select=telegram_bot_token,telegram_chat_id,notification_times&user_id=eq.default_user`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/user_settings?select=telegram_bot_token,telegram_chat_id,notification_times&user_id=eq.default_user`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     const s = d?.[0];
     botToken = s?.telegram_bot_token;
@@ -315,7 +315,7 @@ async function testOllama() {
 
   // Disponível
   try {
-    const r = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(5000) });
+    const r = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     const models = d.models?.map(m => m.name) || [];
     models.length > 0 ? ok("Disponível", models.join(", ")) : fail("Ollama", "sem modelos");
@@ -491,11 +491,11 @@ async function testSecurity() {
   // RLS ativo — service_role bypass vs anon respeita
   try {
     // Com service_role, qualquer tabela funciona
-    const r1 = await fetch(`${SB_URL}/rest/v1/books?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r1 = await fetch(`${SB_URL}/rest/v1/books?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     r1.ok ? ok("RLS: service_role bypass") : fail("RLS: service_role", `HTTP ${r1.status}`);
 
     // Com anon, também funciona (nossas policies)
-    const r2 = await fetch(`${SB_URL}/rest/v1/books?select=id&limit=1`, { headers: anonH, signal: AbortSignal.timeout(5000) });
+    const r2 = await fetch(`${SB_URL}/rest/v1/books?select=id&limit=1`, { headers: anonH, signal: AbortSignal.timeout(10000) });
     r2.ok ? ok("RLS: anon com policies") : fail("RLS: anon", `HTTP ${r2.status}`);
   } catch (e) { fail("RLS", e.message); }
 
@@ -512,7 +512,7 @@ async function testData() {
 
   // Books
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/books?select=id,title,current_page,total_pages,pages_read_today,daily_goal&user_id=eq.default_user`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/books?select=id,title,current_page,total_pages,pages_read_today,daily_goal&user_id=eq.default_user`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     d?.length > 0 ? ok("Books: cadastrados", `${d.length} livros`) : warn("Books: nenhum livro cadastrado");
     // Verificar campos válidos
@@ -525,14 +525,14 @@ async function testData() {
   // Daily stats
   try {
     const today = new Date().toISOString().split("T")[0];
-    const r = await fetch(`${SB_URL}/rest/v1/daily_stats?select=*&date=eq.${today}`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/daily_stats?select=*&date=eq.${today}`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     const d = await r.json();
     d?.length > 0 ? ok("Daily stats: hoje", `pages: ${d[0].books_pages_read}, bible: ${d[0].bible_chapters_read}, pomodoros: ${d[0].pomodoros_completed}`) : ok("Daily stats: sem registro hoje (normal se não usou)");
   } catch (e) { fail("Daily stats", e.message); }
 
   // Pomodoro sessions
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/pomodoro_sessions?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${SB_URL}/rest/v1/pomodoro_sessions?select=id&limit=1`, { headers: sbH, signal: AbortSignal.timeout(10000) });
     r.ok ? ok("Pomodoro sessions: tabela acessível") : fail("Pomodoro sessions", `HTTP ${r.status}`);
   } catch (e) { fail("Pomodoro sessions", e.message); }
 }
