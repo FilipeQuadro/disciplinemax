@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { NotificationInit } from "@/components/NotificationInit";
 import { IntroScreen } from "@/components/IntroScreen";
 import { BackgroundParticles } from "@/components/BackgroundParticles";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "DisciplinaMax – Mentor de Disciplina",
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="bg-[#0B0E14] text-slate-100 antialiased">
+        <AuthProvider>
         <IntroScreen />
         <BackgroundParticles />
         <div className="flex h-screen overflow-hidden relative z-10">
@@ -49,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
         </div>
         <NotificationInit />
+        </AuthProvider>
         <Toaster
           position="top-right"
           toastOptions={{

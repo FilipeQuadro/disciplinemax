@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import {
-  Settings, Bell, MessageSquare, Timer, Smartphone, Check, AlertCircle, ExternalLink
+  Settings, Bell, MessageSquare, Timer, Smartphone, Check, AlertCircle, ExternalLink, Shield
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -30,6 +30,8 @@ export default function ConfiguracoesPage() {
     daily_bible_chapters: 3,
     gemini_api_key: "",
     timezone: "America/Sao_Paulo",
+    streak_freeze_available: 1,
+    streak_freeze_used: 0,
   });
   const [notifPerm, setNotifPerm] = useState<string>("default");
   const [testingWa, setTestingWa] = useState(false);
@@ -256,12 +258,38 @@ export default function ConfiguracoesPage() {
         </div>
       </section>
 
+      {/* Streak Freeze */}
+      <section className="card">
+        <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
+          <Shield size={18} style={{ color: "#E8844A" }} /> Perdão de Streak
+        </h2>
+        <p className="text-sm mb-4" style={{ color: "#8B95A5" }}>Proteja seu streak se perder um dia — 1 uso por mês</p>
+        <div className="flex items-center justify-between p-4 rounded-xl"
+          style={{
+            background: form.streak_freeze_available > 0 && form.streak_freeze_used < 1
+              ? "rgba(58,186,180,0.06)" : "rgba(232,132,74,0.06)",
+            border: form.streak_freeze_available > 0 && form.streak_freeze_used < 1
+              ? "1px solid rgba(58,186,180,0.2)" : "1px solid rgba(232,132,74,0.2)",
+          }}>
+          <div className="flex items-center gap-3">
+            <Shield size={20} style={{ color: form.streak_freeze_used < 1 ? "#3ABAB4" : "#E8844A" }} />
+            <div>
+              <p className="text-sm font-medium text-white">
+                {form.streak_freeze_used < 1 ? "Perdão disponível" : "Perdão já usado este mês"}
+              </p>
+              <p className="text-xs" style={{ color: "#555E6E" }}>
+                Se perder um dia, seu streak não será resetado
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* IA */}
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
           🤖 Google Gemini (IA Motivacional)
-        </h2>
-        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
+        </h2>        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
         <a href="https://aistudio.google.com/app/apikey" target="_blank"
           className="text-xs flex items-center gap-1 mb-3" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Obter chave gratuita no Google AI Studio

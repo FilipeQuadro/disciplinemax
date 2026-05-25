@@ -6,13 +6,14 @@ import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
   BookOpen, BookMarked, Timer, Flame, Target, CheckCircle2,
-  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, FlameKindling
+  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, FlameKindling, Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { clsx } from "clsx";
+import { useAchievements, AchievementGrid, AchievementNotification } from "@/components/Achievements";
 
 export default function DashboardPage() {
   const {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const today = new Date();
+  const achievements = useAchievements();
 
   useEffect(() => {
     setMounted(true);
@@ -108,6 +110,20 @@ export default function DashboardPage() {
     }
     load();
   }, []);
+
+  // Check achievements after data loads
+  useEffect(() => {
+    if (!loading) {
+      const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
+      achievements.checkAndUnlock({
+        streak,
+        booksCompleted,
+        bibleChaptersTotal: todayBibleChapters,
+        pomodorosTotal: pomodoroCount,
+        totalPagesRead: books.reduce((sum, b) => sum + b.current_page, 0),
+      });
+    }
+  }, [loading, streak, books, todayBibleChapters, pomodoroCount]);
 
   const totalPagesRead = books.reduce((sum, b) => sum + b.current_page, 0);
   const totalPagesGoal = books.reduce((sum, b) => sum + b.daily_goal, 0);
@@ -293,6 +309,17 @@ export default function DashboardPage() {
 
       {/* Calendário de consistência */}
       <ConsistencyCalendar />
+
+      {/* Conquistas */}
+      <div className="card">
+        <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
+          <Trophy size={16} style={{ color: "#D4AF37" }} />
+          Conquistas
+        </h2>
+        <AchievementGrid unlocked={achievements.unlocked} compact />
+      </div>
+
+      <AchievementNotification badgeKey={achievements.newBadge} />
     </div>
   );
 }

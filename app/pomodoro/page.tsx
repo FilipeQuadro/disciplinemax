@@ -7,6 +7,7 @@ import { Timer, Play, Pause, RotateCcw, SkipForward, Coffee, Zap, BarChart3 } fr
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { clsx } from "clsx";
+import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
 
 const COLORS = {
   focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
@@ -26,6 +27,7 @@ export default function PomodoroPage() {
   const [pomosUntilLong] = useState(settings?.pomodoros_until_long || 4);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const ambient = useAmbientSound();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   const getModeTime = useCallback(() => {
@@ -150,6 +152,9 @@ export default function PomodoroPage() {
           </button>
         ))}
       </div>
+
+      {/* Ambient Sound */}
+      <AmbientControls ambient={ambient} />
 
       {/* Timer */}
       <div className="rounded-2xl flex flex-col items-center py-8"

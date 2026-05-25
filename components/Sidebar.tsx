@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Timer, Bell, Settings,
-  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked
+  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, LogIn
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 import { clsx } from "clsx";
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { streak, pomodoroActive, sidebarOpen, setSidebarOpen } = useStore();
+  const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -136,6 +138,17 @@ export function Sidebar() {
                 <span className="text-[11px] font-medium" style={{ color: "#8B95A5" }}>Notificações</span>
               </div>
               <p className="text-[10px]" style={{ color: "#555E6E" }}>Ativas e te monitorando 24h 👀</p>
+            </div>
+            <div className="mt-2">
+              {user ? (
+                <button onClick={signOut} className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#8B95A5" }}>
+                  <LogOut size={14} /> Sair
+                </button>
+              ) : (
+                <Link href="/login" className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#D4AF37" }}>
+                  <LogIn size={14} /> Entrar
+                </Link>
+              )}
             </div>
           </div>
         )}

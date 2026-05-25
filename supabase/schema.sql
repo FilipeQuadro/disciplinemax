@@ -164,6 +164,24 @@ CREATE TABLE IF NOT EXISTS notifications_sent (
 );
 
 -- ============================================
+-- TABELA: achievements (Conquistas)
+-- ============================================
+CREATE TABLE IF NOT EXISTS achievements (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id TEXT DEFAULT 'default_user',
+  badge_key TEXT NOT NULL,
+  unlocked_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, badge_key)
+);
+
+-- ============================================
+-- ADD streak freeze columns to user_settings
+-- ============================================
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_available INTEGER DEFAULT 1;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_used INTEGER DEFAULT 0;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_reset_month TEXT DEFAULT '';
+
+-- ============================================
 -- REALTIME: Habilitar sincronização em tempo real
 -- ============================================
 ALTER TABLE books REPLICA IDENTITY FULL;
