@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendWhatsAppMessage, buildMorningMessage, buildReminderMessage } from "@/lib/whatsapp";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { getMotivationalMessage } from "@/lib/ai";
-import webpush from "web-push";
-import { createApnsProvider, sendApnsNotification } from "@/lib/apns";
+import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -17,7 +14,7 @@ const notifCache = new Set<string>();
 
 export async function GET(req: Request) {
   if (!supabase) {
-    return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
 
   const authHeader = req.headers.get("authorization");
@@ -41,7 +38,7 @@ export async function GET(req: Request) {
   const brtMinute = parseInt(brtTime.split(":")[1], 10);
   const currentMinutes = brtHour * 60 + brtMinute;
 
-  // Limpar notifications_sent antigos (> 7 dias) para evitar acúmulo
+  // Limpar notifications_sent antigos (> 7 dias)
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("notifications_sent").delete().lt("sent_at", sevenDaysAgo);
 
@@ -51,19 +48,9 @@ export async function GET(req: Request) {
   const { data: allBibleGoals } = await supabase.from("bible_goals").select("*");
   const { data: allStats } = await supabase
     .from("daily_stats").select("*").eq("date", today);
-  const { data: allSubs } = await supabase.from("notification_subscriptions").select("*");
 
-  // VAPID
-  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    webpush.setVapidDetails(
-      "mailto:app@disciplinaapp.com",
-      process.env.VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY
-    );
-  }
-
-  const apnsProvider = createApnsProvider();
-  const results = [];
+  let sent = 0;
+  let skipped = 0;
 
   for (const settings of (allSettings || [])) {
     const userId = settings.user_id;
@@ -78,9 +65,7 @@ export async function GET(req: Request) {
     const booksGoalMet = totalPagesRead >= totalPagesGoal;
     const bibleGoalMet = bibleChaptersRead >= bibleGoalChapters;
 
-    if (booksGoalMet && bibleGoalMet) continue;
-
-    // Matching com tolerância de 30 min — se o cron rodar até 29 min depois, dispara
+    // Matching com tolerância de 30 min
     const notifTimes: string[] = settings.notification_times || ["07:00", "12:00", "19:00"];
     const matchedTime = notifTimes.find((t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -88,11 +73,11 @@ export async function GET(req: Request) {
       return currentMinutes >= notifMinutes && currentMinutes < notifMinutes + 30;
     });
 
-    if (!matchedTime) continue;
+    if (!matchedTime) { skipped++; continue; }
 
-    // Dedup: consultar notifications_sent no DB (persistente entre restarts)
+    // Dedup persistente
     const dedupKey = `${userId}_${today}_${matchedTime}`;
-    if (notifCache.has(dedupKey)) continue;
+    if (notifCache.has(dedupKey)) { skipped++; continue; }
 
     const { data: alreadySent } = await supabase
       .from("notifications_sent")
@@ -100,36 +85,78 @@ export async function GET(req: Request) {
       .eq("user_id", userId)
       .eq("notif_key", `${today}_${matchedTime}`)
       .maybeSingle();
-    if (alreadySent) { notifCache.add(dedupKey); continue; }
+    if (alreadySent) { notifCache.add(dedupKey); skipped++; continue; }
 
     notifCache.add(dedupKey);
 
-    // Persistir dedup no DB
+    // Persistir dedup
     try {
       await supabase.from("notifications_sent").insert({
         user_id: userId,
         notif_key: `${today}_${matchedTime}`,
       } as any);
-    } catch (e) { /* UNIQUE constraint = já existe, seguro ignorar */ }
+    } catch { /* UNIQUE constraint */ }
 
-    // Construir mensagem
-    const isMorning = brtHour < 9;
-    const message = isMorning
-      ? buildMorningMessage({
-          booksPages: userBooks.map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
-          bibleChapters: bibleGoalChapters,
-          pomodoroGoal: 4,
-          motivational: await getMotivationalMessage({ streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false }),
-        })
-      : buildReminderMessage({
-          pendingBooks: userBooks.filter((b: any) => b.pages_read_today < b.daily_goal)
-            .map((b: any) => ({ title: b.title, pagesLeft: b.daily_goal - b.pages_read_today })),
-          biblePending: !bibleGoalMet,
-          bibleChaptersLeft: Math.max(0, bibleGoalChapters - bibleChaptersRead),
-          hour: brtHour,
-        });
+    // ========== Construir mensagem do Telegram ==========
+    const isMorning = brtHour < 12;
+    const verse = await getBibleVerseOfDay();
+    const motivational = await getMotivationalMessage({
+      streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false,
+    });
 
-    // Telegram
+    let message = "";
+
+    if (isMorning) {
+      // Mensagem matinal — metas do dia + versículo
+      message = `☀️ *Bom dia! Hora de buscar o Senhor!*\n\n`;
+
+      if (userBooks.length > 0) {
+        message += `📚 *Metas de leitura hoje:*\n`;
+        for (const b of userBooks) {
+          const pagesLeft = b.daily_goal - b.pages_read_today;
+          message += `• ${b.title}: ${pagesLeft} páginas\n`;
+        }
+        message += `\n`;
+      }
+
+      if (bibleGoalChapters > 0) {
+        message += `✝️ *Bíblia:* ${bibleGoalChapters} capítulo(s) — ${bibleGoal?.current_book || ""} ${bibleGoal?.current_chapter || 1}\n\n`;
+      }
+
+      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      message += `💡 _${motivational}_\n\n`;
+      message += `👉 disciplinemax.onrender.com`;
+    } else if (booksGoalMet && bibleGoalMet) {
+      // Metas completadas
+      message = `🎉 *Parabéns! Você completou todas as metas de hoje!* 🎉\n\n`;
+      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      message += `💪 Continue firme amanhã!`;
+    } else {
+      // Lembrete — ainda faltam metas
+      const timeEmoji = brtHour < 18 ? "☀️" : "🌙";
+      message = `${timeEmoji} *Lembrete — ainda faltam metas hoje!*\n\n`;
+
+      const pendingBooks = userBooks.filter((b: any) => b.pages_read_today < b.daily_goal);
+      if (pendingBooks.length > 0) {
+        message += `📖 *Livros pendentes:*\n`;
+        for (const b of pendingBooks) {
+          const pagesLeft = b.daily_goal - b.pages_read_today;
+          message += `• ${b.title}: ${pagesLeft} páginas\n`;
+        }
+        message += `\n`;
+      }
+
+      if (!bibleGoalMet && bibleGoalChapters > 0) {
+        const chaptersLeft = Math.max(0, bibleGoalChapters - bibleChaptersRead);
+        message += `✝️ *Bíblia:* ${chaptersLeft} capítulo(s) restante(s)\n\n`;
+      }
+
+      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      message += `💪 _${motivational}_\n\n`;
+      message += `👉 disciplinemax.onrender.com`;
+    }
+
+    // Enviar Telegram
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
         await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
@@ -137,39 +164,8 @@ export async function GET(req: Request) {
         console.error("Telegram send failed:", e);
       }
     }
-
-    // WhatsApp
-    if (settings.whatsapp_number && settings.callmebot_api_key) {
-      await sendWhatsAppMessage(settings.whatsapp_number, settings.callmebot_api_key, message);
-    }
-
-    // Push notifications
-    const userSubs = (allSubs || []).filter((s: any) => s.user_id === userId);
-    const pushBody = `Ainda faltam ${totalPagesGoal - totalPagesRead} páginas e ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos hoje.`;
-
-    for (const sub of userSubs) {
-      if (sub.platform === "apns" && sub.device_token && apnsProvider) {
-        try {
-          await sendApnsNotification(apnsProvider, sub.device_token, {
-            title: "🎯 Metas pendentes!", body: pushBody, url: "/",
-          });
-        } catch (e) {
-          await supabase.from("notification_subscriptions").delete().eq("device_token", sub.device_token);
-        }
-      } else if (sub.platform === "web" && sub.endpoint && sub.p256dh && sub.auth) {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            JSON.stringify({ title: "🎯 Metas pendentes!", body: pushBody, tag: "cron-reminder", requireInteraction: true, url: "/" })
-          );
-        } catch (e) {
-          await supabase.from("notification_subscriptions").delete().eq("endpoint", sub.endpoint);
-        }
-      }
-    }
-
-    results.push({ userId, matchedTime });
   }
 
-  return NextResponse.json({ ok: true, processed: results.length, brtTime, results, time: now.toISOString() });
+  // Resposta mínima para evitar "Response data too big" do cron-job.org
+  return NextResponse.json({ ok: true, sent, skipped, brtTime });
 }
