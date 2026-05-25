@@ -112,5 +112,16 @@ SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon select on n
 SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon insert on notifications_sent', 'INSERT', 'true', 'true');
 SELECT create_policy_if_not_exists('notifications_sent', 'Allow anon delete on notifications_sent', 'DELETE', 'true', 'true');
 
+-- ACHIEVEMENTS
+SELECT create_policy_if_not_exists('achievements', 'Allow anon select on achievements', 'SELECT', 'true', 'true');
+SELECT create_policy_if_not_exists('achievements', 'Allow anon insert on achievements', 'INSERT', 'true', 'true');
+SELECT create_policy_if_not_exists('achievements', 'Allow anon update on achievements', 'UPDATE', 'true', 'true');
+SELECT create_policy_if_not_exists('achievements', 'Allow anon delete on achievements', 'DELETE', 'true', 'true');
+
+-- Streak freeze columns
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_available INTEGER DEFAULT 1;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_used INTEGER DEFAULT 0;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_reset_month TEXT DEFAULT '';
+
 -- Limpar helper
 DROP FUNCTION IF EXISTS create_policy_if_not_exists(TEXT, TEXT, TEXT, TEXT, TEXT);
