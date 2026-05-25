@@ -1,23 +1,25 @@
 import { format } from "date-fns";
 import { supabase, DailyStats } from "@/lib/supabase";
 
-export async function getTodayStats() {
+export async function getTodayStats(userId: string) {
   if (!supabase) return null;
   const today = format(new Date(), "yyyy-MM-dd");
   const { data } = await supabase
     .from("daily_stats")
     .select("*")
+    .eq("user_id", userId)
     .eq("date", today)
     .maybeSingle();
   return data || null;
 }
 
-export async function upsertTodayStats(updates: Partial<Record<string, any>>) {
+export async function upsertTodayStats(userId: string, updates: Partial<Record<string, any>>) {
   if (!supabase) return null;
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: existing } = await supabase
     .from("daily_stats")
     .select("*")
+    .eq("user_id", userId)
     .eq("date", today)
     .maybeSingle() as { data: DailyStats | null };
 
@@ -35,7 +37,7 @@ export async function upsertTodayStats(updates: Partial<Record<string, any>>) {
 
   const payload = {
     id: crypto.randomUUID(),
-    user_id: "default_user",
+    user_id: userId,
     date: today,
     books_pages_read: 0,
     bible_chapters_read: 0,
@@ -52,13 +54,14 @@ export async function upsertTodayStats(updates: Partial<Record<string, any>>) {
   return payload;
 }
 
-export async function getRecentDailyStats(days = 35) {
+export async function getRecentDailyStats(userId: string, days = 35) {
   if (!supabase) return [];
   const start = new Date();
   start.setDate(start.getDate() - (days - 1));
   const { data } = await supabase
     .from("daily_stats")
     .select("date, goals_completed, books_pages_read, bible_chapters_read")
+    .eq("user_id", userId)
     .gte("date", format(start, "yyyy-MM-dd"))
     .order("date", { ascending: false });
   return data || [];

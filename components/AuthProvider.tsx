@@ -24,24 +24,32 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { setUserId } = useStore();
+  const { setUserId, clearUserData } = useStore();
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const uid = session?.user?.id ?? null;
       setUser(session?.user ?? null);
-      setUserId(session?.user?.id ?? "default_user");
+      setUserId(uid);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const newUid = session?.user?.id ?? null;
+      const currentUid = user?.id ?? null;
+
+      if (newUid !== currentUid) {
+        clearUserData();
+      }
+
       setUser(session?.user ?? null);
-      setUserId(session?.user?.id ?? "default_user");
+      setUserId(newUid);
     });
 
     return () => subscription.unsubscribe();
-  }, [setUserId]);
+  }, [setUserId, clearUserData]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: "Supabase not configured" };
@@ -57,7 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { name } },
     });
     if (!error) {
-      // Create default settings for new user
       const userId = (await supabase.auth.getUser()).data.user?.id;
       if (userId) {
         await (supabase.from("user_settings") as any).upsert({ user_id: userId });
@@ -70,7 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
-    setUserId("default_user");
+    clearUserData();
+    setUserId(null);
   };
 
   return (

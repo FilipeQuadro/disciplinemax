@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 import { getBibleVerseOfDay } from "@/lib/ai";
 import { BookMarked, Check, Plus, Calendar, TrendingUp, Star, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -31,6 +32,7 @@ const READING_PLANS = [
 
 export default function BibliaPage() {
   const { bibleGoal, setBibleGoal, todayBibleChapters, setTodayBibleChapters } = useStore();
+  const { user } = useAuth();
   const [verse, setVerse] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
@@ -40,18 +42,21 @@ export default function BibliaPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     getBibleVerseOfDay().then(setVerse);
     loadHistory(); loadGoal(); loadWeekly();
-  }, []);
+  }, [user]);
 
   async function loadGoal() {
-    const { data } = await supabase.from("bible_goals").select("*").maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
+    if (!user) return;
+    const { data } = await supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
     if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
   }
 
   async function loadHistory() {
+    if (!user) return;
     const today = format(new Date(), "yyyy-MM-dd");
-    const { data } = await supabase.from("bible_readings").select("*").order("read_at", { ascending: false }).limit(20);
+    const { data } = await supabase.from("bible_readings").select("*").eq("user_id", user.id).order("read_at", { ascending: false }).limit(20);
     if (data) {
       setHistory(data);
       setTodayBibleChapters(data.filter((r: any) => r.read_at?.startsWith(today)).length);
@@ -59,15 +64,17 @@ export default function BibliaPage() {
   }
 
   async function loadWeekly() {
-    const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").order("date", { ascending: false }).limit(7);
+    if (!user) return;
+    const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").eq("user_id", user.id).order("date", { ascending: false }).limit(7);
     if (data) setWeeklyStats(data.reverse());
   }
 
   async function logReading() {
+    if (!user) return;
     setLoading(true);
     try {
       const { error } = await supabase.from("bible_readings").insert({
-        book_name: logForm.book, chapter: logForm.chapter, notes: logForm.notes,
+        user_id: user.id, book_name: logForm.book, chapter: logForm.chapter, notes: logForm.notes,
         read_at: new Date().toISOString(),
       } as any);
       if (!error) {
@@ -80,8 +87,9 @@ export default function BibliaPage() {
   }
 
   async function saveGoal() {
+    if (!user) return;
     const { error } = await supabase.from("bible_goals").upsert({
-      daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
+      user_id: user.id, daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
       start_date: format(new Date(), "yyyy-MM-dd"), updated_at: new Date().toISOString(),
     } as any);
     if (!error) { toast.success("Meta bíblica atualizada!"); loadGoal(); setShowGoalForm(false); }

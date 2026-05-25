@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Timer, Bell, Settings,
-  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, LogIn
+  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, Shield, Crown
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/lib/supabase";
 import { clsx } from "clsx";
 
 const navItems = [
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/livros", icon: BookOpen, label: "Livros", color: "text-[#7C6BBD]" },
   { href: "/biblia", icon: BookMarked, label: "Bíblia", color: "text-[#D4AF37]" },
   { href: "/pomodoro", icon: Timer, label: "Pomodoro", color: "text-[#D94F4F]" },
+  { href: "/planos", icon: Crown, label: "Planos", color: "text-[#D4AF37]" },
   { href: "/configuracoes", icon: Settings, label: "Configurações", color: "text-[#8B95A5]" },
 ];
 
@@ -24,6 +26,16 @@ export function Sidebar() {
   const { streak, pomodoroActive, sidebarOpen, setSidebarOpen } = useStore();
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user && supabase) {
+      supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle()
+        .then(({ data }) => setIsAdmin(!!data));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   return (
     <>
@@ -127,29 +139,42 @@ export function Sidebar() {
               </Link>
             );
           })}
+          {isAdmin && (
+            <>
+              {sidebarOpen && <p className="section-title px-3 mb-2 mt-4">Admin</p>}
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
+                title={!sidebarOpen ? "Admin" : undefined}
+              >
+                <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
+                {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Painel Admin</span>}
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* Footer */}
         {sidebarOpen && (
           <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Bell size={13} style={{ color: "#D4AF37" }} />
-                <span className="text-[11px] font-medium" style={{ color: "#8B95A5" }}>Notificações</span>
+            {user && (
+              <div className="rounded-xl p-3 mb-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                    style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", color: "#0B0E14" }}>
+                    {(user.user_metadata?.name || user.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{user.user_metadata?.name || "Usuário"}</p>
+                    <p className="text-[10px] truncate" style={{ color: "#555E6E" }}>{user.email}</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-[10px]" style={{ color: "#555E6E" }}>Ativas e te monitorando 24h 👀</p>
-            </div>
-            <div className="mt-2">
-              {user ? (
-                <button onClick={signOut} className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#8B95A5" }}>
-                  <LogOut size={14} /> Sair
-                </button>
-              ) : (
-                <Link href="/login" className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#D4AF37" }}>
-                  <LogIn size={14} /> Entrar
-                </Link>
-              )}
-            </div>
+            )}
+            <button onClick={signOut} className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#8B95A5" }}>
+              <LogOut size={14} /> Sair
+            </button>
           </div>
         )}
       </aside>

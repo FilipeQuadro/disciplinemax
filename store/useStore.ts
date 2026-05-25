@@ -6,6 +6,7 @@ interface AppState {
   // User
   userId: string | null;
   setUserId: (id: string | null) => void;
+  clearUserData: () => void;
 
   // Books
   books: Book[];
@@ -54,6 +55,20 @@ export const useStore = create<AppState>()(
     (set) => ({
       userId: null,
       setUserId: (id) => set({ userId: id }),
+      clearUserData: () => set({
+        books: [],
+        bibleGoal: null,
+        todayBibleChapters: 0,
+        todaySessions: [],
+        todayStats: null,
+        streak: 0,
+        settings: null,
+        pomodoroCount: 0,
+        pomodoroActive: false,
+        pomodoroTimeLeft: 25 * 60,
+        pomodoroIsBreak: false,
+        pomodoroTask: "",
+      }),
 
       books: [],
       setBooks: (books) => set({ books }),

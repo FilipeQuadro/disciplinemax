@@ -176,10 +176,18 @@ export default function LoginPage() {
           </div>
 
           {/* Guest */}
-          <a href="/" className="login-guest">
+          <button
+            onClick={async () => {
+              try {
+                const { error } = await signIn("guest@disciplinemax.com", "guest1234");
+                if (error) setError("Conta demo indisponível");
+              } catch { setError("Erro ao acessar demo"); }
+            }}
+            className="login-guest"
+          >
             <FlameKindling size={14} />
-            Entrar como convidado
-          </a>
+            Experimentar modo demo
+          </button>
         </div>
       </div>
     </div>

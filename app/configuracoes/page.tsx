@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Settings, Bell, MessageSquare, Timer, Smartphone, Check, AlertCircle, ExternalLink, Shield
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { clsx } from "clsx";
 
 export default function ConfiguracoesPage() {
   const { settings, setSettings, setNotificationsEnabled, notificationsEnabled } = useStore();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     whatsapp_number: "",
     callmebot_api_key: "",
@@ -39,14 +41,15 @@ export default function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    if (user) loadSettings();
     if (typeof window !== "undefined" && "Notification" in window) {
       setNotifPerm(Notification.permission);
     }
-  }, []);
+  }, [user]);
 
   async function loadSettings() {
-    const { data } = await supabase.from("user_settings").select("*").maybeSingle() as { data: any | null };
+    if (!user) return;
+    const { data } = await supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle() as { data: any | null };
     if (data) { setSettings(data); setForm({ ...form, ...data }); }
   }
 
@@ -96,9 +99,10 @@ export default function ConfiguracoesPage() {
   }
 
   async function saveSettings() {
+    if (!user) return;
     setSaving(true);
     const { error } = await supabase.from("user_settings").upsert({
-      ...(form as any), updated_at: new Date().toISOString(),
+      user_id: user.id, ...(form as any), updated_at: new Date().toISOString(),
     } as any);
     setSaving(false);
     if (!error) { toast.success("Configurações salvas!"); loadSettings(); }

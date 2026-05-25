@@ -12,7 +12,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
   }
   const url = new URL(req.url);
-  const userId = url.searchParams.get("user_id") || "default_user";
+  const userId = url.searchParams.get("user_id");
+  if (!userId) {
+    return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+  }
   const today = new Date().toISOString().split("T")[0];
 
   const { data: stats } = await supabase

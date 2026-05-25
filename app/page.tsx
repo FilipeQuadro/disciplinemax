@@ -13,9 +13,11 @@ import { format, startOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { clsx } from "clsx";
+import { useAuth } from "@/components/AuthProvider";
 import { useAchievements, AchievementGrid, AchievementNotification } from "@/components/Achievements";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const {
     books, setBooks, streak, setStreak, todayStats, setTodayStats,
     bibleGoal, setBibleGoal, todayBibleChapters, setTodayBibleChapters,
@@ -32,14 +34,15 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     async function load() {
+      if (!user) return;
       const todayStr = format(new Date(), "yyyy-MM-dd");
 
       const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
-        supabase.from("books").select("*").order("created_at"),
-        supabase.from("bible_goals").select("*").maybeSingle(),
-        supabase.from("user_settings").select("*").maybeSingle(),
-        supabase.from("daily_stats").select("*").eq("date", todayStr).maybeSingle(),
-        supabase.from("bible_readings").select("id").gte("read_at", todayStr),
+        supabase.from("books").select("*").eq("user_id", user.id).order("created_at"),
+        supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("daily_stats").select("*").eq("user_id", user.id).eq("date", todayStr).maybeSingle(),
+        supabase.from("bible_readings").select("id").eq("user_id", user.id).gte("read_at", todayStr),
       ]);
 
       if (booksRes.data) {
@@ -64,6 +67,7 @@ export default function DashboardPage() {
       const { data: recentStats } = await supabase
         .from("daily_stats")
         .select("date, goals_completed")
+        .eq("user_id", user.id)
         .order("date", { ascending: false })
         .limit(30);
       if (recentStats) {
@@ -89,6 +93,7 @@ export default function DashboardPage() {
       const { data: weekData } = await supabase
         .from("daily_stats")
         .select("*")
+        .eq("user_id", user.id)
         .gte("date", format(start, "yyyy-MM-dd"))
         .order("date") as { data: any[] | null };
 
@@ -109,7 +114,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
 
   // Check achievements after data loads
   useEffect(() => {
@@ -308,7 +313,7 @@ export default function DashboardPage() {
       )}
 
       {/* Calendário de consistência */}
-      <ConsistencyCalendar />
+      <ConsistencyCalendar userId={user!.id} />
 
       {/* Conquistas */}
       <div className="card">
@@ -398,7 +403,7 @@ function BookMiniCard({ book }: { book: any }) {
   );
 }
 
-function ConsistencyCalendar() {
+function ConsistencyCalendar({ userId }: { userId: string }) {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -419,6 +424,7 @@ function ConsistencyCalendar() {
       const { data: stats } = await supabase
         .from("daily_stats")
         .select("date, goals_completed")
+        .eq("user_id", userId)
         .gte("date", startDate) as { data: { date: string; goals_completed: boolean }[] | null };
 
       if (stats) {
@@ -433,7 +439,7 @@ function ConsistencyCalendar() {
       setData(arr);
     }
     loadCalendar();
-  }, []);
+  }, [userId]);
 
   return (
     <div className="card">

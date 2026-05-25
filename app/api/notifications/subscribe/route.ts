@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   const { endpoint, keys, device_token, platform, bundle_id, user_id } = body;
-  const safeUserId = user_id || "default_user";
+  if (!user_id) {
+    return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+  }
+  const safeUserId = user_id;
 
   if (platform === "apns") {
     if (!device_token) {

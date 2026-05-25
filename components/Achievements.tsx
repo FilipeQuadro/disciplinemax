@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 import { Trophy, Flame, BookOpen, BookMarked, Timer, Star, Lock, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -58,28 +59,29 @@ export const BADGES: Badge[] = [
 
 export function useAchievements() {
   const { streak } = useStore();
+  const { user } = useAuth();
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [newBadge, setNewBadge] = useState<string | null>(null);
 
   useEffect(() => {
     loadUnlocked();
-  }, []);
+  }, [user]);
 
   async function loadUnlocked() {
-    if (!supabase) return;
-    const { data } = await supabase.from("achievements").select("badge_key");
+    if (!supabase || !user) return;
+    const { data } = await supabase.from("achievements").select("badge_key").eq("user_id", user.id);
     if (data) setUnlocked(data.map((d: any) => d.badge_key));
   }
 
   async function checkAndUnlock(state: BadgeState) {
-    if (!supabase) return;
+    if (!supabase || !user) return;
     const newUnlocks: string[] = [];
 
     for (const badge of BADGES) {
       if (unlocked.includes(badge.key)) continue;
       if (badge.condition(state)) {
         const { error } = await supabase.from("achievements").insert({
-          user_id: "default_user",
+          user_id: user.id,
           badge_key: badge.key,
         } as any);
         if (!error) {

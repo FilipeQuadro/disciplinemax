@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase, Book } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 import {
   BookOpen, Plus, Trash2, ChevronRight, BookMarked,
   Calendar, TrendingUp, Target, Edit2, Check, X, Sparkles
@@ -20,6 +21,7 @@ const emptyBook = {
 
 export default function LivrosPage() {
   const { books, setBooks, updateBook } = useStore();
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...emptyBook });
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,8 @@ export default function LivrosPage() {
   useEffect(() => { loadBooks(); }, []);
 
   async function loadBooks() {
-    const { data } = await supabase.from("books").select("*").order("created_at");
+    if (!user) return;
+    const { data } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
     if (data) setBooks(data as Book[]);
   }
 
@@ -38,7 +41,7 @@ export default function LivrosPage() {
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
     setLoading(true);
     try {
-      const payload = { ...form, pages_read_today: 0, target_date: form.target_date || null };
+      const payload = { ...form, user_id: user!.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
         const { error } = await (supabase.from("books") as any).update(payload).eq("id", editingId);
         if (!error) { toast.success("Livro atualizado!"); await loadBooks(); setEditingId(null); }

@@ -8,6 +8,7 @@ import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { clsx } from "clsx";
 import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
+import { useAuth } from "@/components/AuthProvider";
 
 const COLORS = {
   focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
@@ -19,6 +20,7 @@ export default function PomodoroPage() {
   const { pomodoroActive, pomodoroTimeLeft, pomodoroIsBreak, pomodoroCount,
     pomodoroTask, setPomodoroActive, setPomodoroTimeLeft, setPomodoroIsBreak,
     setPomodoroCount, setPomodoroTask, todaySessions, addSession, settings } = useStore();
+  const { user } = useAuth();
 
   const [mode, setMode] = useState<"focus" | "shortBreak" | "longBreak">("focus");
   const [customFocus, setCustomFocus] = useState(settings?.pomodoro_duration || 25);
@@ -57,7 +59,7 @@ export default function PomodoroPage() {
       const newCount = pomodoroCount + 1;
       setPomodoroCount(newCount);
       const session = {
-        id: crypto.randomUUID(), user_id: "default_user", duration_minutes: customFocus,
+        id: crypto.randomUUID(), user_id: user!.id, duration_minutes: customFocus,
         break_minutes: 0, completed: true, task_name: pomodoroTask,
         started_at: (startTime || new Date()).toISOString(), ended_at: new Date().toISOString(),
       };
