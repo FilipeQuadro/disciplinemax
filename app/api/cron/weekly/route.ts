@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -9,9 +10,7 @@ const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) :
 export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ ok: false }, { status: 500 });
 
-  const url = new URL(req.url);
-  const secret = url.searchParams.get("secret");
-  if (secret !== process.env.CRON_SECRET) {
+  if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,18 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-let supabaseClient: ReturnType<typeof createClient> | null = null;
-if (supabaseUrl && supabaseAnonKey) {
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-    realtime: { params: { eventsPerSecond: 10 } },
-  });
-} else {
-  console.warn("Supabase environment variables are not configured. Supabase client will be disabled.");
-}
-
-export const supabase = supabaseClient as ReturnType<typeof createClient>;
+export const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      realtime: { params: { eventsPerSecond: 10 } },
+    })
+  : null;
 
 // Tipos do banco de dados
 export type Book = {

@@ -3,27 +3,49 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null as any;
+
+/**
+ * Verify the request's Bearer token is a valid Supabase session.
+ * Returns the authenticated user ID, or null if invalid.
+ */
+async function getAuthUserId(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const sb = createClient(supabaseUrl!, supabaseKey!);
+  const { data: { user }, error } = await sb.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
 
 export async function POST(req: NextRequest) {
-  if (!supabase) {
+  if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
   }
+
+  // Authenticate the caller
+  const callerId = await getAuthUserId(req);
+  if (!callerId) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { endpoint, keys, device_token, platform, bundle_id, user_id } = body;
-  if (!user_id) {
-    return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+
+  // Verify the caller owns this user_id
+  if (user_id !== callerId) {
+    return NextResponse.json({ error: "Cannot subscribe for another user" }, { status: 403 });
   }
-  const safeUserId = user_id;
+
+  const sb = createClient(supabaseUrl, supabaseKey);
 
   if (platform === "apns") {
     if (!device_token) {
       return NextResponse.json({ error: "Invalid APNS registration" }, { status: 400 });
     }
-    const { error } = await supabase.from("notification_subscriptions").upsert({
-      user_id: safeUserId,
+    const { error } = await sb.from("notification_subscriptions").upsert({
+      user_id: callerId,
       platform: "apns",
       device_token,
       bundle_id: bundle_id || process.env.APNS_BUNDLE_ID || "br.com.disciplina.app",
@@ -38,8 +60,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("notification_subscriptions").upsert({
-    user_id: safeUserId,
+  const { error } = await sb.from("notification_subscriptions").upsert({
+    user_id: callerId,
     platform: "web",
     endpoint,
     p256dh: keys.p256dh,

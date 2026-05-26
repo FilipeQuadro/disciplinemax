@@ -31,17 +31,18 @@ export default function LivrosPage() {
   useEffect(() => { loadBooks(); }, []);
 
   async function loadBooks() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { data } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
     if (data) setBooks(data as Book[]);
   }
 
   async function saveBook() {
+    if (!supabase || !user) { toast.error("Serviço indisponível"); return; }
     if (!form.title.trim()) { toast.error("Informe o título do livro"); return; }
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
     setLoading(true);
     try {
-      const payload = { ...form, user_id: user!.id, pages_read_today: 0, target_date: form.target_date || null };
+      const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
         const { error } = await (supabase.from("books") as any).update(payload).eq("id", editingId);
         if (!error) { toast.success("Livro atualizado!"); await loadBooks(); setEditingId(null); }
@@ -56,13 +57,14 @@ export default function LivrosPage() {
   }
 
   async function deleteBook(id: string) {
-    if (!confirm("Remover este livro?")) return;
+    if (!confirm("Remover este livro?") || !supabase) return;
     await supabase.from("books").delete().eq("id", id);
     await loadBooks();
     toast.success("Livro removido");
   }
 
   async function logReading(book: Book) {
+    if (!supabase) return;
     const pages = readingInput[book.id] || 0;
     if (pages <= 0) return;
     const newPage = Math.min(book.current_page + pages, book.total_pages);

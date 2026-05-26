@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
+import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -17,11 +18,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 
-  const authHeader = req.headers.get("authorization");
-  const url = new URL(req.url);
-  const querySecret = url.searchParams.get("secret");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
+  // CRON_SECRET only — this is a server-to-server endpoint
+  if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

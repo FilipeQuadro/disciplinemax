@@ -31,6 +31,7 @@ interface AppState {
   setPomodoroCount: (v: number) => void;
   setPomodoroTask: (v: string) => void;
   todaySessions: PomodoroSession[];
+  setTodaySessions: (s: PomodoroSession[]) => void;
   addSession: (s: PomodoroSession) => void;
 
   // Stats

@@ -27,11 +27,22 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration) {
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
     });
-    // Salvar subscription no servidor
+
+    // Get auth token to send with subscription
+    const { supabase: sb } = await import("@/lib/supabase");
+    const { data: { session } } = await sb!.auth.getSession();
+    const authToken = session?.access_token || "";
+
     await fetch("/api/notifications/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sub.toJSON()),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        ...sub.toJSON(),
+        user_id: session?.user?.id,
+      }),
     });
     return sub;
   } catch (e) {

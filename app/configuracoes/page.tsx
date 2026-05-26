@@ -48,7 +48,7 @@ export default function ConfiguracoesPage() {
   }, [user]);
 
   async function loadSettings() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { data } = await supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle() as { data: any | null };
     if (data) { setSettings(data); setForm({ ...form, ...data }); }
   }
@@ -99,11 +99,25 @@ export default function ConfiguracoesPage() {
   }
 
   async function saveSettings() {
-    if (!user) return;
+    if (!user || !supabase) return;
     setSaving(true);
     const { error } = await supabase.from("user_settings").upsert({
-      user_id: user.id, ...(form as any), updated_at: new Date().toISOString(),
-    } as any);
+      user_id: user.id,
+      whatsapp_number: form.whatsapp_number,
+      callmebot_api_key: form.callmebot_api_key,
+      telegram_bot_token: form.telegram_bot_token,
+      telegram_chat_id: form.telegram_chat_id,
+      notification_times: form.notification_times,
+      pomodoro_duration: Math.max(1, Math.min(120, form.pomodoro_duration)),
+      short_break: Math.max(1, Math.min(30, form.short_break)),
+      long_break: Math.max(1, Math.min(60, form.long_break)),
+      pomodoros_until_long: Math.max(1, Math.min(10, form.pomodoros_until_long)),
+      daily_books_goal: Math.max(1, Math.min(500, form.daily_books_goal)),
+      daily_bible_chapters: Math.max(1, Math.min(50, form.daily_bible_chapters)),
+      gemini_api_key: form.gemini_api_key,
+      timezone: form.timezone,
+      updated_at: new Date().toISOString(),
+    });
     setSaving(false);
     if (!error) { toast.success("Configurações salvas!"); loadSettings(); }
     else toast.error("Erro: " + error.message);

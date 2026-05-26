@@ -58,13 +58,14 @@ export default function PomodoroPage() {
     if (mode === "focus") {
       const newCount = pomodoroCount + 1;
       setPomodoroCount(newCount);
+      if (!user?.id) return;
       const session = {
-        id: crypto.randomUUID(), user_id: user!.id, duration_minutes: customFocus,
+        id: crypto.randomUUID(), user_id: user.id, duration_minutes: customFocus,
         break_minutes: 0, completed: true, task_name: pomodoroTask,
         started_at: (startTime || new Date()).toISOString(), ended_at: new Date().toISOString(),
       };
       addSession(session);
-      await (supabase.from("pomodoro_sessions") as any).insert(session);
+      if (supabase) await (supabase.from("pomodoro_sessions") as any).insert(session);
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 
       if (newCount % pomosUntilLong === 0) {

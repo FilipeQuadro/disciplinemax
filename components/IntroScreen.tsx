@@ -1,18 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FlameKindling } from "lucide-react";
 
-/**
- * Heavy gate/portcullis opening sound — deep metallic groan with chain rattle.
- * Plays when the intro screen first appears (entering the "fortress").
- */
+// Safe AudioContext creation — returns null on failure
+function createSafeAudioContext(): AudioContext | null {
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AC) return null;
+    const ctx = new AC();
+    // Resume if suspended (iOS requires user gesture — we'll try but not block)
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+// Bell-like chime — bright, welcoming. Plays when the intro fades out.
+function playIntroChime() {
+  try {
+    const ctx = createSafeAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 880, gain: 0.15, start: 0, dur: 0.6 },
+      { freq: 1320, gain: 0.08, start: 0.02, dur: 0.5 },
+      { freq: 1760, gain: 0.04, start: 0.04, dur: 0.4 },
+      { freq: 660, gain: 0.1, start: 0.15, dur: 0.8 },
+    ];
+
+    for (const n of notes) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(n.freq, now + n.start);
+      g.gain.setValueAtTime(0, now + n.start);
+      g.gain.linearRampToValueAtTime(n.gain, now + n.start + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur + 0.05);
+    }
+
+    // Clean up context after use
+    setTimeout(() => {
+      try { ctx.close(); } catch { /* silent */ }
+    }, 2000);
+  } catch { /* silent — audio is optional */ }
+}
+
+// Gate sound — deep metallic groan. Only plays if audio context is available.
 function playGateSound() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = createSafeAudioContext();
+    if (!ctx) return;
+
     const now = ctx.currentTime;
 
-    // Low metallic groan — sawtooth through lowpass filter
+    // Low metallic groan
     const groan = ctx.createOscillator();
     const groanGain = ctx.createGain();
     const groanFilter = ctx.createBiquadFilter();
@@ -31,117 +81,74 @@ function playGateSound() {
     groan.start(now);
     groan.stop(now + 1.5);
 
-    // Chain rattle — rapid noise bursts through bandpass
-    const rattleLen = 0.6;
-    const rattleBuf = ctx.createBuffer(1, ctx.sampleRate * rattleLen, ctx.sampleRate);
-    const rattleData = rattleBuf.getChannelData(0);
-    for (let i = 0; i < rattleData.length; i++) {
-      // Sparse crackle: mostly silence with random bursts
-      rattleData[i] = Math.random() < 0.15 ? (Math.random() * 2 - 1) * 0.6 : 0;
-    }
-    const rattleSrc = ctx.createBufferSource();
-    rattleSrc.buffer = rattleBuf;
-    const rattleFilter = ctx.createBiquadFilter();
-    rattleFilter.type = "bandpass";
-    rattleFilter.frequency.setValueAtTime(800, now);
-    rattleFilter.Q.setValueAtTime(2, now);
-    const rattleGain = ctx.createGain();
-    rattleGain.gain.setValueAtTime(0, now);
-    rattleGain.gain.linearRampToValueAtTime(0.12, now + 0.05);
-    rattleGain.gain.exponentialRampToValueAtTime(0.001, now + rattleLen);
-    rattleSrc.connect(rattleFilter);
-    rattleFilter.connect(rattleGain);
-    rattleGain.connect(ctx.destination);
-    rattleSrc.start(now + 0.1);
-    rattleSrc.stop(now + 0.1 + rattleLen);
-
-    // Deep thud — sine burst for the gate latch releasing
-    const thud = ctx.createOscillator();
-    const thudGain = ctx.createGain();
-    thud.type = "sine";
-    thud.frequency.setValueAtTime(45, now + 0.08);
-    thudGain.gain.setValueAtTime(0, now);
-    thudGain.gain.setValueAtTime(0.15, now + 0.08);
-    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    thud.connect(thudGain);
-    thudGain.connect(ctx.destination);
-    thud.start(now + 0.08);
-    thud.stop(now + 0.6);
-
-    // High metallic creak — filtered square wave slide
-    const creak = ctx.createOscillator();
-    const creakGain = ctx.createGain();
-    const creakFilter = ctx.createBiquadFilter();
-    creak.type = "square";
-    creak.frequency.setValueAtTime(300, now + 0.3);
-    creak.frequency.linearRampToValueAtTime(120, now + 1.0);
-    creakFilter.type = "bandpass";
-    creakFilter.frequency.setValueAtTime(600, now + 0.3);
-    creakFilter.Q.setValueAtTime(8, now + 0.3);
-    creakGain.gain.setValueAtTime(0, now);
-    creakGain.gain.setValueAtTime(0.03, now + 0.3);
-    creakGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
-    creak.connect(creakFilter);
-    creakFilter.connect(creakGain);
-    creakGain.connect(ctx.destination);
-    creak.start(now + 0.3);
-    creak.stop(now + 1.1);
-  } catch { /* silent */ }
-}
-
-/**
- * Bell-like chime — bright, welcoming. Plays when the intro fades out (entering the app).
- */
-function playIntroChime() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const now = ctx.currentTime;
-
-    const notes = [
-      { freq: 880, gain: 0.15, start: 0, dur: 0.6 },     // A5 — bright ping
-      { freq: 1320, gain: 0.08, start: 0.02, dur: 0.5 },   // E6 — shimmer
-      { freq: 1760, gain: 0.04, start: 0.04, dur: 0.4 },   // A6 — sparkle
-      { freq: 660, gain: 0.1, start: 0.15, dur: 0.8 },     // E5 — warm body
-    ];
-
-    for (const n of notes) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.connect(g);
-      g.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(n.freq, now + n.start);
-      g.gain.setValueAtTime(0, now + n.start);
-      g.gain.linearRampToValueAtTime(n.gain, now + n.start + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
-      osc.start(now + n.start);
-      osc.stop(now + n.start + n.dur + 0.05);
-    }
-  } catch { /* silent */ }
+    // Clean up
+    setTimeout(() => {
+      try { ctx.close(); } catch { /* silent */ }
+    }, 2000);
+  } catch { /* silent — audio is optional */ }
 }
 
 export { playGateSound, playIntroChime };
 
+const INTRO_DURATION = 2800; // Normal intro duration
+const INTRO_MAX_DURATION = 4000; // Hard fallback — MUST finish by this
+const FADE_DURATION = 800; // Fade out duration
+
 export function IntroScreen() {
   const [visible, setVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
+  const dismissed = useRef(false);
 
   useEffect(() => {
-    // Gate sound on entry
+    // Try to play gate sound — non-blocking, optional
     playGateSound();
 
-    const timer = setTimeout(() => {
-      playIntroChime();
-      setFadeOut(true);
-      setTimeout(() => setVisible(false), 800);
-    }, 2800);
-    return () => clearTimeout(timer);
+    // Normal timer
+    const normalTimer = setTimeout(() => {
+      dismiss();
+    }, INTRO_DURATION);
+
+    // Hard fallback — guarantee the intro finishes even if something goes wrong
+    const maxTimer = setTimeout(() => {
+      dismiss();
+    }, INTRO_MAX_DURATION);
+
+    return () => {
+      clearTimeout(normalTimer);
+      clearTimeout(maxTimer);
+    };
   }, []);
+
+  function dismiss() {
+    if (dismissed.current) return;
+    dismissed.current = true;
+
+    try {
+      playIntroChime();
+    } catch { /* audio is optional */ }
+
+    setFadeOut(true);
+    setTimeout(() => setVisible(false), FADE_DURATION);
+  }
+
+  // Allow tap/click to skip intro immediately
+  function handleSkip() {
+    dismiss();
+  }
 
   if (!visible) return null;
 
   return (
-    <div className={`intro-screen ${fadeOut ? "fade-out" : ""}`}>
+    <div
+      className={`intro-screen ${fadeOut ? "fade-out" : ""}`}
+      onClick={handleSkip}
+      onTouchEnd={handleSkip}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") dismiss(); }}
+      aria-label="Carregando aplicativo — toque para pular"
+      style={{ cursor: "pointer" }}
+    >
       <div className="intro-logo">
         <FlameKindling size={32} className="text-[#0B0E14]" />
       </div>
@@ -150,6 +157,9 @@ export function IntroScreen() {
       <div className="intro-loader">
         <div className="intro-loader-bar" />
       </div>
+      <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.15)" }}>
+        toque para pular
+      </p>
     </div>
   );
 }

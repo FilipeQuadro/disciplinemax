@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { Sidebar } from "@/components/Sidebar";
 import { NotificationInit } from "@/components/NotificationInit";
 import { IntroScreen } from "@/components/IntroScreen";
 import { BackgroundParticles } from "@/components/BackgroundParticles";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AuthGuard } from "@/components/AuthGuard";
+import { AppShell } from "@/components/AppShell";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "DisciplinaMax – Mentor de Disciplina",
@@ -33,6 +34,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -43,25 +46,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/favicon-32.png" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
       </head>
-      <body className="bg-[#0B0E14] text-slate-100 antialiased">
+      <body className="bg-[#0B0E14] text-slate-100 antialiased overscroll-none">
+        <ErrorBoundary>
         <AuthProvider>
         <IntroScreen />
         <BackgroundParticles />
         <AuthGuard>
-          <div className="flex h-screen overflow-hidden relative z-10">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              <div className="max-w-5xl mx-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
-                {children}
-              </div>
-            </main>
-          </div>
+          <AppShell>
+            {children}
+          </AppShell>
           <NotificationInit />
         </AuthGuard>
         </AuthProvider>
+        </ErrorBoundary>
         <Toaster
           position="top-right"
           toastOptions={{

@@ -48,13 +48,13 @@ export default function BibliaPage() {
   }, [user]);
 
   async function loadGoal() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { data } = await supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
     if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
   }
 
   async function loadHistory() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const today = format(new Date(), "yyyy-MM-dd");
     const { data } = await supabase.from("bible_readings").select("*").eq("user_id", user.id).order("read_at", { ascending: false }).limit(20);
     if (data) {
@@ -64,13 +64,13 @@ export default function BibliaPage() {
   }
 
   async function loadWeekly() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").eq("user_id", user.id).order("date", { ascending: false }).limit(7);
     if (data) setWeeklyStats(data.reverse());
   }
 
   async function logReading() {
-    if (!user) return;
+    if (!user || !supabase) return;
     setLoading(true);
     try {
       const { error } = await supabase.from("bible_readings").insert({
@@ -79,7 +79,6 @@ export default function BibliaPage() {
       } as any);
       if (!error) {
         toast.success(`${logForm.book} ${logForm.chapter} registrado! ✝️`);
-        setTodayBibleChapters(todayBibleChapters + 1);
         await loadHistory();
         setLogForm((p) => ({ ...p, chapter: p.chapter + 1, notes: "" }));
       } else toast.error("Erro: " + error.message);
@@ -87,7 +86,7 @@ export default function BibliaPage() {
   }
 
   async function saveGoal() {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { error } = await supabase.from("bible_goals").upsert({
       user_id: user.id, daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
       start_date: format(new Date(), "yyyy-MM-dd"), updated_at: new Date().toISOString(),

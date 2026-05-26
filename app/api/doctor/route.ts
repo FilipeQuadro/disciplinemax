@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyAdminOrCron } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function GET(req: Request) {
-  // Auth
-  const url = new URL(req.url);
-  const querySecret = url.searchParams.get("secret");
-  const authHeader = req.headers.get("authorization");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
+  const { isAdmin } = await verifyAdminOrCron(req);
+  if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

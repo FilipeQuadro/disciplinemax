@@ -34,84 +34,92 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     async function load() {
-      if (!user) return;
+      if (!user || !supabase) {
+        setLoading(false);
+        return;
+      }
       const todayStr = format(new Date(), "yyyy-MM-dd");
 
-      const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
-        supabase.from("books").select("*").eq("user_id", user.id).order("created_at"),
-        supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("daily_stats").select("*").eq("user_id", user.id).eq("date", todayStr).maybeSingle(),
-        supabase.from("bible_readings").select("id").eq("user_id", user.id).gte("read_at", todayStr),
-      ]);
+      try {
+        const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
+          supabase.from("books").select("*").eq("user_id", user.id).order("created_at"),
+          supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle(),
+          supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
+          supabase.from("daily_stats").select("*").eq("user_id", user.id).eq("date", todayStr).maybeSingle(),
+          supabase.from("bible_readings").select("id").eq("user_id", user.id).gte("read_at", todayStr),
+        ]);
 
-      if (booksRes.data) {
-        const needsReset = !statsRes.data && booksRes.data.some((b: any) => b.pages_read_today > 0);
-        if (needsReset) {
-          const resetBooks = booksRes.data.map((b: any) => ({ ...b, pages_read_today: 0 }));
-          setBooks(resetBooks as any[]);
-          for (const b of booksRes.data as any[]) {
-            if (b.pages_read_today > 0) {
-              await (supabase.from("books") as any).update({ pages_read_today: 0 }).eq("id", b.id);
+        if (booksRes.data) {
+          const needsReset = !statsRes.data && booksRes.data.some((b: any) => b.pages_read_today > 0);
+          if (needsReset) {
+            const resetBooks = booksRes.data.map((b: any) => ({ ...b, pages_read_today: 0 }));
+            setBooks(resetBooks as any[]);
+            for (const b of booksRes.data as any[]) {
+              if (b.pages_read_today > 0) {
+                await (supabase.from("books") as any).update({ pages_read_today: 0 }).eq("id", b.id);
+              }
             }
+          } else {
+            setBooks(booksRes.data as any[]);
           }
-        } else {
-          setBooks(booksRes.data as any[]);
         }
-      }
-      if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
-      if (settingsRes.data) setSettings(settingsRes.data as any);
-      if (statsRes.data) setTodayStats(statsRes.data as any);
-      setTodayBibleChapters(bibleReadingsRes.data?.length ?? 0);
+        if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
+        if (settingsRes.data) setSettings(settingsRes.data as any);
+        if (statsRes.data) setTodayStats(statsRes.data as any);
+        setTodayBibleChapters(bibleReadingsRes.data?.length ?? 0);
 
-      const { data: recentStats } = await supabase
-        .from("daily_stats")
-        .select("date, goals_completed")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(30);
-      if (recentStats) {
-        let s = 0;
-        for (const stat of recentStats as any[]) {
-          if (stat.goals_completed) s++;
-          else break;
+        const { data: recentStats } = await supabase
+          .from("daily_stats")
+          .select("date, goals_completed")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .limit(30);
+        let newStreak = 0;
+        if (recentStats) {
+          for (const stat of recentStats as any[]) {
+            if (stat.goals_completed) newStreak++;
+            else break;
+          }
         }
-        setStreak(s);
-      }
+        setStreak(newStreak);
 
-      const v = await getBibleVerseOfDay();
-      setVerse(v);
-      const m = await getMotivationalMessage({
-        streak: streak,
-        booksRead: booksRes.data?.length ?? books.length,
-        bibleChapters: bibleReadingsRes.data?.length ?? todayBibleChapters,
-        completedToday: (statsRes.data as any)?.goals_completed ?? false,
-      });
-      setMotivation(m);
-
-      const start = startOfWeek(today, { weekStartsOn: 0 });
-      const { data: weekData } = await supabase
-        .from("daily_stats")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("date", format(start, "yyyy-MM-dd"))
-        .order("date") as { data: any[] | null };
-
-      if (weekData) {
-        const formatted = Array.from({ length: 7 }, (_, i) => {
-          const d = addDays(start, i);
-          const dateStr = format(d, "yyyy-MM-dd");
-          const stat = weekData.find((s: any) => s.date === dateStr);
-          return {
-            day: format(d, "EEE", { locale: ptBR }),
-            pages: stat?.books_pages_read || 0,
-            chapters: stat?.bible_chapters_read || 0,
-            pomodoros: stat?.pomodoros_completed || 0,
-          };
+        const v = await getBibleVerseOfDay();
+        setVerse(v);
+        const m = await getMotivationalMessage({
+          streak: newStreak,
+          booksRead: booksRes.data?.length ?? books.length,
+          bibleChapters: bibleReadingsRes.data?.length ?? todayBibleChapters,
+          completedToday: (statsRes.data as any)?.goals_completed ?? false,
         });
-        setWeekStats(formatted);
+        setMotivation(m);
+
+        const start = startOfWeek(today, { weekStartsOn: 0 });
+        const { data: weekData } = await supabase
+          .from("daily_stats")
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("date", format(start, "yyyy-MM-dd"))
+          .order("date") as { data: any[] | null };
+
+        if (weekData) {
+          const formatted = Array.from({ length: 7 }, (_, i) => {
+            const d = addDays(start, i);
+            const dateStr = format(d, "yyyy-MM-dd");
+            const stat = weekData.find((s: any) => s.date === dateStr);
+            return {
+              day: format(d, "EEE", { locale: ptBR }),
+              pages: stat?.books_pages_read || 0,
+              chapters: stat?.bible_chapters_read || 0,
+              pomodoros: stat?.pomodoros_completed || 0,
+            };
+          });
+          setWeekStats(formatted);
+        }
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [user]);
@@ -137,7 +145,16 @@ export default function DashboardPage() {
   const pomodoroGoal = settings?.pomodoros_until_long ?? 4;
   const allGoalsMet = pagesReadToday >= totalPagesGoal && bibleGoalMet;
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center h-[60dvh]">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
+          style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}>
+          <div className="w-3 h-3 rounded-full bg-[#0B0E14]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 page-enter stagger-children">
@@ -313,7 +330,7 @@ export default function DashboardPage() {
       )}
 
       {/* Calendário de consistência */}
-      <ConsistencyCalendar userId={user!.id} />
+      <ConsistencyCalendar userId={user?.id ?? ""} />
 
       {/* Conquistas */}
       <div className="card">
@@ -408,6 +425,7 @@ function ConsistencyCalendar({ userId }: { userId: string }) {
 
   useEffect(() => {
     async function loadCalendar() {
+      if (!supabase || !userId) return;
       const days = 35;
       const arr = [];
       for (let i = days - 1; i >= 0; i--) {

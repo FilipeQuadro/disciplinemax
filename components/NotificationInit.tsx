@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { registerServiceWorker, setupPeriodicSync } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/components/AuthProvider";
 
 export function NotificationInit() {
   const { notificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
+  const { user } = useAuth();
   const notifTimes = settings?.notification_times || ["07:00", "12:00", "19:00"];
 
   useEffect(() => {
@@ -29,10 +31,15 @@ export function NotificationInit() {
         await PushNotifications.register();
 
         PushNotifications.addListener("registration", async (token) => {
+          if (!user?.id) return;
+          const { supabase: sb } = await import("@/lib/supabase");
+          const { data: { session } } = await sb!.auth.getSession();
+          const authToken = session?.access_token || "";
           await fetch("/api/notifications/subscribe", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
             body: JSON.stringify({
+              user_id: user.id,
               platform: "apns",
               device_token: token.value,
               bundle_id: process.env.NEXT_PUBLIC_APNS_BUNDLE_ID || "br.com.disciplina.app",

@@ -59,11 +59,11 @@ export function Sidebar() {
       <aside
         className={clsx(
           "fixed md:relative z-40 h-full transition-all duration-300 ease-out",
-          "flex flex-col border-r",
+          "flex flex-col border-r overflow-y-auto overscroll-contain",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           sidebarOpen ? "w-64" : "w-16"
         )}
-        style={{ background: "#0D1018", borderColor: "rgba(255,255,255,0.04)" }}
+        style={{ background: "#0D1018", borderColor: "rgba(255,255,255,0.04)", WebkitOverflowScrolling: "touch" }}
       >
         {/* Logo */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>

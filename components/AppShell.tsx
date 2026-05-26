@@ -1,0 +1,26 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { Sidebar } from "@/components/Sidebar";
+
+const HIDE_SIDEBAR_PATHS = ["/login"];
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const hideSidebar = HIDE_SIDEBAR_PATHS.some((p) => pathname === p);
+
+  if (hideSidebar) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="flex h-[100dvh] overflow-hidden relative z-10 safe-area-inset">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="max-w-5xl mx-auto p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
