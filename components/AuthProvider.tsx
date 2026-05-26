@@ -71,13 +71,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     if (!supabase) return { error: "Supabase not configured" };
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
-    // user_settings and bible_goals are auto-created by the
-    // handle_new_user trigger on auth.users (SECURITY DEFINER).
+    if (!error && data.user) {
+      // Auto-confirm email via server API (service_role bypasses email verification)
+      await fetch("/api/auth/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: data.user.id }),
+      });
+    }
     return { error: error?.message ?? null };
   };
 

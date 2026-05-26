@@ -159,7 +159,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO user_plans (user_id, plan) VALUES (NEW.id, 'free');
   INSERT INTO user_settings (user_id, notification_times, pomodoro_duration, short_break, long_break, pomodoros_until_long, daily_books_goal, daily_bible_chapters, timezone)
-    VALUES (NEW.id::text, '["07:00","12:00","19:00"]'::jsonb, 25, 5, 15, 4, 20, 3, 'America/Sao_Paulo')
+    VALUES (NEW.id::text, ARRAY['07:00','12:00','19:00'], 25, 5, 15, 4, 20, 3, 'America/Sao_Paulo')
     ON CONFLICT (user_id) DO NOTHING;
   INSERT INTO bible_goals (user_id, daily_chapters, plan_name)
     VALUES (NEW.id::text, 3, 'custom')
