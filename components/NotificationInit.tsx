@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { registerServiceWorker, setupPeriodicSync } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
@@ -9,7 +9,11 @@ import { useAuth } from "@/components/AuthProvider";
 export function NotificationInit() {
   const { notificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
   const { user } = useAuth();
-  const notifTimes = settings?.notification_times || ["07:00", "12:00", "19:00"];
+  // Memoize to prevent effect from re-running every render
+  const notifTimes = useMemo(() =>
+    settings?.notification_times?.length ? settings.notification_times : ["07:00", "12:00", "19:00"],
+    [settings?.notification_times]
+  );
 
   useEffect(() => {
     registerServiceWorker().then((reg) => {

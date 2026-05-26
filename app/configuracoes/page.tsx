@@ -49,8 +49,10 @@ export default function ConfiguracoesPage() {
 
   async function loadSettings() {
     if (!user || !supabase) return;
-    const { data } = await supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle() as { data: any | null };
-    if (data) { setSettings(data); setForm({ ...form, ...data }); }
+    try {
+      const { data } = await supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle() as { data: any | null };
+      if (data) { setSettings(data); setForm({ ...form, ...data }); }
+    } catch (err) { console.error("Failed to load settings:", err); }
   }
 
   async function enableNotifications() {
@@ -99,9 +101,10 @@ export default function ConfiguracoesPage() {
   }
 
   async function saveSettings() {
-    if (!user || !supabase) return;
+    if (!user || !supabase) { toast.error("Serviço indisponível"); return; }
     setSaving(true);
-    const { error } = await supabase.from("user_settings").upsert({
+    try {
+      const { error } = await supabase.from("user_settings").upsert({
       user_id: user.id,
       whatsapp_number: form.whatsapp_number,
       callmebot_api_key: form.callmebot_api_key,
@@ -118,9 +121,10 @@ export default function ConfiguracoesPage() {
       timezone: form.timezone,
       updated_at: new Date().toISOString(),
     });
-    setSaving(false);
-    if (!error) { toast.success("Configurações salvas!"); loadSettings(); }
-    else toast.error("Erro: " + error.message);
+      if (!error) { toast.success("Configurações salvas!"); loadSettings(); }
+      else toast.error("Erro: " + error.message);
+    } catch (err) { toast.error("Erro ao salvar"); }
+    finally { setSaving(false); }
   }
 
   const addNotifTime = () => setForm((p) => ({ ...p, notification_times: [...p.notification_times, "09:00"] }));

@@ -65,7 +65,9 @@ export default function PomodoroPage() {
         started_at: (startTime || new Date()).toISOString(), ended_at: new Date().toISOString(),
       };
       addSession(session);
-      if (supabase) await (supabase.from("pomodoro_sessions") as any).insert(session);
+      try {
+        if (supabase) await (supabase.from("pomodoro_sessions") as any).insert(session);
+      } catch (err) { console.error("Failed to save pomodoro session:", err); }
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 
       if (newCount % pomosUntilLong === 0) {
@@ -82,9 +84,18 @@ export default function PomodoroPage() {
     }
   }
 
+  // Reuse AudioContext to avoid iOS exhaustion (~6 max)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   function playNotificationSound() {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AC) return;
+        audioCtxRef.current = new AC();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") { ctx.resume().catch(() => {}); }
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = "sine"; osc.frequency.setValueAtTime(880, ctx.currentTime);
@@ -93,7 +104,7 @@ export default function PomodoroPage() {
       gain.gain.setValueAtTime(0.5, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
       osc.start(); osc.stop(ctx.currentTime + 0.8);
-    } catch { /* silent */ }
+    } catch { /* silent — audio is optional */ }
   }
 
   function toggleTimer() {

@@ -1,6 +1,6 @@
 // Service Worker para DisciplinaApp
 const CACHE_NAME = "disciplina-v1";
-const STATIC_ASSETS = ["/", "/livros", "/biblia", "/pomodoro"];
+const STATIC_ASSETS = ["/", "/livros", "/biblia", "/pomodoro", "/configuracoes", "/planos", "/login"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,8 +20,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Skip API requests — always go to network
+  if (event.request.url.includes("/api/")) return;
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).catch(() => {
+      const cached = caches.match(event.request);
+      return cached || new Response("Offline", { status: 503, statusText: "Offline" });
+    })
   );
 });
 

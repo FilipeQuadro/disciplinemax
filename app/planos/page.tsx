@@ -14,7 +14,8 @@ export default function PlanosPage() {
   useEffect(() => {
     if (user && supabase) {
       (supabase.from("user_plans") as any).select("plan").eq("user_id", user.id).maybeSingle()
-        .then(({ data }: any) => setCurrentPlan((data?.plan as PlanType) || "free"));
+        .then(({ data }: any) => setCurrentPlan((data?.plan as PlanType) || "free"))
+        .catch(() => setCurrentPlan("free"));
     }
   }, [user]);
 

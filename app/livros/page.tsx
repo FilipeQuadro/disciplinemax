@@ -28,12 +28,16 @@ export default function LivrosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
 
-  useEffect(() => { loadBooks(); }, []);
+  useEffect(() => { loadBooks(); }, [user]);
 
   async function loadBooks() {
     if (!user || !supabase) return;
-    const { data } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
-    if (data) setBooks(data as Book[]);
+    try {
+      const { data } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
+      if (data) setBooks(data as Book[]);
+    } catch (err) {
+      console.error("Failed to load books:", err);
+    }
   }
 
   async function saveBook() {

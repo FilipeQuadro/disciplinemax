@@ -49,24 +49,30 @@ export default function BibliaPage() {
 
   async function loadGoal() {
     if (!user || !supabase) return;
-    const { data } = await supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
-    if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
+    try {
+      const { data } = await supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
+      if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
+    } catch (err) { console.error("Failed to load bible goal:", err); }
   }
 
   async function loadHistory() {
     if (!user || !supabase) return;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const { data } = await supabase.from("bible_readings").select("*").eq("user_id", user.id).order("read_at", { ascending: false }).limit(20);
-    if (data) {
-      setHistory(data);
-      setTodayBibleChapters(data.filter((r: any) => r.read_at?.startsWith(today)).length);
-    }
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data } = await supabase.from("bible_readings").select("*").eq("user_id", user.id).order("read_at", { ascending: false }).limit(20);
+      if (data) {
+        setHistory(data);
+        setTodayBibleChapters(data.filter((r: any) => r.read_at?.startsWith(today)).length);
+      }
+    } catch (err) { console.error("Failed to load history:", err); }
   }
 
   async function loadWeekly() {
     if (!user || !supabase) return;
-    const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").eq("user_id", user.id).order("date", { ascending: false }).limit(7);
-    if (data) setWeeklyStats(data.reverse());
+    try {
+      const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").eq("user_id", user.id).order("date", { ascending: false }).limit(7);
+      if (data) setWeeklyStats(data.reverse());
+    } catch (err) { console.error("Failed to load weekly stats:", err); }
   }
 
   async function logReading() {
