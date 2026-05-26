@@ -71,31 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     if (!supabase) return { error: "Supabase not configured" };
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
-    if (!error && data.user) {
-      const userId = data.user.id;
-      // Create settings and bible_goals regardless of email confirmation status
-      await (supabase.from("user_settings") as any).upsert({
-        user_id: userId,
-        notification_times: ["07:00", "12:00", "19:00"],
-        pomodoro_duration: 25,
-        short_break: 5,
-        long_break: 15,
-        pomodoros_until_long: 4,
-        daily_books_goal: 20,
-        daily_bible_chapters: 3,
-        timezone: "America/Sao_Paulo",
-      });
-      await (supabase.from("bible_goals") as any).upsert({
-        user_id: userId,
-        daily_chapters: 3,
-        plan_name: "custom",
-      });
-    }
+    // user_settings and bible_goals are auto-created by the
+    // handle_new_user trigger on auth.users (SECURITY DEFINER).
     return { error: error?.message ?? null };
   };
 
