@@ -98,10 +98,27 @@ export function IntroScreen() {
   const [visible, setVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const dismissed = useRef(false);
+  const audioUnlocked = useRef(false);
+
+  // Unlock audio on first user gesture (required by iOS/Android)
+  useEffect(() => {
+    function unlock() {
+      audioUnlocked.current = true;
+      playGateSound();
+      document.removeEventListener("touchend", unlock);
+      document.removeEventListener("click", unlock);
+    }
+    document.addEventListener("touchend", unlock, { once: true });
+    document.addEventListener("click", unlock, { once: true });
+    return () => {
+      document.removeEventListener("touchend", unlock);
+      document.removeEventListener("click", unlock);
+    };
+  }, []);
 
   useEffect(() => {
-    // Try to play gate sound — non-blocking, optional
-    playGateSound();
+    // Try gate sound immediately (works on desktop; silently fails on mobile)
+    if (!audioUnlocked.current) playGateSound();
 
     // Normal timer
     const normalTimer = setTimeout(() => {
