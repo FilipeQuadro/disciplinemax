@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
     for (const table of tables) {
       try {
-        const { error } = await sb.from(table).select("id").limit(1);
+        const { error } = await sb.from(table).select("*").limit(1);
         tableStatus[table] = !error;
         if (error) {
           issues.push({
@@ -194,17 +194,20 @@ Problemas já corrigidos automaticamente: ${fixes.length > 0 ? fixes.join("; ") 
       },
     }).then(() => {}, () => {});
 
-    // 9. Send Telegram alert for critical issues
-    const criticalIssues = issues.filter((i) => i.severity === "critical");
-    if (criticalIssues.length > 0 && tgSettings?.telegram_bot_token && tgSettings?.telegram_chat_id) {
-      try {
-        const alertMsg = `🚨 *DisciplinaMax — Diagnóstico Automático*\n\n❌ ${criticalIssues.length} problema(s) crítico(s):\n${criticalIssues.map((i) => `• ${i.area}: ${i.message}`).join("\n")}\n\n${fixes.length > 0 ? `✅ Auto-corrigido: ${fixes.join("; ")}` : ""}\n\n⏰ ${new Date().toISOString()}`;
-        await fetch(`https://api.telegram.org/bot${tgSettings.telegram_bot_token}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: tgSettings.telegram_chat_id, text: alertMsg, parse_mode: "Markdown" }),
-        });
-      } catch { /* Don't fail diagnostic if Telegram fails */ }
+    // 9. Send Telegram alert for critical issues (only from cron, not manual runs)
+    // Manual diagnostics are viewed in the admin UI — no need to duplicate Telegram alerts
+    if (actorId === "cron") {
+      const criticalIssues = issues.filter((i) => i.severity === "critical");
+      if (criticalIssues.length > 0 && tgSettings?.telegram_bot_token && tgSettings?.telegram_chat_id) {
+        try {
+          const alertMsg = `🚨 *DisciplinaMax — Diagnóstico Automático*\n\n❌ ${criticalIssues.length} problema(s) crítico(s):\n${criticalIssues.map((i) => `• ${i.area}: ${i.message}`).join("\n")}\n\n${fixes.length > 0 ? `✅ Auto-corrigido: ${fixes.join("; ")}` : ""}\n\n⏰ ${new Date().toISOString()}`;
+          await fetch(`https://api.telegram.org/bot${tgSettings.telegram_bot_token}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: tgSettings.telegram_chat_id, text: alertMsg, parse_mode: "Markdown" }),
+          });
+        } catch { /* Don't fail diagnostic if Telegram fails */ }
+      }
     }
 
     const allOk = issues.filter((i) => i.severity === "critical").length === 0;
