@@ -87,7 +87,7 @@ export default function AdminPage() {
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/ai-diagnostic`, { headers });
-      if (res.ok) {
+      if (res.ok || res.status === 503) {
         const data = await res.json();
         setDiag(data);
         if (data.issues?.length > 0) toast(`🔍 ${data.issues.length} problema(s) encontrado(s)`, { icon: "⚠️" });
