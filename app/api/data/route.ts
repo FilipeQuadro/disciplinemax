@@ -46,6 +46,13 @@ function apiResponse(data: any, status = 200) {
   return NextResponse.json(data, { status, headers: SECURITY_HEADERS });
 }
 
+const BUILD_ID = "v2024-05-27-3fa03a6";
+
+// GET /api/data — version check (no auth required)
+export async function GET() {
+  return NextResponse.json({ ok: true, build: BUILD_ID });
+}
+
 export async function POST(req: Request) {
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return apiResponse({ error: "Not configured" }, 500);
