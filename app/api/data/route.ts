@@ -22,6 +22,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }
 
+  // Read body FIRST before any other operation
+  let body: any;
+  try {
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.trim().length === 0) {
+      return NextResponse.json({ error: "Empty body" }, { status: 400 });
+    }
+    body = JSON.parse(rawBody);
+  } catch (e: any) {
+    return NextResponse.json({ error: "Invalid json: " + e.message }, { status: 400 });
+  }
+
   // Verify user is authenticated
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
@@ -32,7 +44,6 @@ export async function POST(req: Request) {
   if (authError || !user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
   try {
-    const body = await req.json();
     const { action, table, filters, data: payload, id } = body;
 
     if (!table || !ALLOWED_TABLES.includes(table)) {
