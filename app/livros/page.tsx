@@ -28,6 +28,17 @@ export default function LivrosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
 
+  async function authFetch(url: string, body: object) {
+    const { data: { session } } = await supabase!.auth.getSession();
+    const token = session?.access_token || "";
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
   useEffect(() => { loadBooks(); }, [user]);
 
   async function loadBooks() {
@@ -50,14 +61,14 @@ export default function LivrosPage() {
     try {
       const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
-        const { error } = await supabase.from("books").update(payload).eq("id", editingId).select();
-        if (error) { toast.error("Erro: " + error.message); return; }
+        const result = await authFetch("/api/books", { action: "update", payload, id: editingId });
+        if (result.error) { toast.error("Erro: " + result.error); return; }
         toast.success("Livro atualizado!");
         await loadBooks();
         setEditingId(null);
       } else {
-        const { error } = await supabase.from("books").insert(payload).select();
-        if (error) { toast.error("Erro: " + error.message); return; }
+        const result = await authFetch("/api/books", { action: "insert", payload });
+        if (result.error) { toast.error("Erro: " + result.error); return; }
         toast.success("Livro adicionado! 📚");
         await loadBooks();
       }
@@ -74,8 +85,8 @@ export default function LivrosPage() {
   async function deleteBook(id: string) {
     if (!confirm("Remover este livro?") || !supabase) return;
     try {
-      const { error } = await supabase.from("books").delete().eq("id", id);
-      if (error) { toast.error("Erro ao remover"); return; }
+      const result = await authFetch("/api/books", { action: "delete", id });
+      if (result.error) { toast.error("Erro ao remover"); return; }
       await loadBooks();
       toast.success("Livro removido");
     } catch (err) {
@@ -90,10 +101,12 @@ export default function LivrosPage() {
     try {
       const newPage = Math.min(book.current_page + pages, book.total_pages);
       const newToday = book.pages_read_today + pages;
-      const { error } = await supabase.from("books").update({
-        current_page: newPage, pages_read_today: newToday, updated_at: new Date().toISOString(),
-      }).eq("id", book.id);
-      if (error) { toast.error("Erro ao registrar"); return; }
+      const result = await authFetch("/api/books", {
+          action: "update",
+          payload: { current_page: newPage, pages_read_today: newToday, updated_at: new Date().toISOString() },
+          id: book.id,
+      });
+      if (result.error) { toast.error("Erro ao registrar"); return; }
       updateBook(book.id, { current_page: newPage, pages_read_today: newToday });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));
