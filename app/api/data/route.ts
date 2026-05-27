@@ -15,9 +15,40 @@ const ALLOWED_TABLES = [
   "user_plans", "admin_users", "blocked_users", "notification_subscriptions",
 ];
 
+// Tables where upsert should conflict on user_id instead of primary key
+const UPSERT_USER_SCOPED = new Set(["user_settings", "bible_goals", "user_plans"]);
+
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX = 60;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now - entry.lastReset > RATE_LIMIT_WINDOW) {
+    rateLimitMap.set(userId, { count: 1, lastReset: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+// Security headers for API responses
+const SECURITY_HEADERS = {
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Cache-Control": "no-store",
+};
+
+function apiResponse(data: any, status = 200) {
+  return NextResponse.json(data, { status, headers: SECURITY_HEADERS });
+}
+
 export async function POST(req: Request) {
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    return NextResponse.json({ error: "Not configured" }, { status: 500 });
+    return apiResponse({ error: "Not configured" }, 500);
   }
 
   // Read body as text first, then parse — avoids stream consumption issues
@@ -25,27 +56,32 @@ export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
     if (!rawBody || rawBody.trim().length === 0) {
-      return NextResponse.json({ error: "Empty body" }, { status: 400 });
+      return apiResponse({ error: "Empty body" }, 400);
     }
     body = JSON.parse(rawBody);
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid json: " + e.message }, { status: 400 });
+    return apiResponse({ error: "Invalid json: " + e.message }, 400);
   }
 
   // Auth check
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token) return apiResponse({ error: "Unauthorized" }, 401);
 
   const authClient = createClient(supabaseUrl, anonKey);
   const { data: { user }, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  if (authError || !user) return apiResponse({ error: "Invalid token" }, 401);
+
+  // Rate limit per user
+  if (!checkRateLimit(user.id)) {
+    return apiResponse({ error: "Rate limit exceeded" }, 429);
+  }
 
   try {
     const { action, table, filters, data: payload, id } = body;
 
     if (!table || !ALLOWED_TABLES.includes(table)) {
-      return NextResponse.json({ error: "Table not allowed" }, { status: 403 });
+      return apiResponse({ error: "Table not allowed" }, 403);
     }
 
     const sb = getAdminClient();
@@ -67,12 +103,12 @@ export async function POST(req: Request) {
       if (filters?.limit) query = query.limit(filters.limit);
       if (filters?.maybeSingle) {
         const { data, error } = await query.maybeSingle();
-        if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-        return NextResponse.json({ data });
+        if (error) return apiResponse({ error: error.message }, 400);
+        return apiResponse({ data });
       }
       const { data, error } = await query;
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ data });
+      if (error) return apiResponse({ error: error.message }, 400);
+      return apiResponse({ data });
     }
 
     // INSERT
@@ -81,11 +117,11 @@ export async function POST(req: Request) {
         payload.user_id = user.id;
       }
       if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
-        return NextResponse.json({ error: "User mismatch" }, { status: 403 });
+        return apiResponse({ error: "User mismatch" }, 403);
       }
       const { data, error } = await sb.from(table).insert(payload).select();
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ data });
+      if (error) return apiResponse({ error: error.message }, 400);
+      return apiResponse({ data });
     }
 
     // UPDATE
@@ -93,12 +129,12 @@ export async function POST(req: Request) {
       if (table !== "admin_users") {
         const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
         if (row && row.user_id !== user.id) {
-          return NextResponse.json({ error: "Not yours" }, { status: 403 });
+          return apiResponse({ error: "Not yours" }, 403);
         }
       }
       const { data, error } = await sb.from(table).update(payload).eq("id", id).select();
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ data });
+      if (error) return apiResponse({ error: error.message }, 400);
+      return apiResponse({ data });
     }
 
     // UPSERT
@@ -107,11 +143,12 @@ export async function POST(req: Request) {
         payload.user_id = user.id;
       }
       if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
-        return NextResponse.json({ error: "User mismatch" }, { status: 403 });
+        return apiResponse({ error: "User mismatch" }, 403);
       }
-      const { data, error } = await sb.from(table).upsert(payload).select();
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ data });
+      const upsertOpts = UPSERT_USER_SCOPED.has(table) ? { onConflict: "user_id" } : undefined;
+      const { data, error } = await sb.from(table).upsert(payload, upsertOpts).select();
+      if (error) return apiResponse({ error: error.message }, 400);
+      return apiResponse({ data });
     }
 
     // DELETE
@@ -119,16 +156,16 @@ export async function POST(req: Request) {
       if (table !== "admin_users") {
         const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
         if (row && row.user_id !== user.id) {
-          return NextResponse.json({ error: "Not yours" }, { status: 403 });
+          return apiResponse({ error: "Not yours" }, 403);
         }
       }
       const { error } = await sb.from(table).delete().eq("id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ ok: true });
+      if (error) return apiResponse({ error: error.message }, 400);
+      return apiResponse({ ok: true });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return apiResponse({ error: "Invalid action" }, 400);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return apiResponse({ error: e.message }, 500);
   }
 }
