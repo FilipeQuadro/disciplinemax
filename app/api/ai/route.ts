@@ -32,7 +32,7 @@ async function getApiKey(): Promise<string | null> {
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    const { prompt } = JSON.parse(await req.text());
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }

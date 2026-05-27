@@ -105,8 +105,8 @@ export default function DashboardPage() {
           });
           setWeekStats(formatted);
         }
-      } catch (err) {
-        console.error("Dashboard load error:", err);
+      } catch {
+        // Dashboard load error — silently fail, user sees empty state
       } finally {
         setLoading(false);
       }

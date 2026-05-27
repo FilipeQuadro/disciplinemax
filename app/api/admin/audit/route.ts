@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  const body = await req.json();
+  const body = JSON.parse(await req.text());
   const { action, target_type, target_id, details, ip_address } = body;
 
   if (!action) return NextResponse.json({ error: "action is required" }, { status: 400 });

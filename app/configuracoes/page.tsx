@@ -52,7 +52,9 @@ export default function ConfiguracoesPage() {
     try {
       const { data } = await dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user.id }, maybeSingle: true } });
       if (data) { setSettings(data as any); setForm({ ...form, ...(data as any) }); }
-    } catch (err) { console.error("Failed to load settings:", err); }
+    } catch {
+      // Failed to load settings
+    }
   }
 
   async function enableNotifications() {

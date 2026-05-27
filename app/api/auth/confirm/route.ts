@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  const { userId } = await req.json();
+  const { userId } = JSON.parse(await req.text());
   if (!userId) {
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
   }

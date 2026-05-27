@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  const body = await req.json();
+  const body = JSON.parse(await req.text());
   const { user_id, action, reason } = body;
 
   if (!user_id || !action) return NextResponse.json({ error: "user_id and action required" }, { status: 400 });

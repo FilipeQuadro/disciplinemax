@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    const body = JSON.parse(await req.text());
     const { action, payload, id } = body;
 
     // Enforce user_id matches authenticated user

@@ -36,8 +36,7 @@ export default function LivrosPage() {
       const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
       if (error) { toast.error("Erro ao carregar livros"); return; }
       if (data) setBooks(data as Book[]);
-    } catch (err) {
-      console.error("Failed to load books:", err);
+    } catch {
       toast.error("Erro ao carregar livros");
     }
   }
@@ -63,8 +62,7 @@ export default function LivrosPage() {
       }
       setForm({ ...emptyBook });
       setShowForm(false);
-    } catch (err) {
-      console.error("Save book error:", err);
+    } catch {
       toast.error("Erro ao salvar livro");
     } finally {
       setLoading(false);

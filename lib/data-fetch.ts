@@ -9,6 +9,7 @@ export async function dataFetch<T = any>(body: object): Promise<{ data: T | null
     if (!supabase) return { data: null, error: "Supabase not configured" };
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || "";
+    if (!token) return { data: null, error: "Not authenticated" };
     const res = await fetch("/api/data", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },

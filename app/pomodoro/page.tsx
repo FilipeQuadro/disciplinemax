@@ -77,7 +77,9 @@ export default function PomodoroPage() {
       addSession(session);
       try {
         await dataFetch({ action: "insert", table: "pomodoro_sessions", payload: session });
-      } catch (err) { console.error("Failed to save pomodoro session:", err); }
+      } catch {
+        // Failed to save pomodoro session
+      }
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 
       if (newCount % pomosUntilLong === 0) {

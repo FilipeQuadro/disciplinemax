@@ -52,7 +52,9 @@ export default function BibliaPage() {
     try {
       const { data } = await dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } });
       if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: (data as any).daily_chapters, plan_name: (data as any).plan_name || "custom" }); }
-    } catch (err) { console.error("Failed to load bible goal:", err); }
+    } catch {
+      // Failed to load bible goal
+    }
   }
 
   async function loadHistory() {
@@ -64,7 +66,9 @@ export default function BibliaPage() {
         setHistory(data as any[]);
         setTodayBibleChapters((data as any[]).filter((r: any) => r.read_at?.startsWith(today)).length);
       }
-    } catch (err) { console.error("Failed to load history:", err); }
+    } catch {
+      // Failed to load history
+    }
   }
 
   async function loadWeekly() {
@@ -72,7 +76,9 @@ export default function BibliaPage() {
     try {
       const { data } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 7, select: "date, bible_chapters_read" } });
       if (data) setWeeklyStats((data as any[]).reverse());
-    } catch (err) { console.error("Failed to load weekly stats:", err); }
+    } catch {
+      // Failed to load weekly stats
+    }
   }
 
   async function logReading() {

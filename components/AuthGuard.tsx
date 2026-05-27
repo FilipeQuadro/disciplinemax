@@ -30,13 +30,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await dataFetch({ action: "select", table: "blocked_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "user_id" } });
         if (error) {
-          console.warn("blocked_users check failed:", error);
           return;
         }
         if (data) setBlocked(true);
       } catch (err) {
-        console.warn("Blocked user check failed:", err);
-      }
+      // Blocked user check failed
+    }
     }
     if (user) checkBlocked();
   }, [user]);

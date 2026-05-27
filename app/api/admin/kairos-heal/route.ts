@@ -62,17 +62,13 @@ export async function POST(req: Request) {
   try {
     // Step 1: Get issues from request body OR run diagnostic
     let issues: HealIssue[];
-    const contentType = req.headers.get("content-type") || "";
+    const rawBody = await req.text();
+    const parsedBody = rawBody ? JSON.parse(rawBody) : {};
 
-    if (contentType.includes("application/json")) {
-      const body = await req.json();
-      if (body.issues && Array.isArray(body.issues) && body.issues.length > 0) {
-        issues = body.issues;
-      } else {
-        // Run diagnostic to get issues
-        issues = await runDiagnostic(sb);
-      }
+    if (parsedBody.issues && Array.isArray(parsedBody.issues) && parsedBody.issues.length > 0) {
+      issues = parsedBody.issues;
     } else {
+      // Run diagnostic to get issues
       issues = await runDiagnostic(sb);
     }
 
