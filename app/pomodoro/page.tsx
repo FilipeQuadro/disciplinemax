@@ -113,7 +113,12 @@ export default function PomodoroPage() {
   }
 
   function resetTimer() { setPomodoroActive(false); setPomodoroTimeLeft(getModeTime()); setStartTime(null); }
-  function skipToBreak() { setPomodoroActive(false); setMode("shortBreak"); setPomodoroTimeLeft(customShort * 60); }
+  function skipToBreak() {
+    setPomodoroActive(false);
+    setPomodoroIsBreak(true);
+    setMode("shortBreak");
+    setPomodoroTimeLeft(customShort * 60);
+  }
 
   const totalSeconds = getModeTime();
   const progress = ((totalSeconds - pomodoroTimeLeft) / totalSeconds) * 100;

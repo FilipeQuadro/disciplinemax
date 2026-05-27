@@ -33,10 +33,12 @@ export default function LivrosPage() {
   async function loadBooks() {
     if (!user || !supabase) return;
     try {
-      const { data } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
+      const { data, error } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
+      if (error) { toast.error("Erro ao carregar livros"); return; }
       if (data) setBooks(data as Book[]);
     } catch (err) {
       console.error("Failed to load books:", err);
+      toast.error("Erro ao carregar livros");
     }
   }
 
@@ -48,38 +50,55 @@ export default function LivrosPage() {
     try {
       const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
-        const { error } = await (supabase.from("books") as any).update(payload).eq("id", editingId);
-        if (!error) { toast.success("Livro atualizado!"); await loadBooks(); setEditingId(null); }
+        const { error } = await supabase.from("books").update(payload).eq("id", editingId).select();
+        if (error) { toast.error("Erro: " + error.message); return; }
+        toast.success("Livro atualizado!");
+        await loadBooks();
+        setEditingId(null);
       } else {
-        if (books.length >= 4) { toast.error("Máximo de 4 livros cadastrados"); setLoading(false); return; }
-        const { error } = await (supabase.from("books") as any).insert(payload);
-        if (!error) { toast.success("Livro adicionado! 📚"); await loadBooks(); }
-        else toast.error("Erro: " + error.message);
+        const { error } = await supabase.from("books").insert(payload).select();
+        if (error) { toast.error("Erro: " + error.message); return; }
+        toast.success("Livro adicionado! 📚");
+        await loadBooks();
       }
-      setForm({ ...emptyBook }); setShowForm(false);
-    } finally { setLoading(false); }
+      setForm({ ...emptyBook });
+      setShowForm(false);
+    } catch (err) {
+      console.error("Save book error:", err);
+      toast.error("Erro ao salvar livro");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function deleteBook(id: string) {
     if (!confirm("Remover este livro?") || !supabase) return;
-    await supabase.from("books").delete().eq("id", id);
-    await loadBooks();
-    toast.success("Livro removido");
+    try {
+      const { error } = await supabase.from("books").delete().eq("id", id);
+      if (error) { toast.error("Erro ao remover"); return; }
+      await loadBooks();
+      toast.success("Livro removido");
+    } catch (err) {
+      toast.error("Erro ao remover livro");
+    }
   }
 
   async function logReading(book: Book) {
     if (!supabase) return;
     const pages = readingInput[book.id] || 0;
     if (pages <= 0) return;
-    const newPage = Math.min(book.current_page + pages, book.total_pages);
-    const newToday = book.pages_read_today + pages;
-    const { error } = await (supabase.from("books") as any).update({
-      current_page: newPage, pages_read_today: newToday, updated_at: new Date().toISOString(),
-    }).eq("id", book.id);
-    if (!error) {
+    try {
+      const newPage = Math.min(book.current_page + pages, book.total_pages);
+      const newToday = book.pages_read_today + pages;
+      const { error } = await supabase.from("books").update({
+        current_page: newPage, pages_read_today: newToday, updated_at: new Date().toISOString(),
+      }).eq("id", book.id);
+      if (error) { toast.error("Erro ao registrar"); return; }
       updateBook(book.id, { current_page: newPage, pages_read_today: newToday });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));
+    } catch {
+      toast.error("Erro ao registrar leitura");
     }
   }
 
@@ -89,7 +108,8 @@ export default function LivrosPage() {
       current_page: book.current_page, daily_goal: book.daily_goal,
       cover_url: book.cover_url || "", color: book.color, target_date: book.target_date || "",
     });
-    setEditingId(book.id); setShowForm(true);
+    setEditingId(book.id);
+    setShowForm(true);
   }
 
   return (
@@ -99,9 +119,9 @@ export default function LivrosPage() {
           <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
             <BookOpen size={24} style={{ color: "#7C6BBD" }} /> Meus Livros
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Até 4 livros em leitura simultânea</p>
+          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Acompanhe sua leitura</p>
         </div>
-        {books.length < 4 && !showForm && (
+        {!showForm && (
           <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyBook }); }}
             className="btn-primary flex items-center gap-2 text-sm">
             <Plus size={16} /> Adicionar
@@ -111,7 +131,12 @@ export default function LivrosPage() {
 
       {showForm && (
         <div className="card animate-slide-up">
-          <h2 className="font-semibold text-white mb-4">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+              <X size={18} />
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Título *</label>
@@ -153,7 +178,7 @@ export default function LivrosPage() {
               <div className="flex gap-2 mt-1">
                 {BOOK_COLORS.map((c) => (
                   <button key={c} onClick={() => setForm((p) => ({ ...p, color: c }))}
-                    className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2")}
+                    className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2 ring-offset-[#141820]")}
                     style={{ background: c }} />
                 ))}
               </div>
@@ -161,7 +186,8 @@ export default function LivrosPage() {
           </div>
           <div className="flex gap-3 mt-5">
             <button onClick={saveBook} disabled={loading} className="btn-primary flex items-center gap-2">
-              <Check size={16} /> {loading ? "Salvando..." : editingId ? "Atualizar" : "Salvar Livro"}
+              {loading ? <div className="w-4 h-4 border-2 border-[#0B0E14]/20 border-t-[#0B0E14] rounded-full animate-spin" /> : <Check size={16} />}
+              {loading ? "Salvando..." : editingId ? "Atualizar" : "Salvar Livro"}
             </button>
             <button onClick={() => { setShowForm(false); setEditingId(null); }} className="btn-ghost flex items-center gap-2">
               <X size={16} /> Cancelar
@@ -170,14 +196,14 @@ export default function LivrosPage() {
         </div>
       )}
 
-      {books.length === 0 ? (
+      {books.length === 0 && !showForm ? (
         <div className="card text-center py-16">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
             style={{ background: "rgba(124,107,189,0.08)" }}>
             <BookOpen size={28} style={{ color: "#7C6BBD" }} />
           </div>
           <h3 className="font-medium mb-2" style={{ color: "#8B95A5" }}>Nenhum livro ainda</h3>
-          <p className="text-sm" style={{ color: "#555E6E" }}>Adicione até 4 livros para acompanhar</p>
+          <p className="text-sm" style={{ color: "#555E6E" }}>Adicione um livro para acompanhar sua leitura</p>
         </div>
       ) : (
         <div className="space-y-4">

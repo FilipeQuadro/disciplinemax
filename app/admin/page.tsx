@@ -49,6 +49,8 @@ export default function AdminPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [tab, setTab] = useState<"overview" | "users" | "diag" | "audit" | "plans">("overview");
   const [diagRunning, setDiagRunning] = useState(false);
+  const [healRunning, setHealRunning] = useState(false);
+  const [healResult, setHealResult] = useState<any>(null);
 
   const secret = process.env.NEXT_PUBLIC_CRON_SECRET || "";
 
@@ -95,6 +97,30 @@ export default function AdminPage() {
       }
     } catch { toast.error("Falha ao executar diagnóstico"); }
     setDiagRunning(false);
+  }
+
+  async function runKairosHeal() {
+    setHealRunning(true);
+    setHealResult(null);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/admin/kairos-heal`, {
+        method: "POST",
+        headers,
+      });
+      const data = await res.json();
+      setHealResult(data);
+      if (data.ok) {
+        toast.success("🤖 Kairós Auto-Heal: Problemas corrigidos!");
+      } else {
+        toast(`🤖 Kairós: ${data.remainingCritical || 0} problema(s) crítico(s) restante(s)`, { icon: "⚠️" });
+      }
+      // Re-run diagnostic to refresh status
+      await runDiagnostic();
+    } catch {
+      toast.error("Falha ao executar auto-heal. Kairós AI está rodando?");
+    }
+    setHealRunning(false);
   }
 
   async function manageUser(userId: string, action: "block" | "unblock" | "reset_data" | "delete") {
@@ -249,6 +275,21 @@ export default function AdminPage() {
                   <><Zap size={14} /> Executar Diagnóstico</>
                 )}
               </button>
+              <button onClick={runKairosHeal} disabled={healRunning || (!diag || diag.ok)}
+                className="text-sm flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300"
+                style={{
+                  background: (healRunning || !diag || diag.ok) ? "rgba(255,255,255,0.03)" : "rgba(108,92,231,0.15)",
+                  color: (healRunning || !diag || diag.ok) ? "#555E6E" : "#6C5CE7",
+                  border: (healRunning || !diag || diag.ok) ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(108,92,231,0.3)",
+                  cursor: (healRunning || !diag || diag.ok) ? "not-allowed" : "pointer",
+                }}
+                title={!diag ? "Execute o diagnóstico primeiro" : diag.ok ? "Sistema saudável, sem necessidade de heal" : "Executar Kairós AI Auto-Heal"}>
+                {healRunning ? (
+                  <><div className="w-4 h-4 border-2 border-[#6C5CE7]/20 border-t-[#6C5CE7] rounded-full animate-spin" /> Curando...</>
+                ) : (
+                  <><Bot size={14} /> 🤖 Auto-Heal</>
+                )}
+              </button>
             </div>
 
             {diag && (
@@ -331,7 +372,79 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        </div>
+
+          {/* Kairós Auto-Heal Result */}
+          {healResult && (
+            <div className="card mt-4">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <Bot size={16} style={{ color: "#6C5CE7" }} /> Kairós AI — Resultado do Auto-Heal
+              </h3>
+              <div className="space-y-3">
+                {/* Status */}
+                <div className="p-4 rounded-xl flex items-center gap-3" style={{
+                  background: healResult.ok ? "rgba(58,186,180,0.06)" : "rgba(217,79,79,0.06)",
+                  border: healResult.ok ? "1px solid rgba(58,186,180,0.2)" : "1px solid rgba(217,79,79,0.2)",
+                }}>
+                  {healResult.ok ? <CheckCircle2 size={20} style={{ color: "#3ABAB4" }} /> : <XCircle size={20} style={{ color: "#D94F4F" }} />}
+                  <div>
+                    <p className="font-medium text-white">{healResult.ok ? "Problemas corrigidos com sucesso!" : "Alguns problemas não puderam ser corrigidos automaticamente"}</p>
+                    <p className="text-xs" style={{ color: "#555E6E" }}>
+                      Modelo: {healResult.model || "unknown"} · Request: {healResult.requestId?.substring(0, 8) || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <p className="text-lg font-bold text-white">{healResult.totalIssues || 0}</p>
+                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Problemas</p>
+                  </div>
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.08)" }}>
+                    <p className="text-lg font-bold" style={{ color: "#3ABAB4" }}>{healResult.actionsSucceeded || 0}</p>
+                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Corrigidos</p>
+                  </div>
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(217,79,79,0.04)", border: "1px solid rgba(217,79,79,0.08)" }}>
+                    <p className="text-lg font-bold" style={{ color: "#D94F4F" }}>{healResult.actionsFailed || 0}</p>
+                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Falharam</p>
+                  </div>
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.08)" }}>
+                    <p className="text-lg font-bold" style={{ color: "#E8844A" }}>{healResult.dangerousSkipped || 0}</p>
+                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Perigosos</p>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                {healResult.summary && (
+                  <div className="p-3 rounded-xl" style={{ background: "rgba(108,92,231,0.04)", border: "1px solid rgba(108,92,231,0.1)" }}>
+                    <p className="text-[10px] uppercase tracking-wider font-semibold mb-1" style={{ color: "#6C5CE7" }}>Resumo da IA</p>
+                    <p className="text-sm" style={{ color: "#8B95A5" }}>{healResult.summary}</p>
+                  </div>
+                )}
+
+                {/* Action Results */}
+                {healResult.results && healResult.results.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#555E6E" }}>Ações Executadas</p>
+                    {healResult.results.map((r: any, i: number) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {r.success ? <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "#3ABAB4" }} /> : <XCircle size={14} className="shrink-0 mt-0.5" style={{ color: "#D94F4F" }} />}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="badge text-[9px]" style={{ background: "rgba(108,92,231,0.1)", color: "#6C5CE7" }}>{r.actionType}</span>
+                            <span className="text-xs" style={{ color: "#555E6E" }}>{r.issueId}</span>
+                          </div>
+                          {r.result && <p className="text-sm text-white mt-1">{r.result}</p>}
+                          {r.error && <p className="text-xs mt-1" style={{ color: "#D94F4F" }}>{r.error}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+      </div>
       )}
 
       {/* Audit */}

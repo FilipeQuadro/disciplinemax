@@ -93,11 +93,14 @@ export default function BibliaPage() {
 
   async function saveGoal() {
     if (!user || !supabase) return;
-    const { error } = await supabase.from("bible_goals").upsert({
-      user_id: user.id, daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
-      start_date: format(new Date(), "yyyy-MM-dd"), updated_at: new Date().toISOString(),
-    } as any);
-    if (!error) { toast.success("Meta bíblica atualizada!"); loadGoal(); setShowGoalForm(false); }
+    try {
+      const { error } = await supabase.from("bible_goals").upsert({
+        user_id: user.id, daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
+        start_date: format(new Date(), "yyyy-MM-dd"), updated_at: new Date().toISOString(),
+      } as any);
+      if (error) { toast.error("Erro ao salvar meta"); return; }
+      toast.success("Meta bíblica atualizada!"); loadGoal(); setShowGoalForm(false);
+    } catch { toast.error("Erro ao salvar meta"); }
   }
 
   const goalMet = bibleGoal ? todayBibleChapters >= bibleGoal.daily_chapters : false;
