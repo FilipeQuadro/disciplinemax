@@ -59,6 +59,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ data });
     }
 
+    if (action === "select") {
+      const { data, error } = await sb.from("books").select("*").eq("user_id", user.id).order("created_at");
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ data });
+    }
+
     if (action === "delete") {
       // Verify ownership
       const { data: book } = await sb.from("books").select("user_id").eq("id", id).single();

@@ -43,9 +43,9 @@ export default function LivrosPage() {
   async function loadBooks() {
     if (!user || !supabase) return;
     try {
-      const { data, error } = await supabase.from("books").select("*").eq("user_id", user.id).order("created_at");
-      if (error) { toast.error("Erro ao carregar livros"); return; }
-      if (data) setBooks(data as Book[]);
+      const result = await authFetch("/api/books", { action: "select" });
+      if (result.error) { toast.error("Erro ao carregar livros"); return; }
+      if (result.data) setBooks(result.data as Book[]);
     } catch (err) {
       console.error("Failed to load books:", err);
       toast.error("Erro ao carregar livros");
