@@ -5,9 +5,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import {
-  Users, Activity, Shield, CheckCircle2, XCircle, Clock,
+  Users, Activity, Shield, CheckCircle2, Clock,
   BookOpen, BookMarked, Timer, TrendingUp, Zap, Crown,
-  Ban, Trash2, RotateCcw, AlertTriangle, Bot, FileText, Unlock
+  Ban, Trash2, RotateCcw, FileText, Unlock
 } from "lucide-react";
 import { clsx } from "clsx";
 import { format } from "date-fns";
@@ -30,30 +30,14 @@ interface AuditLog {
   target_id: string | null; details: any; created_at: string;
 }
 
-interface DiagnosticResult {
-  ok: boolean; timestamp: string; issues: DiagnosticIssue[]; fixes: string[];
-  aiAnalysis: string | null; tableStatus: Record<string, boolean>;
-}
-
-interface DiagnosticIssue {
-  severity: "critical" | "warning" | "info";
-  area: string; message: string; autoFixed?: boolean;
-}
-
 export default function AdminPage() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [diag, setDiag] = useState<DiagnosticResult | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"overview" | "users" | "diag" | "audit" | "plans">("overview");
-  const [diagRunning, setDiagRunning] = useState(false);
-  const [healRunning, setHealRunning] = useState(false);
-  const [healResult, setHealResult] = useState<any>(null);
-
-  const secret = process.env.NEXT_PUBLIC_CRON_SECRET || "";
+  const [tab, setTab] = useState<"overview" | "users" | "audit" | "plans">("overview");
 
   useEffect(() => { checkAdmin(); }, [user]);
 
@@ -83,45 +67,6 @@ export default function AdminPage() {
       if (usersRes.ok) { const d = await usersRes.json(); setUsers(d.users || []); }
       if (auditRes.ok) { const d = await auditRes.json(); setAuditLogs(d.logs || []); }
     } catch { /* silently fail */ }
-  }
-
-  async function runDiagnostic() {
-    setDiagRunning(true);
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/ai-diagnostic`, { headers });
-      if (res.ok || res.status === 503) {
-        const data = await res.json();
-        setDiag(data);
-        if (data.issues?.length > 0) toast(`🔍 ${data.issues.length} problema(s) encontrado(s)`, { icon: "⚠️" });
-        else toast.success("✅ Sistema saudável!");
-      }
-    } catch { toast.error("Falha ao executar diagnóstico"); }
-    setDiagRunning(false);
-  }
-
-  async function runKairosHeal() {
-    setHealRunning(true);
-    setHealResult(null);
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/kairos-heal`, {
-        method: "POST",
-        headers,
-      });
-      const data = await res.json();
-      setHealResult(data);
-      if (data.ok) {
-        toast.success("🤖 Kairós Auto-Heal: Problemas corrigidos!");
-      } else {
-        toast(`🤖 Kairós: ${data.remainingCritical || 0} problema(s) crítico(s) restante(s)`, { icon: "⚠️" });
-      }
-      // Re-run diagnostic to refresh status
-      await runDiagnostic();
-    } catch {
-      toast.error("Falha ao executar auto-heal. Kairós AI está rodando?");
-    }
-    setHealRunning(false);
   }
 
   async function manageUser(userId: string, action: "block" | "unblock" | "reset_data" | "delete") {
@@ -157,7 +102,6 @@ export default function AdminPage() {
   const tabs = [
     { key: "overview" as const, label: "Visão Geral", icon: TrendingUp },
     { key: "users" as const, label: "Usuários", icon: Users },
-    { key: "diag" as const, label: "IA Diagnóstico", icon: Bot },
     { key: "audit" as const, label: "Auditoria", icon: FileText },
     { key: "plans" as const, label: "Planos", icon: Crown },
   ];
@@ -260,194 +204,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* AI Diagnostic */}
-      {tab === "diag" && (
-        <div className="space-y-4">
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white flex items-center gap-2">
-                <Bot size={16} style={{ color: "#D4AF37" }} /> IA Diagnóstico Automático
-              </h3>
-              <button onClick={runDiagnostic} disabled={diagRunning}
-                className="btn-primary text-sm flex items-center gap-2">
-                {diagRunning ? (
-                  <><div className="w-4 h-4 border-2 border-[#0B0E14]/20 border-t-[#0B0E14] rounded-full animate-spin" /> Analisando...</>
-                ) : (
-                  <><Zap size={14} /> Executar Diagnóstico</>
-                )}
-              </button>
-              <button onClick={runKairosHeal} disabled={healRunning || (!diag || diag.ok)}
-                className="text-sm flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300"
-                style={{
-                  background: (healRunning || !diag || diag.ok) ? "rgba(255,255,255,0.03)" : "rgba(108,92,231,0.15)",
-                  color: (healRunning || !diag || diag.ok) ? "#555E6E" : "#6C5CE7",
-                  border: (healRunning || !diag || diag.ok) ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(108,92,231,0.3)",
-                  cursor: (healRunning || !diag || diag.ok) ? "not-allowed" : "pointer",
-                }}
-                title={!diag ? "Execute o diagnóstico primeiro" : diag.ok ? "Sistema saudável, sem necessidade de heal" : "Executar Kairós AI Auto-Heal"}>
-                {healRunning ? (
-                  <><div className="w-4 h-4 border-2 border-[#6C5CE7]/20 border-t-[#6C5CE7] rounded-full animate-spin" /> Curando...</>
-                ) : (
-                  <><Bot size={14} /> 🤖 Auto-Heal</>
-                )}
-              </button>
-            </div>
-
-            {diag && (
-              <div className="space-y-4">
-                {/* Status geral */}
-                <div className={clsx("p-4 rounded-xl flex items-center gap-3")}
-                  style={{
-                    background: diag.ok ? "rgba(58,186,180,0.06)" : "rgba(217,79,79,0.06)",
-                    border: diag.ok ? "1px solid rgba(58,186,180,0.2)" : "1px solid rgba(217,79,79,0.2)",
-                  }}>
-                  {diag.ok ? <CheckCircle2 size={20} style={{ color: "#3ABAB4" }} /> : <XCircle size={20} style={{ color: "#D94F4F" }} />}
-                  <div>
-                    <p className="font-medium text-white">{diag.ok ? "Sistema saudável" : "Problemas detectados"}</p>
-                    <p className="text-xs" style={{ color: "#555E6E" }}>
-                      {diag.issues.length} problema(s) · {diag.fixes.length} auto-corrigido(s) · {format(new Date(diag.timestamp), "dd/MM HH:mm")}
-                    </p>
-                  </div>
-                </div>
-
-                {/* AI Analysis */}
-                {diag.aiAnalysis && (
-                  <div className="p-4 rounded-xl" style={{ background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.1)" }}>
-                    <p className="text-[10px] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
-                      <Bot size={11} /> Análise da IA
-                    </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#C8CCD4" }}>{diag.aiAnalysis}</p>
-                  </div>
-                )}
-
-                {/* Issues */}
-                {diag.issues.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#555E6E" }}>Problemas Encontrados</p>
-                    {diag.issues.map((issue: DiagnosticIssue, i: number) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {issue.severity === "critical" ? <XCircle size={16} className="shrink-0 mt-0.5" style={{ color: "#D94F4F" }} /> :
-                         issue.severity === "warning" ? <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "#E8844A" }} /> :
-                         <CheckCircle2 size={16} className="shrink-0 mt-0.5" style={{ color: "#3ABAB4" }} />}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium" style={{ color: "#8B95A5" }}>{issue.area}</span>
-                            {issue.autoFixed && <span className="badge text-[9px]" style={{ background: "rgba(58,186,180,0.12)", color: "#3ABAB4" }}>auto-corrigido</span>}
-                          </div>
-                          <p className="text-sm text-white">{issue.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Fixes */}
-                {diag.fixes.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#3ABAB4" }}>Auto-Corrigido</p>
-                    {diag.fixes.map((fix: string, i: number) => (
-                      <div key={i} className="p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.08)" }}>
-                        <CheckCircle2 size={14} style={{ color: "#3ABAB4" }} />
-                        <p className="text-sm" style={{ color: "#8B95A5" }}>{fix}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Table status */}
-                {diag.tableStatus && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#555E6E" }}>Status das Tabelas</p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(diag.tableStatus).map(([table, ok]) => (
-                        <span key={table} className="badge text-[10px]" style={{
-                          background: ok ? "rgba(58,186,180,0.08)" : "rgba(217,79,79,0.08)",
-                          color: ok ? "#3ABAB4" : "#D94F4F",
-                        }}>
-                          {ok ? "✓" : "✗"} {table}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Kairós Auto-Heal Result */}
-          {healResult && (
-            <div className="card mt-4">
-              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <Bot size={16} style={{ color: "#6C5CE7" }} /> Kairós AI — Resultado do Auto-Heal
-              </h3>
-              <div className="space-y-3">
-                {/* Status */}
-                <div className="p-4 rounded-xl flex items-center gap-3" style={{
-                  background: healResult.ok ? "rgba(58,186,180,0.06)" : "rgba(217,79,79,0.06)",
-                  border: healResult.ok ? "1px solid rgba(58,186,180,0.2)" : "1px solid rgba(217,79,79,0.2)",
-                }}>
-                  {healResult.ok ? <CheckCircle2 size={20} style={{ color: "#3ABAB4" }} /> : <XCircle size={20} style={{ color: "#D94F4F" }} />}
-                  <div>
-                    <p className="font-medium text-white">{healResult.ok ? "Problemas corrigidos com sucesso!" : "Alguns problemas não puderam ser corrigidos automaticamente"}</p>
-                    <p className="text-xs" style={{ color: "#555E6E" }}>
-                      Modelo: {healResult.model || "unknown"} · Request: {healResult.requestId?.substring(0, 8) || "—"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                    <p className="text-lg font-bold text-white">{healResult.totalIssues || 0}</p>
-                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Problemas</p>
-                  </div>
-                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.08)" }}>
-                    <p className="text-lg font-bold" style={{ color: "#3ABAB4" }}>{healResult.actionsSucceeded || 0}</p>
-                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Corrigidos</p>
-                  </div>
-                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(217,79,79,0.04)", border: "1px solid rgba(217,79,79,0.08)" }}>
-                    <p className="text-lg font-bold" style={{ color: "#D94F4F" }}>{healResult.actionsFailed || 0}</p>
-                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Falharam</p>
-                  </div>
-                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.08)" }}>
-                    <p className="text-lg font-bold" style={{ color: "#E8844A" }}>{healResult.dangerousSkipped || 0}</p>
-                    <p className="text-[10px]" style={{ color: "#555E6E" }}>Perigosos</p>
-                  </div>
-                </div>
-
-                {/* Summary */}
-                {healResult.summary && (
-                  <div className="p-3 rounded-xl" style={{ background: "rgba(108,92,231,0.04)", border: "1px solid rgba(108,92,231,0.1)" }}>
-                    <p className="text-[10px] uppercase tracking-wider font-semibold mb-1" style={{ color: "#6C5CE7" }}>Resumo da IA</p>
-                    <p className="text-sm" style={{ color: "#8B95A5" }}>{healResult.summary}</p>
-                  </div>
-                )}
-
-                {/* Action Results */}
-                {healResult.results && healResult.results.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#555E6E" }}>Ações Executadas</p>
-                    {healResult.results.map((r: any, i: number) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {r.success ? <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "#3ABAB4" }} /> : <XCircle size={14} className="shrink-0 mt-0.5" style={{ color: "#D94F4F" }} />}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="badge text-[9px]" style={{ background: "rgba(108,92,231,0.1)", color: "#6C5CE7" }}>{r.actionType}</span>
-                            <span className="text-xs" style={{ color: "#555E6E" }}>{r.issueId}</span>
-                          </div>
-                          {r.result && <p className="text-sm text-white mt-1">{r.result}</p>}
-                          {r.error && <p className="text-xs mt-1" style={{ color: "#D94F4F" }}>{r.error}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-      </div>
-      )}
-
       {/* Audit */}
       {tab === "audit" && (
         <div className="card">
@@ -471,13 +227,8 @@ export default function AdminPage() {
                     <td className="p-3 font-mono text-[11px]" style={{ color: "#8B95A5" }}>{log.actor_id?.substring(0, 8) || "system"}</td>
                     <td className="p-3">
                       <span className="badge text-[10px]" style={{
-                        background: log.action.includes("block") ? "rgba(217,79,79,0.1)" :
-                          log.action.includes("delete") ? "rgba(217,79,79,0.1)" :
-                            log.action.includes("diagnostic") ? "rgba(124,107,189,0.1)" :
-                              "rgba(212,175,55,0.1)",
-                        color: log.action.includes("block") ? "#D94F4F" :
-                          log.action.includes("delete") ? "#D94F4F" :
-                            log.action.includes("diagnostic") ? "#7C6BBD" : "#D4AF37",
+                        background: log.action.includes("block") || log.action.includes("delete") ? "rgba(217,79,79,0.1)" : "rgba(212,175,55,0.1)",
+                        color: log.action.includes("block") || log.action.includes("delete") ? "#D94F4F" : "#D4AF37",
                       }}>{log.action}</span>
                     </td>
                     <td className="p-3 text-xs" style={{ color: "#8B95A5" }}>
