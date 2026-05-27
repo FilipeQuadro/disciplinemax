@@ -21,7 +21,7 @@ export default function PlanosPage() {
   const limits = PLAN_LIMITS[currentPlan];
 
   return (
-    <div className="space-y-6 page-enter stagger-children">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
           <Crown size={24} style={{ color: "#D4AF37" }} /> Planos

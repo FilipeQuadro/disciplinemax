@@ -133,7 +133,7 @@ export default function ConfiguracoesPage() {
   }));
 
   return (
-    <div className="space-y-6 page-enter stagger-children max-w-2xl">
+    <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
           <Settings size={24} style={{ color: "#8B95A5" }} /> Configurações

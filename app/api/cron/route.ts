@@ -99,7 +99,10 @@ export async function GET(req: Request) {
     const isMorning = brtHour < 12;
     const verse = await getBibleVerseOfDay();
     const motivational = await getMotivationalMessage({
-      streak: 0, booksRead: 0, bibleChapters: 0, completedToday: false,
+      streak: stats?.streak_day || 0,
+      booksRead: totalPagesRead,
+      bibleChapters: bibleChaptersRead,
+      completedToday: booksGoalMet && bibleGoalMet,
     });
 
     let message = "";

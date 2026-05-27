@@ -23,14 +23,24 @@ export default function PomodoroPage() {
   const { user } = useAuth();
 
   const [mode, setMode] = useState<"focus" | "shortBreak" | "longBreak">("focus");
-  const [customFocus, setCustomFocus] = useState(settings?.pomodoro_duration || 25);
-  const [customShort, setCustomShort] = useState(settings?.short_break || 5);
-  const [customLong, setCustomLong] = useState(settings?.long_break || 15);
-  const [pomosUntilLong] = useState(settings?.pomodoros_until_long || 4);
+  const [customFocus, setCustomFocus] = useState(25);
+  const [customShort, setCustomShort] = useState(5);
+  const [customLong, setCustomLong] = useState(15);
+  const [pomosUntilLong, setPomosUntilLong] = useState(4);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const ambient = useAmbientSound();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Sync custom values when settings load
+  useEffect(() => {
+    if (settings) {
+      setCustomFocus(settings.pomodoro_duration || 25);
+      setCustomShort(settings.short_break || 5);
+      setCustomLong(settings.long_break || 15);
+      setPomosUntilLong(settings.pomodoros_until_long || 4);
+    }
+  }, [settings]);
 
   const getModeTime = useCallback(() => {
     if (mode === "focus") return customFocus * 60;
@@ -134,7 +144,7 @@ export default function PomodoroPage() {
   const totalMinutesToday = todaySessions.filter((s) => s.completed).reduce((sum, s) => sum + s.duration_minutes, 0);
 
   return (
-    <div className="space-y-6 page-enter stagger-children max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

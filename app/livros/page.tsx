@@ -5,8 +5,7 @@ import { supabase, Book } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  BookOpen, Plus, Trash2, ChevronRight, BookMarked,
-  Calendar, TrendingUp, Target, Edit2, Check, X, Sparkles
+  BookOpen, Plus, Trash2, Edit2, Check, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format, differenceInDays, parseISO } from "date-fns";

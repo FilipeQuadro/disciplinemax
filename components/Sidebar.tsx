@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, BookOpen, Timer, Bell, Settings,
+  LayoutDashboard, BookOpen, Timer, Settings,
   Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, Shield, Crown
 } from "lucide-react";
 import { useStore } from "@/store/useStore";

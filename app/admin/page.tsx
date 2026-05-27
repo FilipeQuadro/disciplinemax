@@ -162,7 +162,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="space-y-6 page-enter stagger-children">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
           <Shield size={24} style={{ color: "#D4AF37" }} /> Painel Admin

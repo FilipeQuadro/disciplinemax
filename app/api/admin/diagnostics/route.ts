@@ -39,7 +39,7 @@ export async function GET(req: Request) {
   } catch (e: any) { results.gemini = { ok: false, detail: e.message }; }
 
   try {
-    const { data: settings } = await sb.from("user_settings").select("telegram_bot_token").limit(1).single();
+    const { data: settings } = await sb.from("user_settings").select("telegram_bot_token").limit(1).maybeSingle();
     if (settings?.telegram_bot_token) {
       const r = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, { signal: AbortSignal.timeout(10000) });
       const d = await r.json();

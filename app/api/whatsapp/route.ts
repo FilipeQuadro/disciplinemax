@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendWhatsAppMessage, buildMorningMessage, buildReminderMessage, buildCompletionMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, buildReminderMessage, buildCompletionMessage } from "@/lib/whatsapp";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
