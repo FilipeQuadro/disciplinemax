@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { PLAN_LIMITS, type PlanType } from "@/lib/plans";
 import { Crown, Infinity } from "lucide-react";
 
@@ -11,9 +11,9 @@ export default function PlanosPage() {
   const [currentPlan, setCurrentPlan] = useState<PlanType>("free");
 
   useEffect(() => {
-    if (user && supabase) {
-      (supabase.from("user_plans") as any).select("plan").eq("user_id", user.id).maybeSingle()
-        .then(({ data }: any) => setCurrentPlan((data?.plan as PlanType) || "free"))
+    if (user) {
+      dataFetch({ action: "select", table: "user_plans", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "plan" } })
+        .then(({ data }) => setCurrentPlan(((data as any)?.plan as PlanType) || "free"))
         .catch(() => setCurrentPlan("free"));
     }
   }, [user]);

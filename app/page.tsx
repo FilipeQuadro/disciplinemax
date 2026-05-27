@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
@@ -42,21 +43,21 @@ export default function DashboardPage() {
 
       try {
         const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
-          supabase.from("books").select("*").eq("user_id", user.id).order("created_at"),
-          supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle(),
-          supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
-          supabase.from("daily_stats").select("*").eq("user_id", user.id).eq("date", todayStr).maybeSingle(),
-          supabase.from("bible_readings").select("id").eq("user_id", user.id).gte("read_at", todayStr),
+          dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } }),
+          dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } }),
+          dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user.id }, maybeSingle: true } }),
+          dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id, date: todayStr }, maybeSingle: true } }),
+          dataFetch({ action: "select", table: "bible_readings", filters: { eq: { user_id: user.id }, gte: { read_at: todayStr }, select: "id" } }),
         ]);
 
         if (booksRes.data) {
-          const needsReset = !statsRes.data && booksRes.data.some((b: any) => b.pages_read_today > 0);
+          const needsReset = !statsRes.data && (booksRes.data as any[]).some((b: any) => b.pages_read_today > 0);
           if (needsReset) {
-            const resetBooks = booksRes.data.map((b: any) => ({ ...b, pages_read_today: 0 }));
+            const resetBooks = (booksRes.data as any[]).map((b: any) => ({ ...b, pages_read_today: 0 }));
             setBooks(resetBooks as any[]);
             for (const b of booksRes.data as any[]) {
               if (b.pages_read_today > 0) {
-                await (supabase.from("books") as any).update({ pages_read_today: 0 }).eq("id", b.id);
+                await dataFetch({ action: "update", table: "books", id: b.id, payload: { pages_read_today: 0 } });
               }
             }
           } else {
@@ -66,17 +67,12 @@ export default function DashboardPage() {
         if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
         if (settingsRes.data) setSettings(settingsRes.data as any);
         if (statsRes.data) setTodayStats(statsRes.data as any);
-        setTodayBibleChapters(bibleReadingsRes.data?.length ?? 0);
+        setTodayBibleChapters((bibleReadingsRes.data as any[])?.length ?? 0);
 
-        const { data: recentStats } = await supabase
-          .from("daily_stats")
-          .select("date, goals_completed")
-          .eq("user_id", user.id)
-          .order("date", { ascending: false })
-          .limit(30);
+        const recentStatsRes = await dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 30, select: "date, goals_completed" } });
         let newStreak = 0;
-        if (recentStats) {
-          for (const stat of recentStats as any[]) {
+        if (recentStatsRes.data) {
+          for (const stat of recentStatsRes.data as any[]) {
             if (stat.goals_completed) newStreak++;
             else break;
           }
@@ -94,18 +90,13 @@ export default function DashboardPage() {
         setMotivation(m);
 
         const start = startOfWeek(today, { weekStartsOn: 0 });
-        const { data: weekData } = await supabase
-          .from("daily_stats")
-          .select("*")
-          .eq("user_id", user.id)
-          .gte("date", format(start, "yyyy-MM-dd"))
-          .order("date") as { data: any[] | null };
+        const weekDataRes = await dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, gte: { date: format(start, "yyyy-MM-dd") }, order: { column: "date", ascending: true } } });
 
-        if (weekData) {
+        if (weekDataRes.data) {
           const formatted = Array.from({ length: 7 }, (_, i) => {
             const d = addDays(start, i);
             const dateStr = format(d, "yyyy-MM-dd");
-            const stat = weekData.find((s: any) => s.date === dateStr);
+            const stat = weekDataRes.data!.find((s: any) => s.date === dateStr);
             return {
               day: format(d, "EEE", { locale: ptBR }),
               pages: stat?.books_pages_read || 0,

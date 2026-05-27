@@ -4,6 +4,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { ShieldOff } from "lucide-react";
 
 const PUBLIC_PATHS = ["/login"];
@@ -26,12 +27,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkBlocked() {
-      if (!user || !supabase) return;
+      if (!user) return;
       try {
-        const { data, error } = await supabase.from("blocked_users").select("user_id").eq("user_id", user.id).maybeSingle();
+        const { data, error } = await dataFetch({ action: "select", table: "blocked_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "user_id" } });
         if (error) {
-          // Table doesn't exist — cannot verify, log warning but allow access
-          console.warn("blocked_users table not accessible:", error.message);
+          console.warn("blocked_users check failed:", error);
           return;
         }
         if (data) setBlocked(true);

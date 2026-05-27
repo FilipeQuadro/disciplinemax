@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import { getBibleVerseOfDay } from "@/lib/ai";
@@ -48,56 +49,56 @@ export default function BibliaPage() {
   }, [user]);
 
   async function loadGoal() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { data } = await supabase.from("bible_goals").select("*").eq("user_id", user.id).maybeSingle() as { data: { daily_chapters: number; plan_name?: string } | null };
-      if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: data.daily_chapters, plan_name: data.plan_name || "custom" }); }
+      const { data } = await dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } });
+      if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: (data as any).daily_chapters, plan_name: (data as any).plan_name || "custom" }); }
     } catch (err) { console.error("Failed to load bible goal:", err); }
   }
 
   async function loadHistory() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data } = await supabase.from("bible_readings").select("*").eq("user_id", user.id).order("read_at", { ascending: false }).limit(20);
+      const { data } = await dataFetch({ action: "select", table: "bible_readings", filters: { eq: { user_id: user.id }, order: { column: "read_at", ascending: false }, limit: 20 } });
       if (data) {
-        setHistory(data);
-        setTodayBibleChapters(data.filter((r: any) => r.read_at?.startsWith(today)).length);
+        setHistory(data as any[]);
+        setTodayBibleChapters((data as any[]).filter((r: any) => r.read_at?.startsWith(today)).length);
       }
     } catch (err) { console.error("Failed to load history:", err); }
   }
 
   async function loadWeekly() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { data } = await supabase.from("daily_stats").select("date, bible_chapters_read").eq("user_id", user.id).order("date", { ascending: false }).limit(7);
-      if (data) setWeeklyStats(data.reverse());
+      const { data } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 7, select: "date, bible_chapters_read" } });
+      if (data) setWeeklyStats((data as any[]).reverse());
     } catch (err) { console.error("Failed to load weekly stats:", err); }
   }
 
   async function logReading() {
-    if (!user || !supabase) return;
+    if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from("bible_readings").insert({
+      const { error } = await dataFetch({ action: "insert", table: "bible_readings", payload: {
         user_id: user.id, book_name: logForm.book, chapter: logForm.chapter, notes: logForm.notes,
         read_at: new Date().toISOString(),
-      } as any);
+      }});
       if (!error) {
         toast.success(`${logForm.book} ${logForm.chapter} registrado! ✝️`);
         await loadHistory();
         setLogForm((p) => ({ ...p, chapter: p.chapter + 1, notes: "" }));
-      } else toast.error("Erro: " + error.message);
+      } else toast.error("Erro: " + error);
     } finally { setLoading(false); }
   }
 
   async function saveGoal() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { error } = await supabase.from("bible_goals").upsert({
+      const { error } = await dataFetch({ action: "upsert", table: "bible_goals", payload: {
         user_id: user.id, daily_chapters: goalForm.daily_chapters, plan_name: goalForm.plan_name,
         start_date: format(new Date(), "yyyy-MM-dd"), updated_at: new Date().toISOString(),
-      } as any);
+      }});
       if (error) { toast.error("Erro ao salvar meta"); return; }
       toast.success("Meta bíblica atualizada!"); loadGoal(); setShowGoalForm(false);
     } catch { toast.error("Erro ao salvar meta"); }

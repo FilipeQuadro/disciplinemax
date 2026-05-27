@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, Book } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -27,25 +28,14 @@ export default function LivrosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
 
-  async function authFetch(url: string, body: object) {
-    const { data: { session } } = await supabase!.auth.getSession();
-    const token = session?.access_token || "";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  }
-
   useEffect(() => { loadBooks(); }, [user]);
 
   async function loadBooks() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const result = await authFetch("/api/books", { action: "select" });
-      if (result.error) { toast.error("Erro ao carregar livros"); return; }
-      if (result.data) setBooks(result.data as Book[]);
+      const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
+      if (error) { toast.error("Erro ao carregar livros"); return; }
+      if (data) setBooks(data as Book[]);
     } catch (err) {
       console.error("Failed to load books:", err);
       toast.error("Erro ao carregar livros");
@@ -53,21 +43,21 @@ export default function LivrosPage() {
   }
 
   async function saveBook() {
-    if (!supabase || !user) { toast.error("Serviço indisponível"); return; }
+    if (!user) { toast.error("Serviço indisponível"); return; }
     if (!form.title.trim()) { toast.error("Informe o título do livro"); return; }
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
     setLoading(true);
     try {
       const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
-        const result = await authFetch("/api/books", { action: "update", payload, id: editingId });
-        if (result.error) { toast.error("Erro: " + result.error); return; }
+        const { error } = await dataFetch({ action: "update", table: "books", id: editingId, payload });
+        if (error) { toast.error("Erro: " + error); return; }
         toast.success("Livro atualizado!");
         await loadBooks();
         setEditingId(null);
       } else {
-        const result = await authFetch("/api/books", { action: "insert", payload });
-        if (result.error) { toast.error("Erro: " + result.error); return; }
+        const { error } = await dataFetch({ action: "insert", table: "books", payload });
+        if (error) { toast.error("Erro: " + error); return; }
         toast.success("Livro adicionado! 📚");
         await loadBooks();
       }
@@ -82,10 +72,10 @@ export default function LivrosPage() {
   }
 
   async function deleteBook(id: string) {
-    if (!confirm("Remover este livro?") || !supabase) return;
+    if (!confirm("Remover este livro?")) return;
     try {
-      const result = await authFetch("/api/books", { action: "delete", id });
-      if (result.error) { toast.error("Erro ao remover"); return; }
+      const { error } = await dataFetch({ action: "delete", table: "books", id });
+      if (error) { toast.error("Erro ao remover"); return; }
       await loadBooks();
       toast.success("Livro removido");
     } catch (err) {
@@ -94,18 +84,16 @@ export default function LivrosPage() {
   }
 
   async function logReading(book: Book) {
-    if (!supabase) return;
     const pages = readingInput[book.id] || 0;
     if (pages <= 0) return;
     try {
       const newPage = Math.min(book.current_page + pages, book.total_pages);
       const newToday = book.pages_read_today + pages;
-      const result = await authFetch("/api/books", {
-          action: "update",
+      const { error } = await dataFetch({
+          action: "update", table: "books", id: book.id,
           payload: { current_page: newPage, pages_read_today: newToday, updated_at: new Date().toISOString() },
-          id: book.id,
       });
-      if (result.error) { toast.error("Erro ao registrar"); return; }
+      if (error) { toast.error("Erro ao registrar"); return; }
       updateBook(book.id, { current_page: newPage, pages_read_today: newToday });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));

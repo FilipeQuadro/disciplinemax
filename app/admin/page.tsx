@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import {
   Users, Activity, Shield, CheckCircle2, XCircle, Clock,
   BookOpen, BookMarked, Timer, TrendingUp, Zap, FlameKindling, Crown,
@@ -64,8 +65,8 @@ export default function AdminPage() {
   }
 
   async function checkAdmin() {
-    if (!user || !supabase) { setLoading(false); return; }
-    const { data } = await supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
+    if (!user) { setLoading(false); return; }
+    const { data } = await dataFetch({ action: "select", table: "admin_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "role" } });
     if (data) { setIsAdmin(true); loadData(); }
     setLoading(false);
   }

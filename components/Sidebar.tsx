@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
-import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { clsx } from "clsx";
 
 const navItems = [
@@ -29,8 +29,8 @@ export function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (user && supabase) {
-      supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle()
+    if (user) {
+      dataFetch({ action: "select", table: "admin_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "role" } })
         .then(({ data }) => setIsAdmin(!!data));
     } else {
       setIsAdmin(false);

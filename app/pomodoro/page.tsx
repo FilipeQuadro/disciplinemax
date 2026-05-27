@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { Timer, Play, Pause, RotateCcw, SkipForward, Coffee, Zap, BarChart3 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -76,7 +77,7 @@ export default function PomodoroPage() {
       };
       addSession(session);
       try {
-        if (supabase) await (supabase.from("pomodoro_sessions") as any).insert(session);
+        await dataFetch({ action: "insert", table: "pomodoro_sessions", payload: session });
       } catch (err) { console.error("Failed to save pomodoro session:", err); }
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 

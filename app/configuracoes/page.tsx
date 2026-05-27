@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -48,10 +49,10 @@ export default function ConfiguracoesPage() {
   }, [user]);
 
   async function loadSettings() {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { data } = await supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle() as { data: any | null };
-      if (data) { setSettings(data); setForm({ ...form, ...data }); }
+      const { data } = await dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user.id }, maybeSingle: true } });
+      if (data) { setSettings(data as any); setForm({ ...form, ...(data as any) }); }
     } catch (err) { console.error("Failed to load settings:", err); }
   }
 
@@ -101,10 +102,10 @@ export default function ConfiguracoesPage() {
   }
 
   async function saveSettings() {
-    if (!user || !supabase) { toast.error("Serviço indisponível"); return; }
+    if (!user) { toast.error("Serviço indisponível"); return; }
     setSaving(true);
     try {
-      const { error } = await supabase.from("user_settings").upsert({
+      const { error } = await dataFetch({ action: "upsert", table: "user_settings", payload: {
       user_id: user.id,
       whatsapp_number: form.whatsapp_number,
       callmebot_api_key: form.callmebot_api_key,
@@ -120,9 +121,9 @@ export default function ConfiguracoesPage() {
       gemini_api_key: form.gemini_api_key,
       timezone: form.timezone,
       updated_at: new Date().toISOString(),
-    });
+    }});
       if (!error) { toast.success("Configurações salvas!"); loadSettings(); }
-      else toast.error("Erro: " + error.message);
+      else toast.error("Erro: " + error);
     } catch (err) { toast.error("Erro ao salvar"); }
     finally { setSaving(false); }
   }

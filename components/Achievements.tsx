@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import { Trophy, Flame, BookOpen, BookMarked, Timer, Star, Lock, ChevronRight } from "lucide-react";
@@ -68,22 +69,22 @@ export function useAchievements() {
   }, [user]);
 
   async function loadUnlocked() {
-    if (!supabase || !user) return;
-    const { data } = await supabase.from("achievements").select("badge_key").eq("user_id", user.id);
-    if (data) setUnlocked(data.map((d: any) => d.badge_key));
+    if (!user) return;
+    const { data } = await dataFetch({ action: "select", table: "achievements", filters: { eq: { user_id: user.id }, select: "badge_key" } });
+    if (data) setUnlocked((data as any[]).map((d: any) => d.badge_key));
   }
 
   async function checkAndUnlock(state: BadgeState) {
-    if (!supabase || !user) return;
+    if (!user) return;
     const newUnlocks: string[] = [];
 
     for (const badge of BADGES) {
       if (unlocked.includes(badge.key)) continue;
       if (badge.condition(state)) {
-        const { error } = await supabase.from("achievements").insert({
+        const { error } = await dataFetch({ action: "insert", table: "achievements", payload: {
           user_id: user.id,
           badge_key: badge.key,
-        } as any);
+        }});
         if (!error) {
           newUnlocks.push(badge.key);
           setNewBadge(badge.key);
