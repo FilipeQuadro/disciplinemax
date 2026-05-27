@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: "disciplina-app",
-      script: "node_modules/next/dist/bin/next",
-      args: "start",
+      script: "server.js",
+      cwd: "C:/Users/quadr/Downloads/disciplina-app/disciplina-app",
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",
