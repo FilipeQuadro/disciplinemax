@@ -9,20 +9,18 @@ function getAdminClient(): SupabaseClient {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-// Tables that users can read their own data from
 const ALLOWED_TABLES = [
   "books", "bible_goals", "bible_readings", "daily_stats",
   "user_settings", "pomodoro_sessions", "achievements",
   "user_plans", "admin_users", "blocked_users", "notification_subscriptions",
 ];
 
-// POST /api/data — generic data access using service_role (bypasses RLS)
 export async function POST(req: Request) {
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }
 
-  // Read body FIRST before any other operation
+  // Read body as text first, then parse — avoids stream consumption issues
   let body: any;
   try {
     const rawBody = await req.text();
@@ -34,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid json: " + e.message }, { status: 400 });
   }
 
-  // Verify user is authenticated
+  // Auth check
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,7 +53,6 @@ export async function POST(req: Request) {
     // SELECT
     if (action === "select") {
       let query = sb.from(table).select(filters?.select || "*");
-      // Apply user_id filter by default for user-scoped tables
       if (filters?.eq) {
         for (const [key, value] of Object.entries(filters.eq)) {
           query = query.eq(key, value as string);
@@ -80,7 +77,6 @@ export async function POST(req: Request) {
 
     // INSERT
     if (action === "insert") {
-      // Enforce user_id for user-scoped tables
       if (payload && !payload.user_id && table !== "admin_users") {
         payload.user_id = user.id;
       }
@@ -94,7 +90,6 @@ export async function POST(req: Request) {
 
     // UPDATE
     if (action === "update") {
-      // Verify ownership for user-scoped tables
       if (table !== "admin_users") {
         const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
         if (row && row.user_id !== user.id) {
@@ -108,6 +103,9 @@ export async function POST(req: Request) {
 
     // UPSERT
     if (action === "upsert") {
+      if (!payload.user_id && table !== "admin_users") {
+        payload.user_id = user.id;
+      }
       if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
         return NextResponse.json({ error: "User mismatch" }, { status: 403 });
       }
