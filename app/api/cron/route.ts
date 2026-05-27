@@ -161,6 +161,7 @@ export async function GET(req: Request) {
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
         await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
+        sent++;
       } catch (e) {
         console.error("Telegram send failed:", e);
       }

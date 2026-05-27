@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import {
   Users, Activity, Shield, CheckCircle2, XCircle, Clock,
-  BookOpen, BookMarked, Timer, TrendingUp, Zap, FlameKindling, Crown,
+  BookOpen, BookMarked, Timer, TrendingUp, Zap, Crown,
   Ban, Trash2, RotateCcw, AlertTriangle, Bot, FileText, Unlock
 } from "lucide-react";
 import { clsx } from "clsx";

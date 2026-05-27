@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
-import { Timer, Play, Pause, RotateCcw, SkipForward, Coffee, Zap, BarChart3 } from "lucide-react";
+import { Timer, Play, Pause, RotateCcw, SkipForward, BarChart3 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { clsx } from "clsx";

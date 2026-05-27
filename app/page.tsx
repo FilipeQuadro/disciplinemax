@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
   BookOpen, BookMarked, Timer, Flame, Target, CheckCircle2,
-  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, FlameKindling, Trophy
+  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
@@ -35,7 +34,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     async function load() {
-      if (!user || !supabase) {
+      if (!user) {
         setLoading(false);
         return;
       }
@@ -416,7 +415,7 @@ function ConsistencyCalendar({ userId }: { userId: string }) {
 
   useEffect(() => {
     async function loadCalendar() {
-      if (!supabase || !userId) return;
+      if (!userId) return;
       const days = 35;
       const arr = [];
       for (let i = days - 1; i >= 0; i--) {
@@ -430,11 +429,10 @@ function ConsistencyCalendar({ userId }: { userId: string }) {
       }
 
       const startDate = arr[0].date;
-      const { data: stats } = await supabase
-        .from("daily_stats")
-        .select("date, goals_completed")
-        .eq("user_id", userId)
-        .gte("date", startDate) as { data: { date: string; goals_completed: boolean }[] | null };
+      const { data: stats } = await dataFetch<{ date: string; goals_completed: boolean }[]>({
+        action: "select", table: "daily_stats",
+        filters: { eq: { user_id: userId }, gte: { date: startDate }, select: "date, goals_completed" }
+      });
 
       if (stats) {
         for (const entry of arr) {

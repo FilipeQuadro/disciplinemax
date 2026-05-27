@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
@@ -17,7 +16,7 @@ import { sendTelegramMessage } from "@/lib/telegram";
 import { clsx } from "clsx";
 
 export default function ConfiguracoesPage() {
-  const { settings, setSettings, setNotificationsEnabled, notificationsEnabled } = useStore();
+  const { settings, setSettings, setNotificationsEnabled } = useStore();
   const { user } = useAuth();
   const [form, setForm] = useState({
     whatsapp_number: "",

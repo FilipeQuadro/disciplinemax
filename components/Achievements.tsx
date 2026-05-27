@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
-import { Trophy, Flame, BookOpen, BookMarked, Timer, Star, Lock, ChevronRight } from "lucide-react";
+import { Trophy, Flame, BookOpen, BookMarked, Timer, Lock } from "lucide-react";
 import { clsx } from "clsx";
 
 export interface Badge {

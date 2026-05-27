@@ -3,7 +3,6 @@
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { ShieldOff } from "lucide-react";
 
