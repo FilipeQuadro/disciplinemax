@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
  * Direct Supabase data fetch — uses the client-side Supabase instance.
  * RLS policies (auth.uid()) ensure users only access their own data.
  * This bypasses the /api/data route entirely, avoiding any server-side
- * body parsing issues on Render.
+ * body parsing issues on Render. v3
  */
 export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; error: string | null }> {
   try {
