@@ -1,5 +1,6 @@
 // Service Worker para DisciplinaApp
-const CACHE_NAME = "disciplina-v1";
+// CACHE bumped to v2 to force complete cache invalidation
+const CACHE_NAME = "disciplina-v2";
 const STATIC_ASSETS = ["/", "/livros", "/biblia", "/pomodoro", "/configuracoes", "/planos", "/login"];
 
 self.addEventListener("install", (event) => {
@@ -10,6 +11,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  // Delete ALL old caches (v1, etc.) — forces fresh JS bundles
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
@@ -20,12 +22,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  // Skip API requests — always go to network
-  if (event.request.url.includes("/api/")) return;
+  // Skip API requests and _next/static chunks — always go to network
+  if (event.request.url.includes("/api/") || event.request.url.includes("/_next/static/")) return;
   event.respondWith(
     fetch(event.request).catch(() => {
-      const cached = caches.match(event.request);
-      return cached || new Response("Offline", { status: 503, statusText: "Offline" });
+      return caches.match(event.request).then((cached) => {
+        return cached || new Response("Offline", { status: 503, statusText: "Offline" });
+      });
     })
   );
 });
