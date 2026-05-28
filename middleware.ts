@@ -4,13 +4,6 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // NEVER process API routes — return immediately without touching the response
-  // This is critical: NextResponse.next() on API routes can consume the POST body
-  // in Next.js 14, causing "Empty or invalid json" errors in production
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
   // Skip for static files and Next.js internals
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")) {
     return NextResponse.next();
@@ -27,7 +20,10 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-// Match ALL routes — the guard inside middleware() handles API exclusion
+// CRITICAL: The matcher MUST exclude /api/ routes at the config level.
+// If the middleware function runs AT ALL for /api/ routes (even with an early return),
+// Next.js 14 consumes the POST body stream before it reaches the route handler,
+// causing "Empty or invalid json" errors in production.
 export const config = {
-  matcher: ["/(.*)"],
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico).*)"],
 };

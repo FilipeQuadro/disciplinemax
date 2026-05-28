@@ -49,20 +49,7 @@ function apiResponse(data: any, status = 200) {
 
 // GET /api/data — health check (confirms latest deploy is active)
 export async function GET() {
-  return NextResponse.json({ ok: true, build: "v2026-05-28-b" });
-}
-
-// OPTIONS /api/data — CORS preflight (for Render proxy)
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Max-Age": "86400",
-    },
-  });
+  return NextResponse.json({ ok: true, build: "v2026-05-28-c" });
 }
 
 export async function POST(req: NextRequest) {
@@ -70,24 +57,17 @@ export async function POST(req: NextRequest) {
     return apiResponse({ error: "Not configured" }, 500);
   }
 
-  // CRITICAL: Read body IMMEDIATELY — clone the request first as safety net
-  // against Next.js 14 middleware body consumption bug
+  // Parse body — use official req.json() API
   let body: any;
   try {
-    // Try cloning and reading from clone to avoid stream-already-consumed errors
-    const cloned = req.clone();
-    body = await cloned.json();
+    body = await req.json();
   } catch {
-    try {
-      // Clone already consumed — try original request text
-      const rawBody = await req.text();
-      if (!rawBody || rawBody.trim().length === 0) {
-        return apiResponse({ error: "Empty or invalid json" }, 400);
-      }
-      body = JSON.parse(rawBody);
-    } catch {
-      return apiResponse({ error: "Empty or invalid json" }, 400);
-    }
+    // req.json() failed — body was empty or not valid JSON
+    const contentLength = req.headers.get("content-length") || "missing";
+    const contentType = req.headers.get("content-type") || "missing";
+    return apiResponse({ 
+      error: `Empty or invalid json (cl:${contentLength}, ct:${contentType})` 
+    }, 400);
   }
 
   if (!body || typeof body !== "object") {
