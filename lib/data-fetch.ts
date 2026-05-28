@@ -13,7 +13,7 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return { data: null, error: "Not authenticated" };
 
-    const { action, table, filters, data: payload, id } = body;
+    const { action, table, filters, payload, id } = body;
 
     // ── SELECT ──────────────────────────────────────────────────────
     if (action === "select") {
