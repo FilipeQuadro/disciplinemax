@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { action, table, filters, data: payload, id } = body;
+    const { action, table, filters, payload, id } = body;
 
     if (!table || !ALLOWED_TABLES.includes(table)) {
       return apiResponse({ error: "Table not allowed" }, 403);

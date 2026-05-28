@@ -34,10 +34,10 @@ export default function LivrosPage() {
     if (!user) return;
     try {
       const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
-      if (error) { toast.error("DBv3 erro: " + error); return; }
+      if (error) { toast.error(error); return; }
       if (data) setBooks(data as Book[]);
     } catch (e: any) {
-      toast.error("DBv3 catch: " + (e?.message || e));
+      toast.error("catch: " + (e?.message || e));
     }
   }
 
@@ -50,13 +50,13 @@ export default function LivrosPage() {
       const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };
       if (editingId) {
         const { error } = await dataFetch({ action: "update", table: "books", id: editingId, payload });
-        if (error) { toast.error("DBv3 update: " + error); return; }
+        if (error) { toast.error("Erro ao atualizar: " + error); return; }
         toast.success("Livro atualizado!");
         await loadBooks();
         setEditingId(null);
       } else {
         const { error } = await dataFetch({ action: "insert", table: "books", payload });
-        if (error) { toast.error("DBv3 insert: " + error); return; }
+        if (error) { toast.error("Erro ao adicionar: " + error); return; }
         toast.success("Livro adicionado! 📚");
         await loadBooks();
       }
