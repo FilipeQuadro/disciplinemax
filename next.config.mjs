@@ -14,9 +14,8 @@ const nextConfig = {
         { key: "Service-Worker-Allowed", value: "/" },
       ],
     },
-    // Security headers for all page routes (previously in middleware.ts)
     {
-      source: "/(.*)",
+      source: "/:path*",
       headers: [
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-Content-Type-Options", value: "nosniff" },
