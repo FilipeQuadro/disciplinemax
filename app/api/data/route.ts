@@ -36,79 +36,49 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-// Security headers for API responses
-const SECURITY_HEADERS = {
-  "X-Frame-Options": "DENY",
-  "X-Content-Type-Options": "nosniff",
-  "Cache-Control": "no-store",
-};
-
 function apiResponse(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: SECURITY_HEADERS });
+  return NextResponse.json(data, { status, headers: { "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store" } });
 }
 
-// GET /api/data — health check (confirms latest deploy is active)
+// GET /api/data — health check
 export async function GET() {
-  return NextResponse.json({ ok: true, build: "v2026-05-28-d" });
-}
-
-// Low-level body reader — bypasses req.json()/req.text() which can fail
-// in Next.js 14 production due to internal stream consumption
-async function readBody(req: NextRequest): Promise<any> {
-  // Method 1: Try req.text() (simplest)
-  try {
-    const raw = await req.text();
-    if (raw && raw.trim().length > 0) {
-      return JSON.parse(raw);
-    }
-  } catch {}
-
-  // Method 2: Read the ReadableStream directly
-  try {
-    if (req.body) {
-      const reader = req.body.getReader();
-      const chunks: Uint8Array[] = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) chunks.push(value);
-      }
-      const combined = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
-      let offset = 0;
-      for (const chunk of chunks) {
-        combined.set(chunk, offset);
-        offset += chunk.length;
-      }
-      const text = new TextDecoder().decode(combined);
-      if (text && text.trim().length > 0) {
-        return JSON.parse(text);
-      }
-    }
-  } catch {}
-
-  return null;
+  return NextResponse.json({ ok: true, build: "v2026-05-28-e" });
 }
 
 export async function POST(req: NextRequest) {
+  // ── Diagnostic logging (check Render logs) ──────────────────────
+  console.log("[/api/data] POST received", {
+    url: req.url,
+    method: req.method,
+    cl: req.headers.get("content-length"),
+    ct: req.headers.get("content-type"),
+    auth: req.headers.get("authorization") ? "present" : "missing",
+  });
+
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return apiResponse({ error: "Not configured" }, 500);
   }
 
-  // Parse body using robust low-level reader
+  // ── Read body ───────────────────────────────────────────────────
   let body: any;
   try {
-    body = await readBody(req);
-  } catch {
-    // ignore
+    const raw = await req.text();
+    console.log("[/api/data] body raw length:", raw?.length ?? "null", "preview:", raw?.slice(0, 120));
+
+    if (!raw || raw.trim().length === 0) {
+      console.error("[/api/data] EMPTY BODY — cl:", req.headers.get("content-length"), "ct:", req.headers.get("content-type"));
+      return apiResponse({
+        error: `Empty body (cl:${req.headers.get("content-length") ?? "missing"}, ct:${req.headers.get("content-type") ?? "missing"})`,
+      }, 400);
+    }
+
+    body = JSON.parse(raw);
+  } catch (e: any) {
+    console.error("[/api/data] body parse error:", e.message);
+    return apiResponse({ error: `JSON parse error: ${e.message}` }, 400);
   }
 
-  if (!body || typeof body !== "object") {
-    const contentLength = req.headers.get("content-length") || "missing";
-    const contentType = req.headers.get("content-type") || "missing";
-    return apiResponse({ error: `Empty or invalid json (cl:${contentLength}, ct:${contentType})` }, 400);
-  }
-
-  // Auth check
+  // ── Auth check ──────────────────────────────────────────────────
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) return apiResponse({ error: "Unauthorized" }, 401);
