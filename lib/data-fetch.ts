@@ -1,31 +1,50 @@
 import { supabase } from "@/lib/supabase";
 
-/**
- * Generic data fetch via /api/data (service_role, bypasses RLS).
- * Always includes the user's auth token for verification.
- */
+async function postWithRetry(url: string, opts: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      // Retry on 502/503/504 (Render cold start / proxy errors)
+      if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (e: any) {
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
 export async function dataFetch<T = any>(body: object): Promise<{ data: T | null; error: string | null }> {
   try {
     if (!supabase) return { data: null, error: "Supabase not configured" };
+
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || "";
     if (!token) return { data: null, error: "Not authenticated" };
-    const res = await fetch("/api/data", {
+
+    const res = await postWithRetry("/api/data", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
       body: JSON.stringify(body),
     });
 
-    // Handle non-OK responses (e.g. 502 from Render cold start)
     if (!res.ok) {
       let errorMsg = `HTTP ${res.status}`;
       try {
         const errData = await res.json();
         if (errData.error) errorMsg = errData.error;
       } catch {
-        // Response wasn't JSON — likely HTML error page from proxy
-        const text = await res.text().catch(() => "");
-        if (text) errorMsg = `Server error (${res.status})`;
+        errorMsg = `Server error (${res.status})`;
       }
       return { data: null, error: errorMsg };
     }

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,10 +15,8 @@ const ALLOWED_TABLES = [
   "user_plans", "admin_users", "blocked_users", "notification_subscriptions",
 ];
 
-// Tables where upsert should conflict on user_id instead of primary key
 const UPSERT_USER_SCOPED = new Set(["user_settings", "bible_goals", "user_plans"]);
 
-// Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 60;
@@ -36,72 +33,65 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-function apiResponse(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: { "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store" } });
+function json(data: unknown, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 // GET /api/data — health check
 export async function GET() {
-  return NextResponse.json({ ok: true, build: "v2026-05-28-e" });
+  return NextResponse.json({ ok: true, ts: Date.now() });
 }
 
-export async function POST(req: NextRequest) {
-  // ── Diagnostic logging (check Render logs) ──────────────────────
-  console.log("[/api/data] POST received", {
-    url: req.url,
-    method: req.method,
-    cl: req.headers.get("content-length"),
-    ct: req.headers.get("content-type"),
-    auth: req.headers.get("authorization") ? "present" : "missing",
-  });
-
+export async function POST(req: Request) {
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    return apiResponse({ error: "Not configured" }, 500);
+    return json({ error: "Not configured" }, 500);
   }
 
-  // ── Read body ───────────────────────────────────────────────────
+  // Parse body — try req.json() first, fall back to req.text() + JSON.parse()
   let body: any;
   try {
-    const raw = await req.text();
-    console.log("[/api/data] body raw length:", raw?.length ?? "null", "preview:", raw?.slice(0, 120));
-
-    if (!raw || raw.trim().length === 0) {
-      console.error("[/api/data] EMPTY BODY — cl:", req.headers.get("content-length"), "ct:", req.headers.get("content-type"));
-      return apiResponse({
-        error: `Empty body (cl:${req.headers.get("content-length") ?? "missing"}, ct:${req.headers.get("content-type") ?? "missing"})`,
-      }, 400);
+    body = await req.json();
+  } catch {
+    try {
+      const raw = await req.text();
+      if (!raw || !raw.trim()) {
+        return json({ error: "Empty body" }, 400);
+      }
+      body = JSON.parse(raw);
+    } catch (e: any) {
+      return json({ error: `Invalid JSON: ${e.message}` }, 400);
     }
-
-    body = JSON.parse(raw);
-  } catch (e: any) {
-    console.error("[/api/data] body parse error:", e.message);
-    return apiResponse({ error: `JSON parse error: ${e.message}` }, 400);
   }
 
-  // ── Auth check ──────────────────────────────────────────────────
+  if (!body || typeof body !== "object") {
+    return json({ error: "Invalid body" }, 400);
+  }
+
+  // Auth
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
-  if (!token) return apiResponse({ error: "Unauthorized" }, 401);
+  if (!token) return json({ error: "Unauthorized" }, 401);
 
   const authClient = createClient(supabaseUrl, anonKey);
   const { data: { user }, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !user) return apiResponse({ error: "Invalid token" }, 401);
+  if (authError || !user) return json({ error: "Invalid token" }, 401);
 
-  // Rate limit per user
   if (!checkRateLimit(user.id)) {
-    return apiResponse({ error: "Rate limit exceeded" }, 429);
+    return json({ error: "Rate limit exceeded" }, 429);
   }
 
   try {
     const { action, table, filters, data: payload, id } = body;
 
     if (!table || !ALLOWED_TABLES.includes(table)) {
-      return apiResponse({ error: "Table not allowed" }, 403);
+      return json({ error: "Table not allowed" }, 403);
     }
 
     const sb = getAdminClient();
 
-    // SELECT
     if (action === "select") {
       let query = sb.from(table).select(filters?.select || "*");
       if (filters?.eq) {
@@ -118,69 +108,65 @@ export async function POST(req: NextRequest) {
       if (filters?.limit) query = query.limit(filters.limit);
       if (filters?.maybeSingle) {
         const { data, error } = await query.maybeSingle();
-        if (error) return apiResponse({ error: error.message }, 400);
-        return apiResponse({ data });
+        if (error) return json({ error: error.message }, 400);
+        return json({ data });
       }
       const { data, error } = await query;
-      if (error) return apiResponse({ error: error.message }, 400);
-      return apiResponse({ data });
+      if (error) return json({ error: error.message }, 400);
+      return json({ data });
     }
 
-    // INSERT
     if (action === "insert") {
       if (payload && !payload.user_id && table !== "admin_users") {
         payload.user_id = user.id;
       }
       if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
-        return apiResponse({ error: "User mismatch" }, 403);
+        return json({ error: "User mismatch" }, 403);
       }
       const { data, error } = await sb.from(table).insert(payload).select();
-      if (error) return apiResponse({ error: error.message }, 400);
-      return apiResponse({ data });
+      if (error) return json({ error: error.message }, 400);
+      return json({ data });
     }
 
-    // UPDATE
     if (action === "update") {
       if (table !== "admin_users") {
         const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
         if (row && row.user_id !== user.id) {
-          return apiResponse({ error: "Not yours" }, 403);
+          return json({ error: "Not yours" }, 403);
         }
       }
       const { data, error } = await sb.from(table).update(payload).eq("id", id).select();
-      if (error) return apiResponse({ error: error.message }, 400);
-      return apiResponse({ data });
+      if (error) return json({ error: error.message }, 400);
+      return json({ data });
     }
 
-    // UPSERT
     if (action === "upsert") {
       if (!payload.user_id && table !== "admin_users") {
         payload.user_id = user.id;
       }
       if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
-        return apiResponse({ error: "User mismatch" }, 403);
+        return json({ error: "User mismatch" }, 403);
       }
       const upsertOpts = UPSERT_USER_SCOPED.has(table) ? { onConflict: "user_id" } : undefined;
       const { data, error } = await sb.from(table).upsert(payload, upsertOpts).select();
-      if (error) return apiResponse({ error: error.message }, 400);
-      return apiResponse({ data });
+      if (error) return json({ error: error.message }, 400);
+      return json({ data });
     }
 
-    // DELETE
     if (action === "delete") {
       if (table !== "admin_users") {
         const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
         if (row && row.user_id !== user.id) {
-          return apiResponse({ error: "Not yours" }, 403);
+          return json({ error: "Not yours" }, 403);
         }
       }
       const { error } = await sb.from(table).delete().eq("id", id);
-      if (error) return apiResponse({ error: error.message }, 400);
-      return apiResponse({ ok: true });
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true });
     }
 
-    return apiResponse({ error: "Invalid action" }, 400);
+    return json({ error: "Invalid action" }, 400);
   } catch (e: any) {
-    return apiResponse({ error: e.message }, 500);
+    return json({ error: e.message }, 500);
   }
 }
