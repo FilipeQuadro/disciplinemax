@@ -49,7 +49,44 @@ function apiResponse(data: any, status = 200) {
 
 // GET /api/data — health check (confirms latest deploy is active)
 export async function GET() {
-  return NextResponse.json({ ok: true, build: "v2026-05-28-c" });
+  return NextResponse.json({ ok: true, build: "v2026-05-28-d" });
+}
+
+// Low-level body reader — bypasses req.json()/req.text() which can fail
+// in Next.js 14 production due to internal stream consumption
+async function readBody(req: NextRequest): Promise<any> {
+  // Method 1: Try req.text() (simplest)
+  try {
+    const raw = await req.text();
+    if (raw && raw.trim().length > 0) {
+      return JSON.parse(raw);
+    }
+  } catch {}
+
+  // Method 2: Read the ReadableStream directly
+  try {
+    if (req.body) {
+      const reader = req.body.getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      const combined = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const text = new TextDecoder().decode(combined);
+      if (text && text.trim().length > 0) {
+        return JSON.parse(text);
+      }
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -57,21 +94,18 @@ export async function POST(req: NextRequest) {
     return apiResponse({ error: "Not configured" }, 500);
   }
 
-  // Parse body — use official req.json() API
+  // Parse body using robust low-level reader
   let body: any;
   try {
-    body = await req.json();
+    body = await readBody(req);
   } catch {
-    // req.json() failed — body was empty or not valid JSON
-    const contentLength = req.headers.get("content-length") || "missing";
-    const contentType = req.headers.get("content-type") || "missing";
-    return apiResponse({ 
-      error: `Empty or invalid json (cl:${contentLength}, ct:${contentType})` 
-    }, 400);
+    // ignore
   }
 
   if (!body || typeof body !== "object") {
-    return apiResponse({ error: "Empty or invalid json" }, 400);
+    const contentLength = req.headers.get("content-length") || "missing";
+    const contentType = req.headers.get("content-type") || "missing";
+    return apiResponse({ error: `Empty or invalid json (cl:${contentLength}, ct:${contentType})` }, 400);
   }
 
   // Auth check
