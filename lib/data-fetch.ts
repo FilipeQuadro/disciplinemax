@@ -1,22 +1,38 @@
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 /**
- * Direct Supabase data fetch using the singleton client.
- * The client automatically includes the JWT from its stored session,
- * so RLS policies see the authenticated user.
+ * Direct Supabase data fetch with explicit JWT.
+ * The singleton client sometimes fails to attach the Authorization header
+ * on INSERT/UPDATE/UPSERT (works for SELECT). This creates a one-shot client
+ * with the token set in global.headers to guarantee RLS sees auth.uid().
  */
 export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; error: string | null }> {
   try {
     if (!supabase) return { data: null, error: "Supabase not configured" };
 
+    // Get fresh session from the singleton client
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return { data: null, error: "Not authenticated" };
+
+    // Create a one-shot client with the JWT explicitly in the Authorization header.
+    // This guarantees PostgREST sees auth.uid() for RLS policies.
+    const client = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      },
+    });
 
     const { action, table, filters, payload, id } = body;
 
     // ── SELECT ──────────────────────────────────────────────────────
     if (action === "select") {
-      let query = supabase.from(table).select(filters?.select || "*");
+      let query = client.from(table).select(filters?.select || "*");
 
       if (filters?.eq) {
         for (const [key, value] of Object.entries(filters.eq)) {
@@ -46,14 +62,14 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
 
     // ── INSERT ──────────────────────────────────────────────────────
     if (action === "insert") {
-      const { data, error } = await supabase.from(table).insert(payload).select();
+      const { data, error } = await client.from(table).insert(payload).select();
       if (error) return { data: null, error: error.message };
       return { data: data as T, error: null };
     }
 
     // ── UPDATE ──────────────────────────────────────────────────────
     if (action === "update") {
-      const { data, error } = await supabase.from(table).update(payload).eq("id", id).select();
+      const { data, error } = await client.from(table).update(payload).eq("id", id).select();
       if (error) return { data: null, error: error.message };
       return { data: data as T, error: null };
     }
@@ -61,14 +77,14 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
     // ── UPSERT ──────────────────────────────────────────────────────
     if (action === "upsert") {
       const onConflict = ["user_settings", "bible_goals", "user_plans"].includes(table) ? "user_id" : undefined;
-      const { data, error } = await supabase.from(table).upsert(payload, onConflict ? { onConflict } : undefined).select();
+      const { data, error } = await client.from(table).upsert(payload, onConflict ? { onConflict } : undefined).select();
       if (error) return { data: null, error: error.message };
       return { data: data as T, error: null };
     }
 
     // ── DELETE ──────────────────────────────────────────────────────
     if (action === "delete") {
-      const { error } = await supabase.from(table).delete().eq("id", id);
+      const { error } = await client.from(table).delete().eq("id", id);
       if (error) return { data: null, error: error.message };
       return { data: null, error: null };
     }
