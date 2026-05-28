@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { callOllama } from "@/lib/ai";
 
@@ -30,9 +31,11 @@ async function getApiKey(): Promise<string | null> {
   } catch { return null; }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { prompt } = JSON.parse(await req.text());
+    let body: any;
+    try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
+    const { prompt } = body;
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }

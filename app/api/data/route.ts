@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -46,21 +47,34 @@ function apiResponse(data: any, status = 200) {
   return NextResponse.json(data, { status, headers: SECURITY_HEADERS });
 }
 
-export async function POST(req: Request) {
+// GET /api/data — health check (confirms latest deploy is active)
+export async function GET() {
+  return NextResponse.json({ ok: true, build: "v2026-05-28" });
+}
+
+export async function POST(req: NextRequest) {
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return apiResponse({ error: "Not configured" }, 500);
   }
 
-  // Read body as text first, then parse — avoids stream consumption issues
+  // Parse body — try req.json() first (official Next.js API), fall back to text+parse
   let body: any;
   try {
-    const rawBody = await req.text();
-    if (!rawBody || rawBody.trim().length === 0) {
-      return apiResponse({ error: "Empty body" }, 400);
+    try {
+      body = await req.json();
+    } catch {
+      // req.json() failed — try reading raw text and parsing manually
+      const rawBody = await req.text();
+      if (!rawBody || rawBody.trim().length === 0) {
+        return apiResponse({ error: "Empty or invalid json" }, 400);
+      }
+      body = JSON.parse(rawBody);
     }
-    body = JSON.parse(rawBody);
+    if (!body || typeof body !== "object") {
+      return apiResponse({ error: "Empty or invalid json" }, 400);
+    }
   } catch (e: any) {
-    return apiResponse({ error: "Invalid json: " + e.message }, 400);
+    return apiResponse({ error: "Empty or invalid json" }, 400);
   }
 
   // Auth check

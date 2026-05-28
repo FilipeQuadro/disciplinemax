@@ -15,6 +15,21 @@ export async function dataFetch<T = any>(body: object): Promise<{ data: T | null
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify(body),
     });
+
+    // Handle non-OK responses (e.g. 502 from Render cold start)
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const errData = await res.json();
+        if (errData.error) errorMsg = errData.error;
+      } catch {
+        // Response wasn't JSON — likely HTML error page from proxy
+        const text = await res.text().catch(() => "");
+        if (text) errorMsg = `Server error (${res.status})`;
+      }
+      return { data: null, error: errorMsg };
+    }
+
     const result = await res.json();
     if (result.error) return { data: null, error: result.error };
     return { data: result.data as T, error: null };

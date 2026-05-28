@@ -1,30 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// In-memory rate limiter — resets on deploy (acceptable for this scale)
-const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
-
-const RATE_LIMIT_WINDOW = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 60; // requests per minute per IP
-
-function rateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || now - entry.lastReset > RATE_LIMIT_WINDOW) {
-    rateLimitMap.set(ip, { count: 1, lastReset: now });
-    return true;
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false; // Rate limited
-  }
-
-  entry.count++;
-  return true;
-}
-
-// Security headers
+// Security headers applied to page responses (NOT API routes)
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
   "X-Content-Type-Options": "nosniff",
@@ -53,23 +30,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Rate limit API routes
-  if (pathname.startsWith("/api/")) {
-    // Use request.ip only — ignore x-forwarded-for to prevent spoofing
-    const ip = request.ip || "unknown";
-    if (!rateLimit(ip)) {
-      return new NextResponse(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Retry-After": "60",
-          ...SECURITY_HEADERS,
-        },
-      });
-    }
-  }
-
-  // Apply security headers to all responses
+  // Apply security headers to page responses
   const response = NextResponse.next();
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);

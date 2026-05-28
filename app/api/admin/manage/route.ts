@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
 
@@ -6,14 +7,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Block/unblock/reset/delete a user
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: "Not configured" }, { status: 500 });
 
   const { isAdmin, actorId } = await verifyAdminOrCron(req);
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  const body = JSON.parse(await req.text());
+  let body: any;
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
   const { user_id, action, reason } = body;
 
   if (!user_id || !action) return NextResponse.json({ error: "user_id and action required" }, { status: 400 });

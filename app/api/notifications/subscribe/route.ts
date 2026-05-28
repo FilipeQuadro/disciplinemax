@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const body = JSON.parse(await req.text());
+  let body: any;
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
   const { endpoint, keys, device_token, platform, bundle_id, user_id } = body;
 
   // Verify the caller owns this user_id
