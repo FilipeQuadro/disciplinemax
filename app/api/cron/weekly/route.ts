@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const weekAgoStr = weekAgo.toISOString().split("T")[0];
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
 
   const { data: allSettings } = await sb.from("user_settings").select("*");
 

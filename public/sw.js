@@ -51,7 +51,7 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
-    self.registration.showNotification(data.title || "🎯 DisciplinaApp", {
+    self.registration.showNotification(data.title || "🎯 DisciplinaMax", {
       body: data.body || "Você tem metas pendentes hoje!",
       icon: "/icon-192.png",
       badge: "/icon-192.png",

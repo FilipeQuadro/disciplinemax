@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 );
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "admin_users_select" ON admin_users FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "admin_users_insert" ON admin_users FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
 
 -- User plans
 CREATE TABLE IF NOT EXISTS user_plans (
