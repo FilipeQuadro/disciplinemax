@@ -120,6 +120,7 @@ export const useStore = create<AppState>()(
       pomodoroCount: s.pomodoroCount,
       sidebarOpen: s.sidebarOpen,
       notificationsEnabled: s.notificationsEnabled,
+      // pwaInstallPrompt is intentionally NOT persisted — it's a non-serializable DOM event
     }) }
   )
 );

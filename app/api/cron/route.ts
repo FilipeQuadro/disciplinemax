@@ -26,7 +26,6 @@ export async function GET(req: Request) {
   }
 
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
 
   // BRT timezone
   const brtFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -36,6 +35,10 @@ export async function GET(req: Request) {
   const brtTime = brtFormatter.format(now);
   const brtHour = parseInt(brtTime.split(":")[0], 10);
   const currentMinutes = brtHour * 60 + parseInt(brtTime.split(":")[1], 10);
+
+  // Use BRT date for today (not UTC) to avoid midnight mismatch
+  const brtDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
+  const today = brtDate;
 
   // Limpar notifications_sent antigos (> 7 dias)
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -64,15 +67,9 @@ export async function GET(req: Request) {
   let pushSent = 0;
   let skipped = 0;
 
-  // Fetch AI content once (same for all users) — avoids N duplicate API calls
+  // Fetch verse once (truly same for all users)
   const isMorning = brtHour < 12;
   const verse = await getBibleVerseOfDay();
-  const motivational = await getMotivationalMessage({
-    streak: 0, // Generic — personalized per-user below
-    booksRead: 0,
-    bibleChapters: 0,
-    completedToday: false,
-  });
 
   for (const settings of (allSettings || [])) {
     const userId = settings.user_id;
@@ -120,7 +117,12 @@ export async function GET(req: Request) {
     } catch { /* UNIQUE constraint */ }
 
     // ========== Construir mensagem ==========
-    // verse and motivational already fetched outside the loop
+    const motivational = await getMotivationalMessage({
+      streak: stats?.streak_day || 0,
+      booksRead: totalPagesRead,
+      bibleChapters: bibleChaptersRead,
+      completedToday: booksGoalMet && bibleGoalMet,
+    });
 
     // Telegram message (Markdown format)
     let tgMessage = "";

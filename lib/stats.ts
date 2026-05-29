@@ -14,7 +14,8 @@ export async function upsertTodayStats(userId: string, updates: Partial<Record<s
   const now = new Date().toISOString();
 
   if (existing) {
-    const payload = { ...existing, ...updates, updated_at: now };
+    const { id, user_id, date, created_at, ...mutableFields } = existing as any;
+    const payload = { ...mutableFields, ...updates, updated_at: now };
     const { data } = await dataFetch({ action: "update", table: "daily_stats", id: (existing as any).id, payload });
     return data;
   }

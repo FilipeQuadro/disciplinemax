@@ -34,9 +34,8 @@ export async function GET(req: Request) {
 }
 
 /**
- * Check if a column exists in a table. If not, add it.
- * Uses PostgREST to probe — if select(column) returns 400 with "does not exist",
- * we know the column is missing and need to add it via SQL.
+ * Check if a column exists in a table by probing PostgREST.
+ * Returns a human-readable status message.
  */
 async function checkAndAddColumn(
   sb: any,
@@ -55,29 +54,7 @@ async function checkAndAddColumn(
     return `${table}.${column}: probe error — ${error.message}`;
   }
 
-  // Column doesn't exist — try to add it via Supabase SQL API
-  // The Supabase JS client doesn't support DDL, so we use the REST SQL endpoint
-  try {
-    const sqlResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseKey!,
-        Authorization: `Bearer ${supabaseKey!}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type};`,
-      }),
-    });
-
-    if (sqlResponse.ok) {
-      return `${table}.${column}: ✅ added successfully`;
-    }
-
-    // RPC might not exist — try the Management API alternative
-    const sqlError = await sqlResponse.text();
-    return `${table}.${column}: ⚠️ needs manual SQL — ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type}; (RPC error: ${sqlError})`;
-  } catch (e: any) {
-    return `${table}.${column}: ⚠️ needs manual SQL — ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type}; (${e.message})`;
-  }
+  // Column doesn't exist — we can't add it programmatically (no exec_sql RPC).
+  // Return the SQL the user needs to run manually.
+  return `${table}.${column}: ⚠️ needs manual SQL — ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type};`;
 }

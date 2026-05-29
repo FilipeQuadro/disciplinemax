@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { verifyAdmin } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -12,8 +13,11 @@ function getAdminClient(): SupabaseClient {
 const ALLOWED_TABLES = [
   "books", "bible_goals", "bible_readings", "daily_stats",
   "user_settings", "pomodoro_sessions", "achievements",
-  "user_plans", "admin_users", "blocked_users", "notification_subscriptions",
+  "user_plans", "notification_subscriptions",
 ];
+
+// Admin-only tables — require admin verification
+const ADMIN_ONLY_TABLES = new Set(["admin_users", "blocked_users"]);
 
 // Tables where upsert should conflict on user_id instead of primary key
 const UPSERT_USER_SCOPED = new Set(["user_settings", "bible_goals", "user_plans"]);
@@ -80,7 +84,17 @@ export async function POST(req: Request) {
   try {
     const { action, table, filters, payload, id } = body;
 
-    if (!table || !ALLOWED_TABLES.includes(table)) {
+    if (!table) {
+      return apiResponse({ error: "Table not specified" }, 400);
+    }
+
+    // Admin-only tables require admin verification
+    if (ADMIN_ONLY_TABLES.has(table)) {
+      const adminId = await verifyAdmin(req);
+      if (!adminId) {
+        return apiResponse({ error: "Admin access required" }, 403);
+      }
+    } else if (!ALLOWED_TABLES.includes(table)) {
       return apiResponse({ error: "Table not allowed" }, 403);
     }
 
@@ -113,10 +127,10 @@ export async function POST(req: Request) {
 
     // INSERT
     if (action === "insert") {
-      if (payload && !payload.user_id && table !== "admin_users") {
+      if (payload && !payload.user_id) {
         payload.user_id = user.id;
       }
-      if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
+      if (payload?.user_id && payload.user_id !== user.id) {
         return apiResponse({ error: "User mismatch" }, 403);
       }
       const { data, error } = await sb.from(table).insert(payload).select();
@@ -126,11 +140,12 @@ export async function POST(req: Request) {
 
     // UPDATE
     if (action === "update") {
-      if (table !== "admin_users") {
-        const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
-        if (row && row.user_id !== user.id) {
-          return apiResponse({ error: "Not yours" }, 403);
-        }
+      const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
+      if (!row) {
+        return apiResponse({ error: "Not found" }, 404);
+      }
+      if (row.user_id && row.user_id !== user.id && !ADMIN_ONLY_TABLES.has(table)) {
+        return apiResponse({ error: "Not yours" }, 403);
       }
       const { data, error } = await sb.from(table).update(payload).eq("id", id).select();
       if (error) return apiResponse({ error: error.message }, 400);
@@ -139,10 +154,10 @@ export async function POST(req: Request) {
 
     // UPSERT
     if (action === "upsert") {
-      if (!payload.user_id && table !== "admin_users") {
+      if (!payload.user_id) {
         payload.user_id = user.id;
       }
-      if (payload?.user_id && payload.user_id !== user.id && table !== "admin_users") {
+      if (payload?.user_id && payload.user_id !== user.id) {
         return apiResponse({ error: "User mismatch" }, 403);
       }
       const upsertOpts = UPSERT_USER_SCOPED.has(table) ? { onConflict: "user_id" } : undefined;
@@ -153,11 +168,12 @@ export async function POST(req: Request) {
 
     // DELETE
     if (action === "delete") {
-      if (table !== "admin_users") {
-        const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
-        if (row && row.user_id !== user.id) {
-          return apiResponse({ error: "Not yours" }, 403);
-        }
+      const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
+      if (!row) {
+        return apiResponse({ error: "Not found" }, 404);
+      }
+      if (row.user_id && row.user_id !== user.id && !ADMIN_ONLY_TABLES.has(table)) {
+        return apiResponse({ error: "Not yours" }, 403);
       }
       const { error } = await sb.from(table).delete().eq("id", id);
       if (error) return apiResponse({ error: error.message }, 400);
