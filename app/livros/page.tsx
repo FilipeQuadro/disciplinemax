@@ -9,8 +9,12 @@ import {
   BookOpen, Plus, Trash2, Edit2, Check, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { errorToast } from "@/lib/toast";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { clsx } from "clsx";
+import { trackPagesRead } from "@/lib/stats";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
 
 const BOOK_COLORS = ["#7C6BBD", "#3ABAB4", "#D4AF37", "#E8844A", "#D94F4F", "#7C6BBD"];
 
@@ -27,6 +31,7 @@ export default function LivrosPage() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => { loadBooks(); }, [user]);
 
@@ -34,7 +39,7 @@ export default function LivrosPage() {
     if (!user) return;
     try {
       const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
-      if (error) { toast.error(error); return; }
+      if (error) { errorToast(error, loadBooks); return; }
       if (data) setBooks(data as Book[]);
     } catch (e: any) {
       toast.error("catch: " + (e?.message || e));
@@ -70,7 +75,6 @@ export default function LivrosPage() {
   }
 
   async function deleteBook(id: string) {
-    if (!confirm("Remover este livro?")) return;
     try {
       const { error } = await dataFetch({ action: "delete", table: "books", id });
       if (error) { toast.error("Erro ao remover"); return; }
@@ -93,6 +97,12 @@ export default function LivrosPage() {
       });
       if (error) { toast.error("Erro ao registrar"); return; }
       updateBook(book.id, { current_page: newPage, pages_read_today: newToday });
+      // Auto-update daily stats
+      const allBooks = useStore.getState().books.map((b) => b.id === book.id ? { ...b, current_page: newPage, pages_read_today: newToday } : b);
+      const totalGoal = allBooks.reduce((s: number, b: any) => s + b.daily_goal, 0);
+      const totalRead = allBooks.reduce((s: number, b: any) => s + b.pages_read_today, 0);
+      trackPagesRead(user!.id, pages, totalGoal, totalRead, useStore.getState().todayBibleChapters, useStore.getState().bibleGoal?.daily_chapters || 0).catch(() => {});
+      checkAndNotifyGoalCompletion({ pagesReadToday: totalRead, pagesGoal: totalGoal, bibleChaptersToday: useStore.getState().todayBibleChapters, bibleChaptersGoal: useStore.getState().bibleGoal?.daily_chapters || 0 });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));
     } catch {
@@ -209,10 +219,20 @@ export default function LivrosPage() {
             <BookCard key={book.id} book={book}
               readingValue={readingInput[book.id] || 0}
               onReadingChange={(v: number) => setReadingInput((p) => ({ ...p, [book.id]: v }))}
-              onLog={() => logReading(book)} onEdit={() => startEdit(book)} onDelete={() => deleteBook(book.id)} />
+              onLog={() => logReading(book)}               onEdit={() => startEdit(book)} onDelete={() => setConfirmDelete(book.id)} />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Remover livro?"
+        message="Esta ação não pode ser desfeita. O livro e todo o progresso serão removidos permanentemente."
+        confirmLabel="Remover"
+        destructive
+        onConfirm={() => { if (confirmDelete) { deleteBook(confirmDelete); setConfirmDelete(null); } }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

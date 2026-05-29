@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     // UPDATE
     if (action === "update") {
       if (table !== "admin_users") {
-        const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
+        const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
         if (row && row.user_id !== user.id) {
           return apiResponse({ error: "Not yours" }, 403);
         }
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     // DELETE
     if (action === "delete") {
       if (table !== "admin_users") {
-        const { data: row } = await sb.from(table).select("user_id").eq("id", id).single();
+        const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
         if (row && row.user_id !== user.id) {
           return apiResponse({ error: "Not yours" }, 403);
         }

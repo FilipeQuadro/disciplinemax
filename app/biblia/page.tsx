@@ -9,6 +9,8 @@ import { BookMarked, Check, Plus, Calendar, TrendingUp, Star, ChevronDown, Spark
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { clsx } from "clsx";
+import { trackBibleChapter } from "@/lib/stats";
+import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
 
 const BIBLE_BOOKS = [
   "Gênesis","Êxodo","Levítico","Números","Deuteronômio","Josué","Juízes","Rute",
@@ -92,6 +94,13 @@ export default function BibliaPage() {
       if (!error) {
         toast.success(`${logForm.book} ${logForm.chapter} registrado! ✝️`);
         await loadHistory();
+        // Auto-update daily stats
+        const newCount = (history.filter((r: any) => r.read_at?.startsWith(format(new Date(), "yyyy-MM-dd"))).length) + 1;
+        const { books, bibleGoal } = useStore.getState();
+        const totalPagesRead = books.reduce((s: number, b: any) => s + b.pages_read_today, 0);
+        const totalPagesGoal = books.reduce((s: number, b: any) => s + b.daily_goal, 0);
+        trackBibleChapter(user.id, newCount, bibleGoal?.daily_chapters || 0, totalPagesRead, totalPagesGoal).catch(() => {});
+        checkAndNotifyGoalCompletion({ pagesReadToday: totalPagesRead, pagesGoal: totalPagesGoal, bibleChaptersToday: newCount, bibleChaptersGoal: bibleGoal?.daily_chapters || 0 });
         setLogForm((p) => ({ ...p, chapter: p.chapter + 1, notes: "" }));
       } else toast.error("Erro: " + error);
     } finally { setLoading(false); }
@@ -142,7 +151,7 @@ export default function BibliaPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
               <Star size={11} /> Versículo do Dia
             </p>
-            <p className="text-white font-serif italic text-lg leading-relaxed">"{verse.verse}"</p>
+            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
             <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
           </div>
         </div>

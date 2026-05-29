@@ -54,7 +54,7 @@ export async function GET(req: Request) {
   const geminiStart = Date.now();
   try {
     const apiKey = process.env.GEMINI_API_KEY ||
-      (await sb.from("user_settings").select("gemini_api_key").limit(1).single()).data?.gemini_api_key;
+      (await sb.from("user_settings").select("gemini_api_key").limit(1).maybeSingle()).data?.gemini_api_key;
     if (apiKey) {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
   // 3. Telegram
   const tgStart = Date.now();
   try {
-    const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).single();
+    const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
     if (settings?.telegram_bot_token) {
       const res = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, {
         signal: AbortSignal.timeout(10000),
@@ -177,7 +177,7 @@ export async function GET(req: Request) {
   // Send Telegram alert if issues found
   if (report.issues.length > 0) {
     try {
-      const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).single();
+      const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
       if (settings?.telegram_bot_token && settings?.telegram_chat_id) {
         const alertMsg = `🚨 *DisciplinaApp Auto-Diagnóstico*\n\n❌ ${report.issues.length} problema(s) encontrado(s):\n${report.issues.map((i) => `• ${i}`).join("\n")}\n\n⏰ ${report.timestamp}`;
         await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {

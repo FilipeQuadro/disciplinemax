@@ -75,9 +75,12 @@ export type DailyStats = {
 export type NotificationSub = {
   id: string;
   user_id: string;
-  endpoint: string;
-  p256dh: string;
-  auth: string;
+  platform: string;
+  endpoint?: string;
+  p256dh?: string;
+  auth?: string;
+  device_token?: string;
+  bundle_id?: string;
   created_at: string;
 };
 
@@ -85,7 +88,8 @@ export type UserSettings = {
   id: string;
   user_id: string;
   whatsapp_number?: string;
-  callmebot_api_key?: string;
+  greenapi_instance_id?: string;
+  greenapi_token?: string;
   telegram_bot_token?: string;
   telegram_chat_id?: string;
   notification_times: string[];
@@ -97,5 +101,8 @@ export type UserSettings = {
   daily_bible_chapters: number;
   gemini_api_key?: string;
   timezone: string;
+  streak_freeze_available?: number;
+  streak_freeze_used?: number;
+  streak_freeze_reset_month?: string;
   updated_at: string;
 };

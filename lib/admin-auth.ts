@@ -35,12 +35,16 @@ export async function verifyAdmin(req: Request): Promise<string | null> {
 
 /**
  * Verify the request comes from the CRON_SECRET (for server-to-server calls like cron-job.org).
- * This is the only allowed use of CRON_SECRET — never exposed to the client.
+ * Accepts both Bearer header and ?secret= query param (cron-job.org sends query).
  */
 export function verifyCronSecret(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
   const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  return bearer === process.env.CRON_SECRET;
+  if (bearer === process.env.CRON_SECRET) return true;
+
+  const url = new URL(req.url);
+  const querySecret = url.searchParams.get("secret");
+  return querySecret === process.env.CRON_SECRET;
 }
 
 /**

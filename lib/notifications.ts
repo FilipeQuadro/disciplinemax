@@ -34,6 +34,11 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration) {
     const { data: { session } } = await sb!.auth.getSession();
     const authToken = session?.access_token || "";
 
+    if (!session?.user?.id) {
+      console.warn("Push subscription skipped: no authenticated session");
+      return null;
+    }
+
     await fetch("/api/notifications/subscribe", {
       method: "POST",
       headers: {
@@ -42,7 +47,7 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration) {
       },
       body: JSON.stringify({
         ...sub.toJSON(),
-        user_id: session?.user?.id,
+        user_id: session.user.id,
       }),
     });
     return sub;
@@ -79,6 +84,34 @@ export function showLocalNotification(title: string, body: string, url = "/") {
     window.location.href = url;
     notif.close();
   };
+}
+
+/**
+ * Check if all daily goals are met and fire a congratulatory notification.
+ * Call this after any goal-tracking action (pages read, bible chapter, pomodoro).
+ */
+export function checkAndNotifyGoalCompletion(data: {
+  pagesReadToday: number;
+  pagesGoal: number;
+  bibleChaptersToday: number;
+  bibleChaptersGoal: number;
+}) {
+  const booksGoalMet = data.pagesGoal === 0 || data.pagesReadToday >= data.pagesGoal;
+  const bibleGoalMet = data.bibleChaptersGoal === 0 || data.bibleChaptersToday >= data.bibleChaptersGoal;
+
+  if (booksGoalMet && bibleGoalMet) {
+    // Use a unique tag so we don't spam — one congrats per day
+    if (typeof window !== "undefined" && Notification.permission === "granted") {
+      new Notification("🎉 Todas as metas cumpridas!", {
+        body: "Parabéns! Você completou todas as metas de hoje. Continue firme amanhã! 🔥",
+        icon: "/icon-192.png",
+        tag: "disciplina-goals-complete",
+        requireInteraction: true,
+      });
+    }
+    return true;
+  }
+  return false;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

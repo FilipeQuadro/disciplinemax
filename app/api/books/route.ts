@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "update") {
       // Verify ownership
-      const { data: book } = await sb.from("books").select("user_id").eq("id", id).single();
+      const { data: book } = await sb.from("books").select("user_id").eq("id", id).maybeSingle();
       if (!book || book.user_id !== user.id) {
         return NextResponse.json({ error: "Not your book" }, { status: 403 });
       }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "delete") {
       // Verify ownership
-      const { data: book } = await sb.from("books").select("user_id").eq("id", id).single();
+      const { data: book } = await sb.from("books").select("user_id").eq("id", id).maybeSingle();
       if (!book || book.user_id !== user.id) {
         return NextResponse.json({ error: "Not your book" }, { status: 403 });
       }

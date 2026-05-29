@@ -9,6 +9,16 @@ const RATE_LIMIT_MAX = 60; // requests per minute per IP
 
 function rateLimit(ip: string): boolean {
   const now = Date.now();
+
+  // Prune stale entries periodically (prevent unbounded growth)
+  if (rateLimitMap.size > 10_000) {
+    const keysToDelete: string[] = [];
+    rateLimitMap.forEach((val, key) => {
+      if (now - val.lastReset > RATE_LIMIT_WINDOW) keysToDelete.push(key);
+    });
+    keysToDelete.forEach((key) => rateLimitMap.delete(key));
+  }
+
   const entry = rateLimitMap.get(ip);
 
   if (!entry || now - entry.lastReset > RATE_LIMIT_WINDOW) {
@@ -37,7 +47,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://api.telegram.org https://api.callmebot.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.telegram.org https://api.greenapi.com",
     "worker-src 'self'",
   ].join("; "),
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
@@ -55,8 +65,8 @@ export function middleware(request: NextRequest) {
 
   // Rate limit API routes
   if (pathname.startsWith("/api/")) {
-    // Use request.ip only — ignore x-forwarded-for to prevent spoofing
-    const ip = request.ip || "unknown";
+    // Use request.ip first, then x-forwarded-for header as fallback
+    const ip = request.ip || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     if (!rateLimit(ip)) {
       return new NextResponse(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
@@ -79,5 +89,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

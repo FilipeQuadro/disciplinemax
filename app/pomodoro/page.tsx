@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { clsx } from "clsx";
 import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
 import { useAuth } from "@/components/AuthProvider";
+import { trackPomodoroCompleted } from "@/lib/stats";
 
 const COLORS = {
   focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
@@ -77,6 +78,7 @@ export default function PomodoroPage() {
       addSession(session);
       try {
         await dataFetch({ action: "insert", table: "pomodoro_sessions", payload: session });
+        trackPomodoroCompleted(user.id, customFocus).catch(() => {});
       } catch {
         // Failed to save pomodoro session
       }

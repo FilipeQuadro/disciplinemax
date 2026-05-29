@@ -107,7 +107,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT DEFAULT 'default_user' UNIQUE,
   whatsapp_number TEXT,
-  callmebot_api_key TEXT,
+  greenapi_instance_id TEXT,
+  greenapi_token TEXT,
   telegram_bot_token TEXT,
   telegram_chat_id TEXT,
   notification_times TEXT[] DEFAULT ARRAY['07:00','12:00','19:00'],
@@ -180,6 +181,12 @@ CREATE TABLE IF NOT EXISTS achievements (
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_available INTEGER DEFAULT 1;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_used INTEGER DEFAULT 0;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_reset_month TEXT DEFAULT '';
+
+-- ============================================
+-- ADD Green-API columns to user_settings
+-- ============================================
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS greenapi_instance_id TEXT;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS greenapi_token TEXT;
 
 -- ============================================
 -- REALTIME: Habilitar sincronização em tempo real

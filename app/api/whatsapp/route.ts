@@ -1,32 +1,71 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendWhatsAppMessage, buildReminderMessage, buildCompletionMessage } from "@/lib/whatsapp";
+import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// In-memory dedup — same pattern as main cron
+const notifCache = new Set<string>();
 
 export async function POST(req: Request) {
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }
 
-  const authHeader = req.headers.get("authorization");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const url = new URL(req.url);
-  const querySecret = url.searchParams.get("secret");
-
-  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
+  if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sb = createClient(supabaseUrl, supabaseKey);
   const { data: allSettings } = await sb.from("user_settings").select("*");
   const today = new Date().toISOString().split("T")[0];
+
+  // BRT timezone — only send if within a notification time window
+  const brtFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const brtTime = brtFormatter.format(new Date());
+  const brtHour = parseInt(brtTime.split(":")[0], 10);
+  const currentMinutes = brtHour * 60 + parseInt(brtTime.split(":")[1], 10);
+
   let sent = 0;
 
   for (const settings of allSettings || []) {
-    if (!settings.whatsapp_number || !settings.callmebot_api_key) continue;
+    if (!settings.greenapi_instance_id || !settings.greenapi_token || !settings.whatsapp_number) continue;
     const userId = settings.user_id;
+
+    // Check if current time matches any of the user's notification times (30-min tolerance)
+    const notifTimes: string[] = settings.notification_times || ["07:00", "12:00", "19:00"];
+    const matched = notifTimes.find((t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      const nm = h * 60 + m;
+      return currentMinutes >= nm && currentMinutes < nm + 30;
+    });
+    if (!matched) continue;
+
+    // Dedup — same pattern as main cron route
+    const dedupKey = `${userId}_${today}_${matched}`;
+    if (notifCache.has(dedupKey)) continue;
+
+    const { data: alreadySent } = await sb
+      .from("notifications_sent")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("notif_key", `${today}_${matched}`)
+      .maybeSingle();
+    if (alreadySent) { notifCache.add(dedupKey); continue; }
+
+    notifCache.add(dedupKey);
+
+    try {
+      await sb.from("notifications_sent").insert({
+        user_id: userId,
+        notif_key: `${today}_${matched}`,
+      } as any);
+    } catch { /* UNIQUE constraint */ }
 
     const { data: books } = await sb.from("books").select("*").eq("user_id", userId);
     const { data: bibleGoal } = await sb.from("bible_goals").select("*").eq("user_id", userId).maybeSingle();
@@ -50,7 +89,12 @@ export async function POST(req: Request) {
       });
     }
 
-    const result = await sendWhatsAppMessage(settings.whatsapp_number, settings.callmebot_api_key, message);
+    const result = await sendWhatsAppMessage(
+      settings.greenapi_instance_id,
+      settings.greenapi_token,
+      settings.whatsapp_number,
+      message
+    );
     if (result.ok) sent++;
   }
 

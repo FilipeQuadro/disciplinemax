@@ -49,6 +49,8 @@ interface AppState {
   setSidebarOpen: (v: boolean) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (v: boolean) => void;
+  pwaInstallPrompt: any;
+  setPwaInstallPrompt: (v: any) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -110,6 +112,8 @@ export const useStore = create<AppState>()(
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
       notificationsEnabled: false,
       setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
+      pwaInstallPrompt: null,
+      setPwaInstallPrompt: (v) => set({ pwaInstallPrompt: v }),
     }),
     { name: "disciplina-store", partialize: (s) => ({
       streak: s.streak,

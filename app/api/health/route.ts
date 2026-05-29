@@ -60,7 +60,7 @@ export async function GET(req: Request) {
     } else {
       // Try from DB
       const sb = createClient(supabaseUrl!, supabaseKey!);
-      const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).single();
+      const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).maybeSingle();
       if (data?.gemini_api_key) {
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${data.gemini_api_key}`,
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
 
   // 4. Telegram
   const sb = createClient(supabaseUrl!, supabaseKey!);
-  const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).single();
+  const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
   if (settings?.telegram_bot_token) {
     const tgStart = Date.now();
     try {

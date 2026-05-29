@@ -1,30 +1,46 @@
-// Integração com CallMeBot (WhatsApp gratuito)
-// Cadastro: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+// Green-API WhatsApp integration
+// Free developer plan: https://green-api.com
+// Setup: create account → create instance → scan QR → get idInstance + apiTokenInstance
 
 export type WhatsAppResult = {
   ok: boolean;
+  idMessage?: string;
   status?: number;
   error?: string;
-  responseText?: string;
 };
 
+/**
+ * Send a WhatsApp message via Green-API REST endpoint.
+ * POST https://api.greenapi.com/waInstance{idInstance}/sendMessage/{apiTokenInstance}
+ * Body: { chatId: "5511912345678@c.us", message: "Hello" }
+ */
 export async function sendWhatsAppMessage(
-  phoneNumber: string,
-  apiKey: string,
+  idInstance: string,
+  apiTokenInstance: string,
+  phone: string,
   message: string
 ): Promise<WhatsAppResult> {
   try {
-    const encodedMsg = encodeURIComponent(message);
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneNumber}&text=${encodedMsg}&apikey=${apiKey}`;
-    const res = await fetch(url);
-    const text = await res.text();
+    // Format chatId: phone number + @c.us (personal chat)
+    const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
+
+    const url = `https://api.greenapi.com/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, message }),
+    });
+
+    const data = await res.json();
+
     if (!res.ok) {
-      console.error("WhatsApp send failed:", res.status, text);
-      return { ok: false, status: res.status, responseText: text };
+      console.error("Green-API send failed:", res.status, data);
+      return { ok: false, status: res.status, error: data?.error || data?.message || `HTTP ${res.status}` };
     }
-    return { ok: true, status: res.status, responseText: text };
+
+    return { ok: true, idMessage: data.idMessage, status: res.status };
   } catch (e: any) {
-    console.error("WhatsApp send failed:", e);
+    console.error("Green-API send failed:", e);
     return { ok: false, error: e?.message || String(e) };
   }
 }
@@ -68,7 +84,7 @@ export function buildReminderMessage(data: {
   hour: number;
 }): string {
   const timeEmoji = data.hour < 12 ? "🌅" : data.hour < 18 ? "☀️" : "🌙";
-  let msg = `${timeEmoji} *Lembrete DisciplinaApp*\n\nAinda faltam completar:\n\n`;
+  let msg = `${timeEmoji} *Lembrete DisciplinaMax*\n\nAinda faltam completar:\n\n`;
 
   if (data.pendingBooks.length > 0) {
     data.pendingBooks.forEach((b) => {

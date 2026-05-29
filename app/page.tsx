@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
   BookOpen, BookMarked, Timer, Flame, Target, CheckCircle2,
-  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, Trophy
+  TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, Trophy, Share2
 } from "lucide-react";
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { clsx } from "clsx";
+import { toast } from "react-hot-toast";
 import { useAuth } from "@/components/AuthProvider";
 import { useAchievements, AchievementGrid, AchievementNotification } from "@/components/Achievements";
 
@@ -135,13 +136,35 @@ export default function DashboardPage() {
   const pomodoroGoal = settings?.pomodoros_until_long ?? 4;
   const allGoalsMet = pagesReadToday >= totalPagesGoal && bibleGoalMet;
 
-  if (!mounted) {
+  function shareProgress() {
+    const bibleStatus = bibleGoal ? `${todayBibleChapters}/${bibleGoal.daily_chapters} cap.` : "✓";
+    const text = `🔥 DisciplinaMax — Meu progresso hoje!\n\n📚 ${pagesReadToday}/${totalPagesGoal} páginas\n✝️ Bíblia: ${bibleStatus}\n🍅 ${pomodoroCount} pomodoros\n🔥 ${streak} dias de streak\n\n👉 disciplinemax.onrender.com`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({ title: "DisciplinaMax — Progresso", text }).catch(() => {});
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast.success("Copiado para a área de transferência! 📋")).catch(() => {});
+    }
+  }
+
+  if (!mounted || loading) {
     return (
-      <div className="flex items-center justify-center h-[60dvh]">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
-          style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}>
-          <div className="w-3 h-3 rounded-full bg-[#0B0E14]" />
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="h-3 w-48 rounded bg-white/5 mb-2" />
+            <div className="h-7 w-64 rounded bg-white/5" />
+          </div>
+          <div className="h-9 w-32 rounded-xl bg-white/5" />
         </div>
+        <div className="h-32 rounded-2xl bg-white/[0.02]" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[0,1,2,3].map((i) => <div key={i} className="h-28 rounded-xl bg-white/[0.02]" />)}
+        </div>
+        <div className="h-20 rounded-xl bg-white/[0.02]" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[0,1].map((i) => <div key={i} className="h-36 rounded-xl bg-white/[0.02]" />)}
+        </div>
+        <div className="h-48 rounded-xl bg-white/[0.02]" />
       </div>
     );
   }
@@ -159,16 +182,29 @@ export default function DashboardPage() {
           </h1>
         </div>
         {allGoalsMet ? (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl shimmer"
-            style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
-            <CheckCircle2 size={16} style={{ color: "#3ABAB4" }} />
-            <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Metas concluídas!</span>
+          <div className="flex items-center gap-2">
+            <button onClick={shareProgress} className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+              style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
+              <Share2 size={14} style={{ color: "#D4AF37" }} />
+              <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>Compartilhar</span>
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl shimmer"
+              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
+              <CheckCircle2 size={16} style={{ color: "#3ABAB4" }} />
+              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Metas concluídas!</span>
+            </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-            style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
-            <Target size={16} style={{ color: "#D4AF37" }} />
-            <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>Em andamento</span>
+          <div className="flex items-center gap-2">
+            <button onClick={shareProgress} className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <Share2 size={14} style={{ color: "#555E6E" }} />
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
+              <Target size={16} style={{ color: "#D4AF37" }} />
+              <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>Em andamento</span>
+            </div>
           </div>
         )}
       </div>
@@ -187,7 +223,7 @@ export default function DashboardPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
               <Star size={11} /> Versículo do Dia
             </p>
-            <p className="text-white font-serif italic text-lg leading-relaxed">"{verse.verse}"</p>
+            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
             <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
 import { clsx } from "clsx";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Stats {
   users: { total: number; activeToday: number; newThisWeek: number };
@@ -38,6 +39,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [tab, setTab] = useState<"overview" | "users" | "audit" | "plans">("overview");
+  const [confirmAction, setConfirmAction] = useState<{ userId: string; action: "block" | "unblock" | "reset_data" | "delete" } | null>(null);
 
   useEffect(() => { checkAdmin(); }, [user]);
 
@@ -70,15 +72,6 @@ export default function AdminPage() {
   }
 
   async function manageUser(userId: string, action: "block" | "unblock" | "reset_data" | "delete") {
-    const confirmMsg = {
-      block: "Bloquear este usuário?",
-      unblock: "Desbloquear este usuário?",
-      reset_data: "Resetar TODOS os dados deste usuário? (conta permanece)",
-      delete: "DELETAR este usuário completamente? Esta ação é irreversível!",
-    }[action];
-
-    if (!confirm(confirmMsg)) return;
-
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/manage`, {
@@ -95,6 +88,13 @@ export default function AdminPage() {
       }
     } catch { toast.error("Falha na requisição"); }
   }
+
+  const confirmMessages: Record<string, { title: string; message: string }> = {
+    block: { title: "Bloquear usuário?", message: "O usuário não poderá mais acessar o sistema." },
+    unblock: { title: "Desbloquear usuário?", message: "O usuário voltará a ter acesso ao sistema." },
+    reset_data: { title: "Resetar dados do usuário?", message: "Todos os dados serão apagados, mas a conta permanecerá ativa." },
+    delete: { title: "DELETAR usuário?", message: "Esta ação é irreversível! A conta e todos os dados serão permanentemente removidos." },
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><p style={{ color: "#555E6E" }}>Verificando permissões...</p></div>;
   if (!isAdmin) return <div className="flex items-center justify-center h-64"><p style={{ color: "#D94F4F" }}>Acesso restrito a administradores</p></div>;
@@ -180,18 +180,18 @@ export default function AdminPage() {
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {u.blocked ? (
-                          <button onClick={() => manageUser(u.id, "unblock")} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#3ABAB4" }} title="Desbloquear">
+                          <button onClick={() => setConfirmAction({ userId: u.id, action: "unblock" })} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#3ABAB4" }} title="Desbloquear">
                             <Unlock size={13} />
                           </button>
                         ) : (
-                          <button onClick={() => manageUser(u.id, "block")} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#E8844A" }} title="Bloquear">
+                          <button onClick={() => setConfirmAction({ userId: u.id, action: "block" })} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#E8844A" }} title="Bloquear">
                             <Ban size={13} />
                           </button>
                         )}
-                        <button onClick={() => manageUser(u.id, "reset_data")} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#7C6BBD" }} title="Resetar dados">
+                        <button onClick={() => setConfirmAction({ userId: u.id, action: "reset_data" })} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#7C6BBD" }} title="Resetar dados">
                           <RotateCcw size={13} />
                         </button>
-                        <button onClick={() => manageUser(u.id, "delete")} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#D94F4F" }} title="Deletar">
+                        <button onClick={() => setConfirmAction({ userId: u.id, action: "delete" })} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#D94F4F" }} title="Deletar">
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -261,6 +261,16 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction ? confirmMessages[confirmAction.action].title : ""}
+        message={confirmAction ? confirmMessages[confirmAction.action].message : ""}
+        confirmLabel={confirmAction?.action === "delete" ? "Deletar permanentemente" : confirmAction?.action === "block" ? "Bloquear" : confirmAction?.action === "unblock" ? "Desbloquear" : "Resetar"}
+        destructive={confirmAction?.action === "delete" || confirmAction?.action === "block"}
+        onConfirm={() => { if (confirmAction) { manageUser(confirmAction.userId, confirmAction.action); setConfirmAction(null); } }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
 }

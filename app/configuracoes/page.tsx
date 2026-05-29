@@ -13,14 +13,14 @@ import {
 } from "@/lib/notifications";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { clsx } from "clsx";
 
 export default function ConfiguracoesPage() {
   const { settings, setSettings, setNotificationsEnabled } = useStore();
   const { user } = useAuth();
   const [form, setForm] = useState({
     whatsapp_number: "",
-    callmebot_api_key: "",
+    greenapi_instance_id: "",
+    greenapi_token: "",
     telegram_bot_token: "",
     telegram_chat_id: "",
     notification_times: ["07:00", "12:00", "19:00"],
@@ -71,20 +71,21 @@ export default function ConfiguracoesPage() {
   }
 
   async function testWhatsApp() {
-    if (!form.whatsapp_number || !form.callmebot_api_key) {
-      toast.error("Preencha o número e a chave da API"); return;
+    if (!form.greenapi_instance_id || !form.greenapi_token || !form.whatsapp_number) {
+      toast.error("Preencha o Instance ID, Token e número WhatsApp"); return;
     }
     setTestingWa(true);
     const result = await sendWhatsAppMessage(
-      form.whatsapp_number, form.callmebot_api_key,
+      form.greenapi_instance_id,
+      form.greenapi_token,
+      form.whatsapp_number,
       "✅ *DisciplinaMax* configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚"
     );
     setTestingWa(false);
     if (result.ok) {
       toast.success("WhatsApp conectado! ✅");
     } else {
-      const detail = result.responseText || result.error || "Verifique o número e a chave.";
-      toast.error(`Erro: ${detail}`);
+      toast.error(`Erro: ${result.error || "Verifique as credenciais."}`);
     }
   }
 
@@ -106,23 +107,36 @@ export default function ConfiguracoesPage() {
     if (!user) { toast.error("Serviço indisponível"); return; }
     setSaving(true);
     try {
-      const { error } = await dataFetch({ action: "upsert", table: "user_settings", payload: {
-      user_id: user.id,
-      whatsapp_number: form.whatsapp_number,
-      callmebot_api_key: form.callmebot_api_key,
-      telegram_bot_token: form.telegram_bot_token,
-      telegram_chat_id: form.telegram_chat_id,
-      notification_times: form.notification_times,
-      pomodoro_duration: Math.max(1, Math.min(120, form.pomodoro_duration)),
-      short_break: Math.max(1, Math.min(30, form.short_break)),
-      long_break: Math.max(1, Math.min(60, form.long_break)),
-      pomodoros_until_long: Math.max(1, Math.min(10, form.pomodoros_until_long)),
-      daily_books_goal: Math.max(1, Math.min(500, form.daily_books_goal)),
-      daily_bible_chapters: Math.max(1, Math.min(50, form.daily_bible_chapters)),
-      gemini_api_key: form.gemini_api_key,
-      timezone: form.timezone,
-      updated_at: new Date().toISOString(),
-    }});
+      const payload: Record<string, any> = {
+        user_id: user.id,
+        whatsapp_number: form.whatsapp_number,
+        telegram_bot_token: form.telegram_bot_token,
+        telegram_chat_id: form.telegram_chat_id,
+        notification_times: form.notification_times,
+        pomodoro_duration: Math.max(1, Math.min(120, form.pomodoro_duration)),
+        short_break: Math.max(1, Math.min(30, form.short_break)),
+        long_break: Math.max(1, Math.min(60, form.long_break)),
+        pomodoros_until_long: Math.max(1, Math.min(10, form.pomodoros_until_long)),
+        daily_books_goal: Math.max(1, Math.min(500, form.daily_books_goal)),
+        daily_bible_chapters: Math.max(1, Math.min(50, form.daily_bible_chapters)),
+        gemini_api_key: form.gemini_api_key,
+        timezone: form.timezone,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Try with greenapi fields first — if columns don't exist yet, retry without them
+      let { error } = await dataFetch({ action: "upsert", table: "user_settings", payload: {
+        ...payload,
+        greenapi_instance_id: form.greenapi_instance_id,
+        greenapi_token: form.greenapi_token,
+      }});
+
+      if (error && (error.includes("greenapi") || error.includes("does not exist"))) {
+        // DB migration not applied yet — save without greenapi fields
+        const { error: retryError } = await dataFetch({ action: "upsert", table: "user_settings", payload });
+        error = retryError;
+      }
+
       if (!error) { toast.success("Configurações salvas!"); loadSettings(); }
       else toast.error("Erro: " + error);
     } catch (err) { toast.error("Erro ao salvar"); }
@@ -189,27 +203,33 @@ export default function ConfiguracoesPage() {
         </div>
       </section>
 
-      {/* WhatsApp */}
+      {/* WhatsApp (Green-API) */}
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
-          <MessageSquare size={18} style={{ color: "#3ABAB4" }} /> WhatsApp (CallMeBot)
+          <MessageSquare size={18} style={{ color: "#3ABAB4" }} /> WhatsApp (Green-API)
         </h2>
-        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Receba lembretes automáticos — 100% gratuito</p>
-        <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
+        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Receba lembretes instantâneos via WhatsApp — rápido e gratuito</p>
+        <a href="https://green-api.com" target="_blank"
           className="text-xs flex items-center gap-1 mb-4" style={{ color: "#D4AF37" }}>
-          <ExternalLink size={11} /> Como obter sua chave gratuita
+          <ExternalLink size={11} /> Criar conta gratuita no Green-API
         </a>
         <div className="space-y-3">
           <div>
             <label className="label">Número WhatsApp (com código do país)</label>
             <input className="input" placeholder="55119XXXXXXXX" value={form.whatsapp_number}
               onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} />
-            <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Ex: 5511987654321 (Brasil = 55)</p>
+            <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Ex: 5511987654321 (Brasil = 55). É o número que receberá as mensagens.</p>
           </div>
           <div>
-            <label className="label">Chave API CallMeBot</label>
-            <input className="input" placeholder="1234567" value={form.callmebot_api_key}
-              onChange={(e) => setForm((p) => ({ ...p, callmebot_api_key: e.target.value }))} />
+            <label className="label">Instance ID (Green-API)</label>
+            <input className="input" placeholder="110100001" value={form.greenapi_instance_id}
+              onChange={(e) => setForm((p) => ({ ...p, greenapi_instance_id: e.target.value }))} />
+            <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Encontre no painel do Green-API após criar uma instância e escanear o QR Code.</p>
+          </div>
+          <div>
+            <label className="label">API Token (Green-API)</label>
+            <input className="input" placeholder="d75b3a663749..." value={form.greenapi_token}
+              onChange={(e) => setForm((p) => ({ ...p, greenapi_token: e.target.value }))} />
           </div>
           <button onClick={testWhatsApp} disabled={testingWa} className="btn-ghost text-sm">
             {testingWa ? "Enviando..." : "📱 Testar envio WhatsApp"}
@@ -313,7 +333,8 @@ export default function ConfiguracoesPage() {
       <section className="card">
         <h2 className="font-semibold text-white mb-1 flex items-center gap-2">
           🤖 Google Gemini (IA Motivacional)
-        </h2>        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
+        </h2>
+        <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
         <a href="https://aistudio.google.com/app/apikey" target="_blank"
           className="text-xs flex items-center gap-1 mb-3" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Obter chave gratuita no Google AI Studio

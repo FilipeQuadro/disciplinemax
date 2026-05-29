@@ -57,9 +57,8 @@ export async function POST(req: NextRequest) {
       for (const table of tables) {
         await sb.from(table).delete().eq("user_id", user_id);
       }
-      await sb.from("user_settings").update({
+      const resetPayload: Record<string, any> = {
         whatsapp_number: null,
-        callmebot_api_key: null,
         telegram_bot_token: null,
         telegram_chat_id: null,
         notification_times: ["07:00", "12:00", "19:00"],
@@ -72,7 +71,18 @@ export async function POST(req: NextRequest) {
         gemini_api_key: null,
         streak_freeze_available: 1,
         streak_freeze_used: 0,
-      }).eq("user_id", user_id);
+      };
+      // Try with greenapi fields — if columns don't exist, the error is non-fatal
+      try {
+        await sb.from("user_settings").update({
+          ...resetPayload,
+          greenapi_instance_id: null,
+          greenapi_token: null,
+        }).eq("user_id", user_id);
+      } catch {
+        // greenapi columns may not exist yet — retry without them
+        await sb.from("user_settings").update(resetPayload).eq("user_id", user_id);
+      }
 
       await sb.from("audit_logs").insert({
         actor_id: actorId,

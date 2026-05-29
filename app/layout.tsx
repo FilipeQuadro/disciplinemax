@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppShell } from "@/components/AppShell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PwaInstallListener } from "@/components/PwaInstallListener";
 
 export const metadata: Metadata = {
   title: "DisciplinaMax – Mentor de Disciplina",
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-[#0B0E14] text-slate-100 antialiased overscroll-none">
         <ErrorBoundary>
         <AuthProvider>
+        <PwaInstallListener />
         <IntroScreen />
         <BackgroundParticles />
         <AuthGuard>

@@ -151,6 +151,10 @@ ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_available INTEG
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_used INTEGER DEFAULT 0;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS streak_freeze_reset_month TEXT DEFAULT '';
 
+-- Green-API WhatsApp columns (se ainda não existem)
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS greenapi_instance_id TEXT;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS greenapi_token TEXT;
+
 -- ============================================
 -- 5. Auto-create user_plans row for new users via trigger
 -- ============================================

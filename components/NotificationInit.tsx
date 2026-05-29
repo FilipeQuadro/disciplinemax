@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { registerServiceWorker, setupPeriodicSync, subscribeToPush } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
@@ -22,10 +22,21 @@ export function NotificationInit() {
   }, []);
 
   // Restore notificationsEnabled from browser permission on mount
+  // Also ensure push subscription exists so server-side push works when tab is closed
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission === "granted" && !notificationsEnabled) {
-      setNotificationsEnabled(true);
+    if (Notification.permission === "granted") {
+      if (!notificationsEnabled) {
+        setNotificationsEnabled(true);
+      }
+      // Ensure push subscription exists for server-side delivery
+      registerServiceWorker().then(async (reg) => {
+        if (!reg) return;
+        const existingSub = await reg.pushManager.getSubscription();
+        if (!existingSub) {
+          await subscribeToPush(reg);
+        }
+      });
     }
   }, []);
 

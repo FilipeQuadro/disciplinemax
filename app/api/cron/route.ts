@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
-import { sendWebPush } from "@/lib/web-push-server";
+import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
+import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,11 +21,7 @@ export async function GET(req: Request) {
   }
 
   // CRON_SECRET — accept Bearer header OR ?secret= query param (cron-job.org sends query)
-  const url = new URL(req.url);
-  const querySecret = url.searchParams.get("secret");
-  const authHeader = req.headers.get("authorization");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
+  if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -37,12 +35,22 @@ export async function GET(req: Request) {
   });
   const brtTime = brtFormatter.format(now);
   const brtHour = parseInt(brtTime.split(":")[0], 10);
-  const brtMinute = parseInt(brtTime.split(":")[1], 10);
-  const currentMinutes = brtHour * 60 + brtMinute;
+  const currentMinutes = brtHour * 60 + parseInt(brtTime.split(":")[1], 10);
 
   // Limpar notifications_sent antigos (> 7 dias)
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("notifications_sent").delete().lt("sent_at", sevenDaysAgo);
+
+  // Daily reset: reset pages_read_today for all books if it's midnight BRT (00:00–00:30)
+  if (brtHour === 0 && currentMinutes < 30) {
+    try {
+      const { error: resetErr } = await supabase.from("books").update({ pages_read_today: 0 }).neq("pages_read_today", 0);
+      if (resetErr) console.error("Daily pages reset failed:", resetErr);
+      else console.log("Daily pages_read_today reset done at", brtTime);
+    } catch (e) {
+      console.error("Daily pages reset error:", e);
+    }
+  }
 
   // Buscar dados
   const { data: allSettings } = await supabase.from("user_settings").select("*");
@@ -51,8 +59,20 @@ export async function GET(req: Request) {
   const { data: allStats } = await supabase
     .from("daily_stats").select("*").eq("date", today);
 
-  let sent = 0;
+  let telegramSent = 0;
+  let whatsappSent = 0;
+  let pushSent = 0;
   let skipped = 0;
+
+  // Fetch AI content once (same for all users) — avoids N duplicate API calls
+  const isMorning = brtHour < 12;
+  const verse = await getBibleVerseOfDay();
+  const motivational = await getMotivationalMessage({
+    streak: 0, // Generic — personalized per-user below
+    booksRead: 0,
+    bibleChapters: 0,
+    completedToday: false,
+  });
 
   for (const settings of (allSettings || [])) {
     const userId = settings.user_id;
@@ -99,79 +119,105 @@ export async function GET(req: Request) {
       } as any);
     } catch { /* UNIQUE constraint */ }
 
-    // ========== Construir mensagem do Telegram ==========
-    const isMorning = brtHour < 12;
-    const verse = await getBibleVerseOfDay();
-    const motivational = await getMotivationalMessage({
-      streak: stats?.streak_day || 0,
-      booksRead: totalPagesRead,
-      bibleChapters: bibleChaptersRead,
-      completedToday: booksGoalMet && bibleGoalMet,
-    });
+    // ========== Construir mensagem ==========
+    // verse and motivational already fetched outside the loop
 
-    let message = "";
+    // Telegram message (Markdown format)
+    let tgMessage = "";
 
     if (isMorning) {
-      // Mensagem matinal — metas do dia + versículo
-      message = `☀️ *Bom dia! Hora de buscar o Senhor!*\n\n`;
+      tgMessage = `☀️ *Bom dia! Hora de buscar o Senhor!*\n\n`;
 
       if (userBooks.length > 0) {
-        message += `📚 *Metas de leitura hoje:*\n`;
+        tgMessage += `📚 *Metas de leitura hoje:*\n`;
         for (const b of userBooks) {
           const pagesLeft = b.daily_goal - b.pages_read_today;
-          message += `• ${b.title}: ${pagesLeft} páginas\n`;
+          tgMessage += `• ${b.title}: ${pagesLeft} páginas\n`;
         }
-        message += `\n`;
+        tgMessage += `\n`;
       }
 
       if (bibleGoalChapters > 0) {
-        message += `✝️ *Bíblia:* ${bibleGoalChapters} capítulo(s) — ${bibleGoal?.current_book || ""} ${bibleGoal?.current_chapter || 1}\n\n`;
+        tgMessage += `✝️ *Bíblia:* ${bibleGoalChapters} capítulo(s) — ${bibleGoal?.current_book || ""} ${bibleGoal?.current_chapter || 1}\n\n`;
       }
 
-      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
-      message += `💡 _${motivational}_\n\n`;
-      message += `👉 disciplinemax.onrender.com`;
+      tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      tgMessage += `💡 _${motivational}_\n\n`;
+      tgMessage += `👉 disciplinemax.onrender.com`;
     } else if (booksGoalMet && bibleGoalMet) {
-      // Metas completadas
-      message = `🎉 *Parabéns! Você completou todas as metas de hoje!* 🎉\n\n`;
-      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
-      message += `💪 Continue firme amanhã!`;
+      tgMessage = `🎉 *Parabéns! Você completou todas as metas de hoje!* 🎉\n\n`;
+      tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      tgMessage += `💪 Continue firme amanhã!`;
     } else {
-      // Lembrete — ainda faltam metas
       const timeEmoji = brtHour < 18 ? "☀️" : "🌙";
-      message = `${timeEmoji} *Lembrete — ainda faltam metas hoje!*\n\n`;
+      tgMessage = `${timeEmoji} *Lembrete — ainda faltam metas hoje!*\n\n`;
 
       const pendingBooks = userBooks.filter((b: any) => b.pages_read_today < b.daily_goal);
       if (pendingBooks.length > 0) {
-        message += `📖 *Livros pendentes:*\n`;
+        tgMessage += `📖 *Livros pendentes:*\n`;
         for (const b of pendingBooks) {
           const pagesLeft = b.daily_goal - b.pages_read_today;
-          message += `• ${b.title}: ${pagesLeft} páginas\n`;
+          tgMessage += `• ${b.title}: ${pagesLeft} páginas\n`;
         }
-        message += `\n`;
+        tgMessage += `\n`;
       }
 
       if (!bibleGoalMet && bibleGoalChapters > 0) {
         const chaptersLeft = Math.max(0, bibleGoalChapters - bibleChaptersRead);
-        message += `✝️ *Bíblia:* ${chaptersLeft} capítulo(s) restante(s)\n\n`;
+        tgMessage += `✝️ *Bíblia:* ${chaptersLeft} capítulo(s) restante(s)\n\n`;
       }
 
-      message += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
-      message += `💪 _${motivational}_\n\n`;
-      message += `👉 disciplinemax.onrender.com`;
+      tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
+      tgMessage += `💪 _${motivational}_\n\n`;
+      tgMessage += `👉 disciplinemax.onrender.com`;
     }
 
-    // Enviar Telegram
+    // WhatsApp message (plain text with bold — Green-API supports WhatsApp formatting)
+    let waMessage = "";
+    if (booksGoalMet && bibleGoalMet) {
+      waMessage = `🎉 *Parabéns! Todas as metas de hoje foram cumpridas!*\n\n📜 "${verse.verse}" — ${verse.reference}\n\n💪 Continue firme amanhã!`;
+    } else {
+      const timeEmoji = brtHour < 12 ? "☀️" : brtHour < 18 ? "☀️" : "🌙";
+      waMessage = `${timeEmoji} *Lembrete DisciplinaMax*\n\nAinda faltam completar:\n\n`;
+
+      const pendingBooks = userBooks.filter((b: any) => b.pages_read_today < b.daily_goal);
+      for (const b of pendingBooks) {
+        waMessage += `📖 ${b.title}: *${b.daily_goal - b.pages_read_today}* páginas\n`;
+      }
+
+      if (!bibleGoalMet && bibleGoalChapters > 0) {
+        waMessage += `✝️ Bíblia: *${Math.max(0, bibleGoalChapters - bibleChaptersRead)}* capítulos\n`;
+      }
+
+      waMessage += `\n📜 "${verse.verse}" — ${verse.reference}\n\n💪 ${motivational}\n\n👉 disciplinemax.onrender.com`;
+    }
+
+    // ── Enviar Telegram ──
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
-        await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
-        sent++;
+        await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, tgMessage);
+        telegramSent++;
       } catch (e) {
         console.error("Telegram send failed:", e);
       }
     }
 
-    // Enviar Web Push (browser notifications even when tab is closed)
+    // ── Enviar WhatsApp (Green-API) ──
+    if (settings.greenapi_instance_id && settings.greenapi_token && settings.whatsapp_number) {
+      try {
+        const waResult = await sendWhatsAppMessage(
+          settings.greenapi_instance_id,
+          settings.greenapi_token,
+          settings.whatsapp_number,
+          waMessage
+        );
+        if (waResult.ok) whatsappSent++;
+      } catch (e) {
+        console.error("WhatsApp send failed:", e);
+      }
+    }
+
+    // ── Enviar Web Push (browser notifications even when tab is closed) ──
     try {
       const { data: subs } = await supabase
         .from("notification_subscriptions")
@@ -182,17 +228,21 @@ export async function GET(req: Request) {
         const pushBody = booksGoalMet && bibleGoalMet
           ? "🎉 Parabéns! Todas as metas de hoje foram cumpridas!"
           : `🎯 Metas pendentes! ${!booksGoalMet ? `📚 ${totalPagesGoal - totalPagesRead} páginas` : ""}${!booksGoalMet && !bibleGoalMet ? " · " : ""}${!bibleGoalMet ? `✝️ ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos` : ""}`;
-        await sendWebPush(subs, {
+        const pushResult = await sendWebPush(subs, {
           title: booksGoalMet && bibleGoalMet ? "🎉 Metas cumpridas!" : "🎯 Metas pendentes!",
           body: pushBody,
           tag: "disciplina-reminder",
         });
+        pushSent += pushResult.sent;
+        // Clean up expired subscriptions
+        if (pushResult.expiredEndpoints.length > 0) {
+          await cleanupExpiredSubscriptions(supabase, pushResult.expiredEndpoints);
+        }
       }
     } catch (e) {
       console.error("Web Push send failed:", e);
     }
   }
 
-  // Resposta mínima para evitar "Response data too big" do cron-job.org
-  return NextResponse.json({ ok: true, sent, skipped, brtTime });
+  return NextResponse.json({ ok: true, telegramSent, whatsappSent, pushSent, skipped, brtTime });
 }

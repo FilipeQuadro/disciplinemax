@@ -11,6 +11,8 @@ import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import { dataFetch } from "@/lib/data-fetch";
 import { clsx } from "clsx";
+import { Download } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard", color: "text-[#D4AF37]" },
@@ -23,7 +25,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { streak, pomodoroActive, sidebarOpen, setSidebarOpen } = useStore();
+  const { streak, pomodoroActive, sidebarOpen, setSidebarOpen, pwaInstallPrompt, setPwaInstallPrompt } = useStore();
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -175,6 +177,22 @@ export function Sidebar() {
             <button onClick={signOut} className="nav-item w-full justify-center gap-2 text-xs" style={{ color: "#8B95A5" }}>
               <LogOut size={14} /> Sair
             </button>
+            {pwaInstallPrompt && sidebarOpen && (
+              <button
+                onClick={async () => {
+                  try {
+                    pwaInstallPrompt.prompt();
+                    const { outcome } = await pwaInstallPrompt.userChoice;
+                    if (outcome === "accepted") toast.success("App instalado! 🎉");
+                    setPwaInstallPrompt(null);
+                  } catch { /* ignore */ }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 mt-2"
+                style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.15)", color: "#D4AF37" }}
+              >
+                <Download size={14} /> Instalar App
+              </button>
+            )}
           </div>
         )}
       </aside>
