@@ -6,13 +6,9 @@ import { verifyCronSecret } from "@/lib/admin-auth";
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-  }
-
-  // Require CRON_SECRET or admin auth to prevent unauthorized email confirmations
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: any;
@@ -25,6 +21,30 @@ export async function POST(req: NextRequest) {
   const { userId } = body;
   if (!userId) {
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  }
+
+  // Auth: accept CRON_SECRET (server-to-server) OR a valid user session
+  // where the caller is confirming their OWN account (userId matches token subject)
+  const isCron = verifyCronSecret(req);
+  let isSelfConfirm = false;
+
+  if (!isCron) {
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    if (token) {
+      try {
+        const sb = createClient(supabaseUrl, anonKey);
+        const { data: { user } } = await sb.auth.getUser(token);
+        // User can only confirm their own account
+        if (user && user.id === userId) {
+          isSelfConfirm = true;
+        }
+      } catch { /* invalid token */ }
+    }
+  }
+
+  if (!isCron && !isSelfConfirm) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sb = createClient(supabaseUrl, serviceRoleKey);

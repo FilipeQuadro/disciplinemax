@@ -5,6 +5,7 @@ import { Book } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
+import { canDoAction, PLAN_LIMITS, type PlanType } from "@/lib/plans";
 import {
   BookOpen, Plus, Trash2, Edit2, Check, X
 } from "lucide-react";
@@ -50,6 +51,19 @@ export default function LivrosPage() {
     if (!user) { toast.error("Serviço indisponível"); return; }
     if (!form.title.trim()) { toast.error("Informe o título do livro"); return; }
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
+
+    // Check plan limits before adding a new book
+    if (!editingId) {
+      try {
+        const { data: planData } = await dataFetch({ action: "select", table: "user_plans", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "plan" } });
+        const plan = ((planData as any)?.plan as PlanType) || "free";
+        if (!canDoAction(plan, "maxBooks", books.length)) {
+          toast.error(`Limite do plano atingido! Você pode ter até ${PLAN_LIMITS[plan].maxBooks} livros no plano ${PLAN_LIMITS[plan].label}.`);
+          return;
+        }
+      } catch { /* allow if plan check fails */ }
+    }
+
     setLoading(true);
     try {
       const payload = { ...form, user_id: user.id, pages_read_today: 0, target_date: form.target_date || null };

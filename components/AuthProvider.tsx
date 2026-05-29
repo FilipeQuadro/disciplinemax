@@ -77,12 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { name } },
     });
     if (!error && data.user) {
-      // Auto-confirm email via server API (service_role bypasses email verification)
-      await fetch("/api/auth/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: data.user.id }),
-      });
+      // Auto-confirm email via server API
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch("/api/auth/confirm", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ userId: data.user.id }),
+        });
+      } catch { /* auto-confirm is best-effort */ }
     }
     return { error: error?.message ?? null };
   };
