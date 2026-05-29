@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   const sb = createClient(supabaseUrl, supabaseKey);
   const { data: allSettings } = await sb.from("user_settings").select("*");
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
   // BRT timezone — only send if within a notification time window
   const brtFormatter = new Intl.DateTimeFormat("en-GB", {

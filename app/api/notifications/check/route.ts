@@ -39,7 +39,7 @@ export async function GET(req: Request) {
   }
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
   const { data: stats } = await sb
     .from("daily_stats").select("*").eq("date", today).eq("user_id", callerId).maybeSingle();
