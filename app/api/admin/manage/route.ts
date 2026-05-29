@@ -6,7 +6,6 @@ import { verifyAdminOrCron } from "@/lib/admin-auth";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Block/unblock/reset/delete a user
 export async function POST(req: NextRequest) {
   if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: "Not configured" }, { status: 500 });
 
@@ -16,7 +15,7 @@ export async function POST(req: NextRequest) {
   const sb = createClient(supabaseUrl, supabaseKey);
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-  const { user_id, action, reason } = body;
+  const { user_id, action, reason, new_plan } = body;
 
   if (!user_id || !action) return NextResponse.json({ error: "user_id and action required" }, { status: 400 });
 
@@ -27,7 +26,6 @@ export async function POST(req: NextRequest) {
         reason: reason || "Blocked by admin",
         blocked_by: actorId,
       });
-
       await sb.from("audit_logs").insert({
         actor_id: actorId,
         action: "user_blocked",
@@ -35,21 +33,65 @@ export async function POST(req: NextRequest) {
         target_id: user_id,
         details: { reason: reason || "Blocked by admin" },
       });
-
       return NextResponse.json({ ok: true, action: "blocked" });
     }
 
     if (action === "unblock") {
       await sb.from("blocked_users").delete().eq("user_id", user_id);
-
       await sb.from("audit_logs").insert({
         actor_id: actorId,
         action: "user_unblocked",
         target_type: "user",
         target_id: user_id,
       });
-
       return NextResponse.json({ ok: true, action: "unblocked" });
+    }
+
+    if (action === "add_admin") {
+      const { error } = await sb.from("admin_users").upsert({
+        user_id,
+        role: "admin",
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      await sb.from("audit_logs").insert({
+        actor_id: actorId,
+        action: "admin_added",
+        target_type: "user",
+        target_id: user_id,
+      });
+      return NextResponse.json({ ok: true, action: "admin_added" });
+    }
+
+    if (action === "remove_admin") {
+      await sb.from("admin_users").delete().eq("user_id", user_id);
+      await sb.from("audit_logs").insert({
+        actor_id: actorId,
+        action: "admin_removed",
+        target_type: "user",
+        target_id: user_id,
+      });
+      return NextResponse.json({ ok: true, action: "admin_removed" });
+    }
+
+    if (action === "change_plan") {
+      const validPlans = ["free", "pro", "premium"];
+      const plan = new_plan || "free";
+      if (!validPlans.includes(plan)) {
+        return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+      }
+      const { error } = await sb.from("user_plans").upsert({
+        user_id,
+        plan,
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      await sb.from("audit_logs").insert({
+        actor_id: actorId,
+        action: "plan_changed",
+        target_type: "user",
+        target_id: user_id,
+        details: { new_plan: plan },
+      });
+      return NextResponse.json({ ok: true, action: "plan_changed" });
     }
 
     if (action === "reset_data") {
@@ -72,7 +114,6 @@ export async function POST(req: NextRequest) {
         streak_freeze_available: 1,
         streak_freeze_used: 0,
       };
-      // Try with greenapi fields — if columns don't exist, the error is non-fatal
       try {
         await sb.from("user_settings").update({
           ...resetPayload,
@@ -80,7 +121,6 @@ export async function POST(req: NextRequest) {
           greenapi_token: null,
         }).eq("user_id", user_id);
       } catch {
-        // greenapi columns may not exist yet — retry without them
         await sb.from("user_settings").update(resetPayload).eq("user_id", user_id);
       }
 
@@ -90,23 +130,23 @@ export async function POST(req: NextRequest) {
         target_type: "user",
         target_id: user_id,
       });
-
       return NextResponse.json({ ok: true, action: "data_reset" });
     }
 
     if (action === "delete") {
+      // Remove from blocked_users and admin_users first
+      await sb.from("blocked_users").delete().eq("user_id", user_id);
+      await sb.from("admin_users").delete().eq("user_id", user_id);
       const tables = ["books", "bible_readings", "bible_goals", "pomodoro_sessions", "daily_stats", "achievements", "notifications_sent", "notification_subscriptions", "user_settings", "user_plans"];
       for (const table of tables) {
         await sb.from(table).delete().eq("user_id", user_id);
       }
-
       await sb.from("audit_logs").insert({
         actor_id: actorId,
         action: "user_deleted",
         target_type: "user",
         target_id: user_id,
       });
-
       return NextResponse.json({ ok: true, action: "deleted" });
     }
 
@@ -116,7 +156,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Check if a user is blocked
 export async function GET(req: Request) {
   if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: "Not configured" }, { status: 500 });
 

@@ -51,6 +51,7 @@ ALTER TABLE blocked_users ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 CREATE POLICY "admin_users_select" ON admin_users FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "admin_users_insert" ON admin_users FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
 CREATE POLICY "user_plans_select" ON user_plans FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
 CREATE POLICY "user_plans_insert" ON user_plans FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
 CREATE POLICY "user_plans_update" ON user_plans FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);

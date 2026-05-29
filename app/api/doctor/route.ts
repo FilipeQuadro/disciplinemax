@@ -179,7 +179,7 @@ export async function GET(req: Request) {
     try {
       const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
       if (settings?.telegram_bot_token && settings?.telegram_chat_id) {
-        const alertMsg = `🚨 *DisciplinaApp Auto-Diagnóstico*\n\n❌ ${report.issues.length} problema(s) encontrado(s):\n${report.issues.map((i) => `• ${i}`).join("\n")}\n\n⏰ ${report.timestamp}`;
+        const alertMsg = `🚨 *DisciplinaMax Auto-Diagnóstico*\n\n❌ ${report.issues.length} problema(s) encontrado(s):\n${report.issues.map((i) => `• ${i}`).join("\n")}\n\n⏰ ${report.timestamp}`;
         await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

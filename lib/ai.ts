@@ -51,7 +51,7 @@ async function getGeminiKeyFromDB(): Promise<string | null> {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return null;
     const sb = createClient(url, key);
-    const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).single();
+    const { data } = await sb.from("user_settings").select("gemini_api_key").limit(1).maybeSingle();
     return data?.gemini_api_key || null;
   } catch { return null; }
 }

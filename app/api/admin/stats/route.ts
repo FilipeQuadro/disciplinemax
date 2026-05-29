@@ -16,24 +16,37 @@ export async function GET(req: Request) {
   const sb = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const today = new Date().toISOString().split("T")[0];
+    // Use BRT date to avoid midnight mismatch
+    const brtDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const today = brtDate;
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
 
-    const { count: totalUsers } = await sb.from("user_settings").select("*", { count: "exact", head: true });
-    const { count: activeToday } = await sb.from("daily_stats").select("user_id", { count: "exact", head: true }).eq("date", today);
-    const { count: newThisWeek } = await sb.from("user_settings").select("user_id", { count: "exact", head: true }).gte("created_at", weekAgo);
+    const [
+      { count: totalUsers },
+      { count: activeToday },
+      { count: newThisWeek },
+      { data: todayAgg },
+      { count: freePlan },
+      { count: proPlan },
+      { count: premiumPlan },
+      { count: blockedCount },
+    ] = await Promise.all([
+      sb.from("user_settings").select("*", { count: "exact", head: true }),
+      sb.from("daily_stats").select("user_id", { count: "exact", head: true }).eq("date", today),
+      sb.from("user_settings").select("user_id", { count: "exact", head: true }).gte("created_at", weekAgo),
+      sb.from("daily_stats").select("books_pages_read, bible_chapters_read, pomodoros_completed").eq("date", today),
+      sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "free"),
+      sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "pro"),
+      sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "premium"),
+      sb.from("blocked_users").select("user_id", { count: "exact", head: true }),
+    ]);
 
-    const { data: todayAgg } = await sb.from("daily_stats").select("books_pages_read, bible_chapters_read, pomodoros_completed").eq("date", today);
     const pagesToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.books_pages_read || 0), 0);
     const chaptersToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.bible_chapters_read || 0), 0);
     const pomodorosToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.pomodoros_completed || 0), 0);
 
-    const { count: freePlan } = await sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "free");
-    const { count: proPlan } = await sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "pro");
-    const { count: premiumPlan } = await sb.from("user_plans").select("*", { count: "exact", head: true }).eq("plan", "premium");
-
     return NextResponse.json({
-      users: { total: totalUsers || 0, activeToday: activeToday || 0, newThisWeek: newThisWeek || 0 },
+      users: { total: totalUsers || 0, activeToday: activeToday || 0, newThisWeek: newThisWeek || 0, blocked: blockedCount || 0 },
       metrics: { pagesToday, chaptersToday, pomodorosToday },
       plans: { free: freePlan || 0, pro: proPlan || 0, premium: premiumPlan || 0 },
     });
