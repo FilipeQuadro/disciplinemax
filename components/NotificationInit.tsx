@@ -1,26 +1,35 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
-import { registerServiceWorker, setupPeriodicSync } from "@/lib/notifications";
+import { registerServiceWorker, setupPeriodicSync, subscribeToPush } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 
 export function NotificationInit() {
-  const { notificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
+  const { notificationsEnabled, setNotificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
   const { user } = useAuth();
-  // Memoize to prevent effect from re-running every render
   const notifTimes = useMemo(() =>
     settings?.notification_times?.length ? settings.notification_times : ["07:00", "12:00", "19:00"],
     [settings?.notification_times]
   );
 
+  // Register service worker once
   useEffect(() => {
     registerServiceWorker().then((reg) => {
       if (reg) setupPeriodicSync(reg);
     });
   }, []);
 
+  // Restore notificationsEnabled from browser permission on mount
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "granted" && !notificationsEnabled) {
+      setNotificationsEnabled(true);
+    }
+  }, []);
+
+  // Capacitor Push (iOS/Android)
   useEffect(() => {
     const registerCapacitorPush = async () => {
       if (typeof window === "undefined") return;
@@ -66,14 +75,16 @@ export function NotificationInit() {
     registerCapacitorPush();
   }, []);
 
-  // Notificações browser — usa horários do settings com tolerância de 2 min
+  // Browser notifications — uses settings times with 5-minute tolerance
+  // Uses ref to track fired notifications so we don't re-notify within the window
   useEffect(() => {
     if (!notificationsEnabled) return;
-    if (typeof window === "undefined" || Notification.permission !== "granted") return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
 
-    const lastNotified = new Map<string, string>(); // date_time → evitar duplicata
+    const firedToday = new Map<string, number>(); // time_slot → timestamp of last fire
 
-    const checkAndSchedule = () => {
+    const checkAndNotify = () => {
       const now = new Date();
       const brt = new Intl.DateTimeFormat("en-GB", {
         timeZone: "America/Sao_Paulo",
@@ -83,6 +94,13 @@ export function NotificationInit() {
       const currentMinutes = brtH * 60 + brtM;
       const today = now.toISOString().split("T")[0];
 
+      // Clean old entries from previous days
+      const keysToDelete: string[] = [];
+      firedToday.forEach((_, key) => {
+        if (!key.startsWith(today)) keysToDelete.push(key);
+      });
+      keysToDelete.forEach((key) => firedToday.delete(key));
+
       const totalPagesGoal = books.reduce((s, b) => s + b.daily_goal, 0);
       const totalPagesRead = books.reduce((s, b) => s + b.pages_read_today, 0);
       const booksGoalMet = totalPagesRead >= totalPagesGoal;
@@ -90,17 +108,19 @@ export function NotificationInit() {
 
       if (booksGoalMet && bibleGoalMet) return;
 
+      // 5-minute tolerance window
       const matched = notifTimes.find((t) => {
         const [h, m] = t.split(":").map(Number);
         const nm = h * 60 + m;
-        return currentMinutes >= nm && currentMinutes < nm + 2;
+        return currentMinutes >= nm && currentMinutes < nm + 5;
       });
 
       if (!matched) return;
 
+      // Dedup: only fire once per time slot per day
       const dedupKey = `${today}_${matched}`;
-      if (lastNotified.get(today) === matched) return;
-      lastNotified.set(today, matched);
+      if (firedToday.has(dedupKey)) return;
+      firedToday.set(dedupKey, Date.now());
 
       const pending = [];
       if (!booksGoalMet) pending.push(`📚 ${totalPagesGoal - totalPagesRead} páginas de livros`);
@@ -116,8 +136,9 @@ export function NotificationInit() {
       }
     };
 
-    const interval = setInterval(checkAndSchedule, 60000);
-    checkAndSchedule();
+    // Check immediately, then every 30 seconds for better coverage
+    checkAndNotify();
+    const interval = setInterval(checkAndNotify, 30000);
     return () => clearInterval(interval);
   }, [notificationsEnabled, books, bibleGoal, todayBibleChapters, notifTimes]);
 

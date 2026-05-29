@@ -1,4 +1,5 @@
-// Gerenciamento de notificações push (Web Push API)
+// Gerenciamento de notificações push (Web Push API — client-side)
+
 export async function registerServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return null;
   try {

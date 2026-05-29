@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
-import { verifyCronSecret } from "@/lib/admin-auth";
+import { sendWebPush } from "@/lib/web-push-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,8 +18,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 
-  // CRON_SECRET only — this is a server-to-server endpoint
-  if (!verifyCronSecret(req)) {
+  // CRON_SECRET — accept Bearer header OR ?secret= query param (cron-job.org sends query)
+  const url = new URL(req.url);
+  const querySecret = url.searchParams.get("secret");
+  const authHeader = req.headers.get("authorization");
+  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -165,6 +169,27 @@ export async function GET(req: Request) {
       } catch (e) {
         console.error("Telegram send failed:", e);
       }
+    }
+
+    // Enviar Web Push (browser notifications even when tab is closed)
+    try {
+      const { data: subs } = await supabase
+        .from("notification_subscriptions")
+        .select("endpoint, p256dh, auth")
+        .eq("user_id", userId)
+        .eq("platform", "web");
+      if (subs && subs.length > 0) {
+        const pushBody = booksGoalMet && bibleGoalMet
+          ? "🎉 Parabéns! Todas as metas de hoje foram cumpridas!"
+          : `🎯 Metas pendentes! ${!booksGoalMet ? `📚 ${totalPagesGoal - totalPagesRead} páginas` : ""}${!booksGoalMet && !bibleGoalMet ? " · " : ""}${!bibleGoalMet ? `✝️ ${Math.max(0, bibleGoalChapters - bibleChaptersRead)} capítulos` : ""}`;
+        await sendWebPush(subs, {
+          title: booksGoalMet && bibleGoalMet ? "🎉 Metas cumpridas!" : "🎯 Metas pendentes!",
+          body: pushBody,
+          tag: "disciplina-reminder",
+        });
+      }
+    } catch (e) {
+      console.error("Web Push send failed:", e);
     }
   }
 

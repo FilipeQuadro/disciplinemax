@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -10,7 +9,12 @@ const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) :
 export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ ok: false }, { status: 500 });
 
-  if (!verifyCronSecret(req)) {
+  // CRON_SECRET — accept Bearer header OR ?secret= query param (cron-job.org sends query)
+  const url = new URL(req.url);
+  const querySecret = url.searchParams.get("secret");
+  const authHeader = req.headers.get("authorization");
+  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (bearer !== process.env.CRON_SECRET && querySecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
