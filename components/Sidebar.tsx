@@ -115,7 +115,6 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 mt-2">
-          {sidebarOpen && <p className="section-title px-3 mb-2">Menu</p>}
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
@@ -142,18 +141,18 @@ export function Sidebar() {
             );
           })}
           {isAdmin && (
-            <>
-              {sidebarOpen && <p className="section-title px-3 mb-2 mt-4">Admin</p>}
-              <Link
-                href="/admin"
-                onClick={() => setMobileOpen(false)}
-                className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
-                title={!sidebarOpen ? "Admin" : undefined}
-              >
-                <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
-                {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Painel Admin</span>}
-              </Link>
-            </>
+            <Link
+              href="/admin"
+              onClick={() => setMobileOpen(false)}
+              className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
+              title={!sidebarOpen ? "Admin" : undefined}
+            >
+              <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
+              {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Admin</span>}
+              {sidebarOpen && pathname === "/admin" && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
+              )}
+            </Link>
           )}
         </nav>
 
