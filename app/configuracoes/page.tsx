@@ -42,6 +42,24 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     if (user) loadSettings();
+    else setForm({
+      whatsapp_number: "",
+      greenapi_instance_id: "",
+      greenapi_token: "",
+      telegram_bot_token: "",
+      telegram_chat_id: "",
+      notification_times: ["07:00", "12:00", "19:00"],
+      pomodoro_duration: 25,
+      short_break: 5,
+      long_break: 15,
+      pomodoros_until_long: 4,
+      daily_books_goal: 20,
+      daily_bible_chapters: 3,
+      gemini_api_key: "",
+      timezone: "America/Sao_Paulo",
+      streak_freeze_available: 1,
+      streak_freeze_used: 0,
+    });
     if (typeof window !== "undefined" && "Notification" in window) {
       setNotifPerm(Notification.permission);
     }
@@ -209,7 +227,7 @@ export default function ConfiguracoesPage() {
           <MessageSquare size={18} style={{ color: "#3ABAB4" }} /> WhatsApp (Green-API)
         </h2>
         <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Receba lembretes instantâneos via WhatsApp — rápido e gratuito</p>
-        <a href="https://green-api.com" target="_blank"
+        <a href="https://green-api.com" target="_blank" rel="noopener noreferrer"
           className="text-xs flex items-center gap-1 mb-4" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Criar conta gratuita no Green-API
         </a>
@@ -335,7 +353,7 @@ export default function ConfiguracoesPage() {
           🤖 Google Gemini (IA Motivacional)
         </h2>
         <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Chave gratuita para mensagens personalizadas da IA</p>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank"
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
           className="text-xs flex items-center gap-1 mb-3" style={{ color: "#D4AF37" }}>
           <ExternalLink size={11} /> Obter chave gratuita no Google AI Studio
         </a>

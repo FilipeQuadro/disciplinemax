@@ -60,7 +60,14 @@ export default function PomodoroPage() {
     return () => clearInterval(intervalRef.current);
   }, [pomodoroActive]);
 
-  useEffect(() => { if (pomodoroTimeLeft === 0 && pomodoroActive) handleTimerEnd(); }, [pomodoroTimeLeft]);
+  const [timerEnded, setTimerEnded] = useState(false);
+  useEffect(() => {
+    if (pomodoroTimeLeft === 0 && pomodoroActive && !timerEnded) {
+      setTimerEnded(true);
+      handleTimerEnd();
+    }
+    if (pomodoroTimeLeft > 0) setTimerEnded(false);
+  }, [pomodoroTimeLeft]);
 
   async function handleTimerEnd() {
     setPomodoroActive(false);

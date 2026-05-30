@@ -94,13 +94,12 @@ export default function BibliaPage() {
       if (!error) {
         toast.success(`${logForm.book} ${logForm.chapter} registrado! ✝️`);
         await loadHistory();
-        // Auto-update daily stats
-        const newCount = (history.filter((r: any) => r.read_at?.startsWith(format(new Date(), "yyyy-MM-dd"))).length) + 1;
-        const { books, bibleGoal } = useStore.getState();
+        // Auto-update daily stats — use fresh count from store (loadHistory updates it)
+        const { todayBibleChapters: freshCount, bibleGoal: freshGoal, books } = useStore.getState();
         const totalPagesRead = books.reduce((s: number, b: any) => s + b.pages_read_today, 0);
         const totalPagesGoal = books.reduce((s: number, b: any) => s + b.daily_goal, 0);
-        trackBibleChapter(user.id, newCount, bibleGoal?.daily_chapters || 0, totalPagesRead, totalPagesGoal).catch(() => {});
-        checkAndNotifyGoalCompletion({ pagesReadToday: totalPagesRead, pagesGoal: totalPagesGoal, bibleChaptersToday: newCount, bibleChaptersGoal: bibleGoal?.daily_chapters || 0 });
+        trackBibleChapter(user.id, freshCount + 1, freshGoal?.daily_chapters || 0, totalPagesRead, totalPagesGoal).catch(() => {});
+        checkAndNotifyGoalCompletion({ pagesReadToday: totalPagesRead, pagesGoal: totalPagesGoal, bibleChaptersToday: freshCount + 1, bibleChaptersGoal: freshGoal?.daily_chapters || 0 });
         setLogForm((p) => ({ ...p, chapter: p.chapter + 1, notes: "" }));
       } else toast.error("Erro: " + error);
     } finally { setLoading(false); }

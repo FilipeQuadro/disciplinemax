@@ -76,7 +76,12 @@ export function useAmbientSound() {
 
     stop();
 
-    const ctx = ctxRef.current || createSafeAudioContext();
+    // Close old AudioContext to avoid iOS exhaustion (~6 max)
+    if (ctxRef.current && ctxRef.current.state !== "closed") {
+      try { ctxRef.current.close(); } catch { /* silent */ }
+    }
+
+    const ctx = createSafeAudioContext();
     if (!ctx) return;
     ctxRef.current = ctx;
 
