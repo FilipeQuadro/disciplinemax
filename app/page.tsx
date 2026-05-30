@@ -64,8 +64,26 @@ export default function DashboardPage() {
             setBooks(booksRes.data as any[]);
           }
         }
-        if (bibleGoalRes.data) setBibleGoal(bibleGoalRes.data as any);
-        if (settingsRes.data) setSettings(settingsRes.data as any);
+        if (bibleGoalRes.data) {
+          setBibleGoal(bibleGoalRes.data as any);
+        } else {
+          // Auto-heal: bible_goals missing
+          const { data: newGoal } = await dataFetch({ action: "upsert", table: "bible_goals", payload: { user_id: user.id, daily_chapters: 3, plan_name: "custom" } });
+          if (newGoal) setBibleGoal(newGoal as any);
+        }
+        if (settingsRes.data) {
+          setSettings(settingsRes.data as any);
+        } else {
+          // Auto-heal: user_settings missing (trigger didn't fire or user pre-dates trigger)
+          const defaultSettings = {
+            user_id: user.id,
+            notification_times: ["07:00", "12:00", "19:00"],
+            pomodoro_duration: 25, short_break: 5, long_break: 15, pomodoros_until_long: 4,
+            daily_books_goal: 20, daily_bible_chapters: 3, timezone: "America/Sao_Paulo",
+          };
+          const { data: newSettings } = await dataFetch({ action: "upsert", table: "user_settings", payload: defaultSettings });
+          if (newSettings) setSettings(newSettings as any);
+        }
         if (statsRes.data) setTodayStats(statsRes.data as any);
         setTodayBibleChapters((bibleReadingsRes.data as any[])?.length ?? 0);
 

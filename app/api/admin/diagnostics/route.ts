@@ -287,12 +287,12 @@ export async function GET(req: Request) {
   try {
     const { data: notifs } = await sb
       .from("notifications_sent")
-      .select("sent_at, type")
+      .select("sent_at, notif_key")
       .order("sent_at", { ascending: false })
       .limit(10);
 
     const lastNotif = notifs?.[0]?.sent_at || null;
-    const notifTypes = notifs?.map((n: any) => n.type) || [];
+    const notifKeys = notifs?.map((n: any) => n.notif_key) || [];
 
     if (!lastNotif) {
       results.push({
@@ -312,7 +312,7 @@ export async function GET(req: Request) {
           description: "Verifica se o agendador de tarefas (cron) está executando as notificações periodicamente.",
           explanation: `A última notificação foi enviada há ${Math.round(hoursSinceLast)} horas (mais de 48h). O cron provavelmente está PARADO. Causas: (1) o job no cron-job.org foi pausado ou deletado, (2) o CRON_SECRET mudou, (3) o servidor está retornando erro no endpoint /api/cron.`,
           suggestion: `Para resolver: verifique no cron-job.org se o job está ativo. Teste manualmente: abra https://seu-dominio.com/api/cron?secret=SEU_CRON_SECRET no navegador. Se retornar erro, verifique os logs. Última notificação: ${lastNotif}`,
-          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifTypes.slice(0, 5) },
+          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifKeys.slice(0, 5) },
         });
         issues.push(`Cron: última notificação há ${Math.round(hoursSinceLast)}h`);
       } else if (hoursSinceLast > 24) {
@@ -322,16 +322,16 @@ export async function GET(req: Request) {
           description: "Verifica se o agendador de tarefas (cron) está executando as notificações periodicamente.",
           explanation: `A última notificação foi há ${Math.round(hoursSinceLast)} horas. Isso pode ser normal se não há notificações agendadas, mas se há usuários com horários configurados, o cron pode estar com problemas.`,
           suggestion: "Verifique se há usuários com notificações agendadas. Se sim, teste o endpoint /api/cron manualmente.",
-          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifTypes.slice(0, 5) },
+          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifKeys.slice(0, 5) },
         });
       } else {
         results.push({
           status: "healthy",
           name: "Cron / Agendador",
           description: "Verifica se o agendador de tarefas (cron) está executando as notificações periodicamente.",
-          explanation: `O cron está funcionando normalmente. A última notificação foi enviada há ${Math.round(hoursSinceLast)}h. Tipos recentes: ${notifTypes.slice(0, 3).join(", ") || "nenhum"}.`,
+          explanation: `O cron está funcionando normalmente. A última notificação foi enviada há ${Math.round(hoursSinceLast)}h. Tipos recentes: ${notifKeys.slice(0, 3).join(", ") || "nenhum"}.`,
           suggestion: "Nenhuma ação necessária.",
-          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifTypes.slice(0, 5) },
+          details: { lastNotif, hoursSinceLast: Math.round(hoursSinceLast), recentTypes: notifKeys.slice(0, 5) },
         });
       }
     }
@@ -445,7 +445,8 @@ export async function GET(req: Request) {
     const { count: settingsCount } = await sb.from("user_settings").select("id", { count: "exact", head: true });
 
     let orphanCount = 0;
-    if (settingsCount) {
+    const orphanIds: string[] = [];
+    if (settingsCount !== null) {
       // Users in auth but not in user_settings (shouldn't happen with triggers)
       const { data: authData } = await sb.auth.admin.listUsers();
       const settingsIds = new Set<string>();
@@ -453,20 +454,51 @@ export async function GET(req: Request) {
       for (const s of (allSettings || [])) settingsIds.add(s.user_id);
 
       for (const u of (authData?.users || [])) {
-        if (!settingsIds.has(u.id)) orphanCount++;
+        if (!settingsIds.has(u.id)) {
+          orphanCount++;
+          orphanIds.push(u.id);
+        }
       }
     }
 
     if (orphanCount > 0) {
-      results.push({
-        status: "warning",
-        name: "Integridade dos Dados",
-        description: "Verifica se não há dados órfãos ou inconsistências no banco.",
-        explanation: `${orphanCount} usuário(s) existem em auth.users mas NÃO têm registro em user_settings. Isso pode causar erros quando esses usuários tentam usar o app, pois as configurações padrão não foram criadas. Causa provável: o trigger de auto-criação falhou ou o usuário se cadastrou antes do trigger existir.`,
-        suggestion: `Para resolver: chame o endpoint /api/auth/confirm para cada usuário órfão, ou rode o script SQL que cria registros em user_settings para todos os auth.users que não têm. Usuários afetados: ${orphanCount}.`,
-        details: { orphanCount },
-      });
-      issues.push(`Integridade: ${orphanCount} usuários sem user_settings`);
+      // Auto-heal: create missing user_settings + user_plans + bible_goals
+      let healedCount = 0;
+      for (const uid of orphanIds) {
+        try {
+          await sb.from("user_settings").upsert({
+            user_id: uid,
+            notification_times: ["07:00", "12:00", "19:00"],
+            pomodoro_duration: 25, short_break: 5, long_break: 15, pomodoros_until_long: 4,
+            daily_books_goal: 20, daily_bible_chapters: 3, timezone: "America/Sao_Paulo",
+          }).select();
+          await sb.from("user_plans").upsert({ user_id: uid, plan: "free" });
+          await sb.from("bible_goals").upsert({ user_id: uid, daily_chapters: 3, plan_name: "custom" });
+          healedCount++;
+        } catch { /* best effort */ }
+      }
+
+      if (healedCount === orphanCount) {
+        results.push({
+          status: "healthy",
+          name: "Integridade dos Dados",
+          description: "Verifica se não há dados órfãos ou inconsistências no banco.",
+          explanation: `${orphanCount} usuário(s) estavam sem user_settings, mas foram CORRIGIDOS automaticamente. Os registros em user_settings, user_plans e bible_goals foram criados. Causa original: o trigger de auto-criação falhou ou o usuário se cadastrou antes do trigger existir.`,
+          suggestion: "O problema foi resolvido automaticamente. Se ocorrer novamente, verifique se o trigger `on_auth_user_created` está ativo no banco executando: SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';",
+          details: { orphanCount, healedCount, orphanIds },
+        });
+        issues.push(`Integridade: ${orphanCount} usuários sem user_settings (auto-corrigido)`);
+      } else {
+        results.push({
+          status: "warning",
+          name: "Integridade dos Dados",
+          description: "Verifica se não há dados órfãos ou inconsistências no banco.",
+          explanation: `${orphanCount} usuário(s) existem em auth.users mas NÃO têm registro em user_settings. Tentativa de auto-correção criou ${healedCount} de ${orphanCount}. Os registros restantes precisam ser criados manualmente.`,
+          suggestion: `Para resolver manualmente: acesse o Supabase SQL Editor e execute: INSERT INTO user_settings (user_id, notification_times, pomodoro_duration, short_break, long_break, pomodoros_until_long, daily_books_goal, daily_bible_chapters, timezone) VALUES ('USER_ID', ARRAY['07:00','12:00','19:00'], 25, 5, 15, 4, 20, 3, 'America/Sao_Paulo'); para cada usuário órfão.`,
+          details: { orphanCount, healedCount, orphanIds },
+        });
+        issues.push(`Integridade: ${orphanCount - healedCount} usuários ainda sem user_settings`);
+      }
     } else {
       results.push({
         status: "healthy",
