@@ -179,7 +179,13 @@ export default function LoginPage() {
           <button
             onClick={async () => {
               try {
-                const { error } = await signIn("guest@disciplinemax.com", "guest1234");
+                const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL;
+                const guestPass = process.env.NEXT_PUBLIC_GUEST_PASSWORD;
+                if (!guestEmail || !guestPass) {
+                  setError("Modo demo não disponível");
+                  return;
+                }
+                const { error } = await signIn(guestEmail, guestPass);
                 if (error) setError("Conta demo indisponível");
               } catch { setError("Erro ao acessar demo"); }
             }}

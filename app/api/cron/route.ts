@@ -15,6 +15,17 @@ const supabase = supabaseUrl && supabaseKey
 // Dedup em memória — funciona enquanto a instância está quente
 const notifCache = new Set<string>();
 
+// Prune the dedup cache every 30 minutes to prevent unbounded growth
+let lastCachePrune = Date.now();
+const CACHE_PRUNE_INTERVAL = 30 * 60 * 1000; // 30 min
+function pruneCache() {
+  const now = Date.now();
+  if (now - lastCachePrune > CACHE_PRUNE_INTERVAL) {
+    notifCache.clear();
+    lastCachePrune = now;
+  }
+}
+
 export async function GET(req: Request) {
   if (!supabase) {
     return NextResponse.json({ ok: false }, { status: 500 });
@@ -24,6 +35,8 @@ export async function GET(req: Request) {
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  pruneCache();
 
   const now = new Date();
 

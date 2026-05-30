@@ -115,7 +115,7 @@ export default function LivrosPage() {
       const allBooks = useStore.getState().books.map((b) => b.id === book.id ? { ...b, current_page: newPage, pages_read_today: newToday } : b);
       const totalGoal = allBooks.reduce((s: number, b: any) => s + b.daily_goal, 0);
       const totalRead = allBooks.reduce((s: number, b: any) => s + b.pages_read_today, 0);
-      trackPagesRead(user!.id, pages, totalGoal, totalRead, useStore.getState().todayBibleChapters, useStore.getState().bibleGoal?.daily_chapters || 0).catch(() => {});
+      if (user) trackPagesRead(user.id, pages, totalGoal, totalRead, useStore.getState().todayBibleChapters, useStore.getState().bibleGoal?.daily_chapters || 0).catch(() => {});
       checkAndNotifyGoalCompletion({ pagesReadToday: totalRead, pagesGoal: totalGoal, bibleChaptersToday: useStore.getState().todayBibleChapters, bibleChaptersGoal: useStore.getState().bibleGoal?.daily_chapters || 0 });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));

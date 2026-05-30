@@ -34,8 +34,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         }
         if (data) setBlocked(true);
       } catch (err) {
-      // Blocked user check failed
-    }
+        console.error("Blocked user check failed:", err);
+      }
     }
     if (user) checkBlocked();
   }, [user]);

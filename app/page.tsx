@@ -11,7 +11,6 @@ import {
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { clsx } from "clsx";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/components/AuthProvider";
@@ -335,42 +334,48 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Gráfico da semana */}
+      {/* Gráfico da semana — CSS bars (zero JS bundle) */}
       {weekStats.length > 0 && (
         <div className="card shimmer">
           <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
             <TrendingUp size={16} style={{ color: "#D4AF37" }} />
             Progresso da Semana
           </h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={weekStats} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorPages" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7C6BBD" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#7C6BBD" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorChapters" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fill: "#555E6E", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#555E6E", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  background: "#141820",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                  borderRadius: "14px",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                  color: "#F0F0F0",
-                }}
-                labelStyle={{ color: "#8B95A5" }}
-                itemStyle={{ color: "#F0F0F0" }}
-              />
-              <Area type="monotone" dataKey="pages" stroke="#7C6BBD" fill="url(#colorPages)" strokeWidth={2} name="Páginas" />
-              <Area type="monotone" dataKey="chapters" stroke="#D4AF37" fill="url(#colorChapters)" strokeWidth={2} name="Capítulos" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="space-y-2">
+            {weekStats.map((d: any, i: number) => {
+              const maxPages = Math.max(...weekStats.map((w: any) => w.pages || 0), 1);
+              const maxChapters = Math.max(...weekStats.map((w: any) => w.chapters || 0), 1);
+              return (
+                <div key={i} className="flex items-center gap-3 py-1.5 px-3 rounded-xl" style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+                  <span className="text-xs font-medium w-8 text-right" style={{ color: "#8B95A5" }}>{d.day}</span>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] w-10 text-right" style={{ color: "#7C6BBD" }}>Pág</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(124,107,189,0.08)" }}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${((d.pages || 0) / maxPages) * 100}%`, background: "linear-gradient(90deg, #7C6BBD, #9B8FD4)" }} />
+                      </div>
+                      <span className="text-[10px] w-6 text-right" style={{ color: "#8B95A5" }}>{d.pages || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] w-10 text-right" style={{ color: "#D4AF37" }}>Cap</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(212,175,55,0.08)" }}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${((d.chapters || 0) / maxChapters) * 100}%`, background: "linear-gradient(90deg, #A8892B, #D4AF37)" }} />
+                      </div>
+                      <span className="text-[10px] w-6 text-right" style={{ color: "#8B95A5" }}>{d.chapters || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-3">
+            <span className="text-[10px] flex items-center gap-1.5" style={{ color: "#7C6BBD" }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#7C6BBD" }} /> Páginas
+            </span>
+            <span className="text-[10px] flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#D4AF37" }} /> Capítulos
+            </span>
+          </div>
         </div>
       )}
 

@@ -6,6 +6,20 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const detailed = url.searchParams.get("detailed") !== null;
+
+  // Public health check — just verify the server is alive
+  // This allows Render uptime monitoring without auth
+  if (!detailed) {
+    return NextResponse.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      service: "DisciplinaMax",
+    });
+  }
+
+  // Detailed health check requires admin auth
   const { isAdmin } = await verifyAdminOrCron(req);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
