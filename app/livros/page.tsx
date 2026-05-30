@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Book } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import { canDoAction, PLAN_LIMITS, type PlanType } from "@/lib/plans";
 import {
-  BookOpen, Plus, Trash2, Edit2, Check, X
+  BookOpen, Plus, Trash2, Edit2, Check, X, Target,
+  ChevronRight, Sparkles, TrendingUp, Flame
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { errorToast } from "@/lib/toast";
 import { format, differenceInDays, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { trackPagesRead } from "@/lib/stats";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -24,8 +26,15 @@ const emptyBook = {
   daily_goal: 20, cover_url: "", color: BOOK_COLORS[0], target_date: "",
 };
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 export default function LivrosPage() {
-  const { books, setBooks, updateBook } = useStore();
+  const { books, setBooks, updateBook, settings, streak } = useStore();
   const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...emptyBook });
@@ -33,8 +42,20 @@ export default function LivrosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => { loadBooks(); }, [user]);
+
+  // ─── Computed ────────────────────────────────────────────────
+  const totalPagesGoal = books.reduce((sum, b) => sum + b.daily_goal, 0);
+  const pagesReadToday = books.reduce((sum, b) => sum + b.pages_read_today, 0);
+  const totalProgress = books.reduce((sum, b) => sum + b.current_page, 0);
+  const totalPages = books.reduce((sum, b) => sum + b.total_pages, 0);
+  const overallProgress = totalPages > 0 ? Math.round((totalProgress / totalPages) * 100) : 0;
+  const todayPct = totalPagesGoal > 0 ? Math.round((pagesReadToday / totalPagesGoal) * 100) : 0;
+  const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
+  const todayGoalMet = pagesReadToday >= totalPagesGoal && totalPagesGoal > 0;
 
   async function loadBooks() {
     if (!user) return;
@@ -52,7 +73,6 @@ export default function LivrosPage() {
     if (!form.title.trim()) { toast.error("Informe o título do livro"); return; }
     if (form.total_pages < 1) { toast.error("Total de páginas inválido"); return; }
 
-    // Check plan limits before adding a new book
     if (!editingId) {
       try {
         const { data: planData } = await dataFetch({ action: "select", table: "user_plans", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "plan" } });
@@ -111,7 +131,6 @@ export default function LivrosPage() {
       });
       if (error) { toast.error("Erro ao registrar"); return; }
       updateBook(book.id, { current_page: newPage, pages_read_today: newToday });
-      // Auto-update daily stats
       const allBooks = useStore.getState().books.map((b) => b.id === book.id ? { ...b, current_page: newPage, pages_read_today: newToday } : b);
       const totalGoal = allBooks.reduce((s: number, b: any) => s + b.daily_goal, 0);
       const totalRead = allBooks.reduce((s: number, b: any) => s + b.pages_read_today, 0);
@@ -134,23 +153,136 @@ export default function LivrosPage() {
     setShowForm(true);
   }
 
+  // ─── Loading Skeleton ──────────────────────────────────────────
+  if (!mounted) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-7 w-64 rounded bg-white/5" />
+        <div className="h-3 w-48 rounded bg-white/5" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="h-44 rounded-2xl bg-white/[0.02]" />
+          <div className="md:col-span-2 h-44 rounded-2xl bg-white/[0.02]" />
+        </div>
+        {[0, 1, 2].map((i) => <div key={i} className="h-32 rounded-2xl bg-white/[0.02]" />)}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 page-enter">
+      {/* Hero Header */}
+      <div className="flex items-start justify-between">
         <div>
+          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
+            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </p>
           <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
             <BookOpen size={24} style={{ color: "#7C6BBD" }} /> Meus Livros
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Acompanhe sua leitura</p>
         </div>
-        {!showForm && (
-          <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyBook }); }}
-            className="btn-primary flex items-center gap-2 text-sm">
-            <Plus size={16} /> Adicionar
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {todayGoalMet ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
+              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
+              <Check size={16} style={{ color: "#3ABAB4" }} />
+              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Meta atingida!</span>
+            </div>
+          ) : totalPagesGoal > 0 ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
+              <Target size={16} style={{ color: "#D4AF37" }} />
+              <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>{todayPct}% hoje</span>
+            </div>
+          ) : null}
+          {!showForm && (
+            <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyBook }); }}
+              className="btn-primary flex items-center gap-2 text-sm">
+              <Plus size={16} /> Adicionar
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Progress Overview */}
+      {books.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
+          {/* Progress Ring */}
+          <div className="card-purple rounded-2xl flex flex-col items-center justify-center py-6 shimmer"
+            style={{ border: "1px solid rgba(124,107,189,0.15)" }}>
+            <div className="relative">
+              <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="7" />
+                <circle cx="60" cy="60" r="50" fill="none" stroke="url(#bookGrad)" strokeWidth="7"
+                  strokeLinecap="round" strokeDasharray={`${50 * 2 * Math.PI}`}
+                  strokeDashoffset={`${50 * 2 * Math.PI * (1 - Math.min(1, overallProgress / 100))}`}
+                  className="transition-all duration-1000 ease-out" />
+                <defs>
+                  <linearGradient id="bookGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#7C6BBD" />
+                    <stop offset="100%" stopColor="#9B8FD4" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-white">{overallProgress}%</span>
+                <span className="text-[9px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Total</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="md:col-span-2 grid grid-cols-3 gap-3">
+            <div className="rounded-2xl p-4 text-center glow-border"
+              style={{ background: "rgba(124,107,189,0.04)", border: "1px solid rgba(124,107,189,0.1)" }}>
+              <p className="text-2xl font-bold count-up" style={{ color: "#7C6BBD" }}>{pagesReadToday}</p>
+              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Páginas hoje</p>
+              <div className="progress-bar mt-2">
+                <div className="progress-fill" style={{ width: `${Math.min(100, todayPct)}%`, background: "#7C6BBD" }} />
+              </div>
+            </div>
+            <div className="rounded-2xl p-4 text-center glow-border"
+              style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.1)" }}>
+              <p className="text-2xl font-bold count-up" style={{ color: "#3ABAB4" }}>{booksCompleted}</p>
+              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Concluídos</p>
+            </div>
+            <div className="rounded-2xl p-4 text-center glow-border"
+              style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.1)" }}>
+              <p className="text-2xl font-bold count-up" style={{ color: "#E8844A" }}>{streak}</p>
+              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Streak</p>
+              {streak >= 7 && <span className="text-[9px]" style={{ color: "#E8844A" }}>🔥</span>}
+            </div>
+
+            {/* Today's Goal Banner */}
+            <div className="md:col-span-3 rounded-2xl p-4 flex items-center gap-4"
+              style={{
+                background: todayGoalMet
+                  ? "linear-gradient(135deg, rgba(58,186,180,0.06), rgba(20,24,32,0.9))"
+                  : "linear-gradient(135deg, rgba(124,107,189,0.04), rgba(20,24,32,0.9))",
+                border: todayGoalMet ? "1px solid rgba(58,186,180,0.15)" : "1px solid rgba(124,107,189,0.1)",
+              }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: todayGoalMet ? "rgba(58,186,180,0.12)" : "rgba(124,107,189,0.1)" }}>
+                {todayGoalMet ? <Check size={24} style={{ color: "#3ABAB4" }} /> : <TrendingUp size={24} style={{ color: "#7C6BBD" }} />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">
+                  {todayGoalMet ? "Meta diária atingida! 🎉" : `${pagesReadToday}/${totalPagesGoal} páginas hoje`}
+                </p>
+                <p className="text-xs" style={{ color: "#555E6E" }}>
+                  {todayGoalMet ? "Continue lendo para aumentar seu streak!" : `Faltam ${totalPagesGoal - pagesReadToday} páginas para completar`}
+                </p>
+              </div>
+              {!todayGoalMet && (
+                <div className="w-16 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${todayPct}%`, background: "linear-gradient(90deg, #7C6BBD, #9B8FD4)" }} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form */}
       {showForm && (
         <div className="card animate-slide-up">
           <div className="flex items-center justify-between mb-4">
@@ -220,22 +352,27 @@ export default function LivrosPage() {
         </div>
       )}
 
+      {/* Empty State */}
       {books.length === 0 && !showForm ? (
-        <div className="card text-center py-16">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "rgba(124,107,189,0.08)" }}>
-            <BookOpen size={28} style={{ color: "#7C6BBD" }} />
+        <div className="card text-center py-16 shimmer" style={{ border: "1px solid rgba(124,107,189,0.1)" }}>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{ background: "linear-gradient(135deg, rgba(124,107,189,0.12), rgba(124,107,189,0.04))" }}>
+            <BookOpen size={36} style={{ color: "#7C6BBD" }} />
           </div>
-          <h3 className="font-medium mb-2" style={{ color: "#8B95A5" }}>Nenhum livro ainda</h3>
-          <p className="text-sm" style={{ color: "#555E6E" }}>Adicione um livro para acompanhar sua leitura</p>
+          <h3 className="text-lg font-serif font-semibold text-white mb-2">Nenhum livro ainda</h3>
+          <p className="text-sm mb-5" style={{ color: "#555E6E" }}>Adicione seu primeiro livro para começar a acompanhar sua leitura</p>
+          <button onClick={() => { setShowForm(true); setForm({ ...emptyBook }); }}
+            className="btn-primary inline-flex items-center gap-2">
+            <Plus size={16} /> Adicionar Livro
+          </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 stagger-children">
           {books.map((book) => (
             <BookCard key={book.id} book={book}
               readingValue={readingInput[book.id] || 0}
               onReadingChange={(v: number) => setReadingInput((p) => ({ ...p, [book.id]: v }))}
-              onLog={() => logReading(book)}               onEdit={() => startEdit(book)} onDelete={() => setConfirmDelete(book.id)} />
+              onLog={() => logReading(book)} onEdit={() => startEdit(book)} onDelete={() => setConfirmDelete(book.id)} />
           ))}
         </div>
       )}
@@ -253,6 +390,8 @@ export default function LivrosPage() {
   );
 }
 
+// ─── Sub Components ──────────────────────────────────────────────
+
 interface BookCardProps {
   book: Book; readingValue: number; onReadingChange: (v: number) => void;
   onLog: () => void; onEdit: () => void; onDelete: () => void;
@@ -262,6 +401,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
   const progress = Math.round((book.current_page / book.total_pages) * 100);
   const pagesLeft = book.total_pages - book.current_page;
   const dailyLeft = Math.max(0, book.daily_goal - book.pages_read_today);
+  const done = dailyLeft === 0;
   const daysToFinish = book.daily_goal > 0 ? Math.ceil(pagesLeft / book.daily_goal) : null;
   const finishDate = daysToFinish ? new Date(Date.now() + daysToFinish * 86400000) : null;
   const daysUntilTarget = book.target_date ? differenceInDays(parseISO(book.target_date), new Date()) : null;
@@ -269,14 +409,19 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
     ? Math.ceil(pagesLeft / Math.max(1, differenceInDays(parseISO(book.target_date), new Date()))) : null;
 
   return (
-    <div className="rounded-2xl p-5 glow-border transition-all duration-300"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.05)",
-        borderLeft: `3px solid ${book.color}40`,
-      }}>
+    <div className={clsx(
+      "rounded-2xl p-5 transition-all duration-300 hover:scale-[1.005] glow-border",
+    )}
+    style={{
+      background: done
+        ? "linear-gradient(145deg, rgba(58,186,180,0.04), rgba(20,24,32,0.8))"
+        : "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(20,24,32,0.8))",
+      border: done ? "1px solid rgba(58,186,180,0.12)" : "1px solid rgba(255,255,255,0.05)",
+      borderLeft: `3px solid ${book.color}40`,
+    }}>
       <div className="flex items-start gap-4">
-        <div className="shrink-0 w-14 h-20 rounded-xl overflow-hidden"
+        {/* Cover / Circular Progress */}
+        <div className="shrink-0 relative w-16 h-20 rounded-xl overflow-hidden"
           style={{ background: book.color + "10" }}>
           {book.cover_url ? (
             <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
@@ -285,7 +430,19 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
               <BookOpen size={20} style={{ color: book.color }} />
             </div>
           )}
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: "#141820", border: `2px solid ${book.color}30` }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" className="absolute transform -rotate-90">
+              <circle cx="14" cy="14" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
+              <circle cx="14" cy="14" r="10" fill="none" stroke={book.color} strokeWidth="2.5"
+                strokeLinecap="round" strokeDasharray={`${10 * 2 * Math.PI}`}
+                strokeDashoffset={`${10 * 2 * Math.PI * (1 - progress / 100)}`}
+                className="transition-all duration-700" />
+            </svg>
+            <span className="text-[7px] font-bold relative" style={{ color: book.color }}>{progress}%</span>
+          </div>
         </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>

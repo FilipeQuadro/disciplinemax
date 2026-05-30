@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
-import { Timer, Play, Pause, RotateCcw, SkipForward, BarChart3 } from "lucide-react";
+import { Timer, Play, Pause, RotateCcw, SkipForward, BarChart3, Target, Check, Flame } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
 import { useAuth } from "@/components/AuthProvider";
@@ -20,7 +21,7 @@ const COLORS = {
 export default function PomodoroPage() {
   const { pomodoroActive, pomodoroTimeLeft, pomodoroIsBreak, pomodoroCount,
     pomodoroTask, setPomodoroActive, setPomodoroTimeLeft, setPomodoroIsBreak,
-    setPomodoroCount, setPomodoroTask, todaySessions, addSession, settings } = useStore();
+    setPomodoroCount, setPomodoroTask, todaySessions, addSession, settings, streak } = useStore();
   const { user } = useAuth();
 
   const [mode, setMode] = useState<"focus" | "shortBreak" | "longBreak">("focus");
@@ -30,10 +31,12 @@ export default function PomodoroPage() {
   const [pomosUntilLong, setPomosUntilLong] = useState(4);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const ambient = useAmbientSound();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
-  // Sync custom values when settings load
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (settings) {
       setCustomFocus(settings.pomodoro_duration || 25);
@@ -105,7 +108,6 @@ export default function PomodoroPage() {
     }
   }
 
-  // Reuse AudioContext to avoid iOS exhaustion (~6 max)
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   function playNotificationSound() {
@@ -153,18 +155,49 @@ export default function PomodoroPage() {
 
   const totalFocusToday = todaySessions.filter((s) => s.completed).length;
   const totalMinutesToday = todaySessions.filter((s) => s.completed).reduce((sum, s) => sum + s.duration_minutes, 0);
+  const pomodoroGoal = settings?.pomodoros_until_long ?? 4;
+  const goalMet = pomodoroCount >= pomodoroGoal;
+
+  // ─── Loading Skeleton ──────────────────────────────────────────
+  if (!mounted) {
+    return (
+      <div className="space-y-6 max-w-2xl mx-auto animate-pulse">
+        <div className="h-7 w-64 rounded bg-white/5" />
+        <div className="h-3 w-48 rounded bg-white/5" />
+        <div className="h-64 rounded-2xl bg-white/[0.02] mx-auto w-64" />
+        {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-2xl bg-white/[0.02]" />)}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-2xl mx-auto page-enter">
+      {/* Hero Header */}
+      <div className="flex items-start justify-between">
         <div>
+          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
+            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </p>
           <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
             <Timer size={24} style={{ color: "#D94F4F" }} /> Pomodoro
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Técnica de foco profundo</p>
         </div>
-        <button onClick={() => setShowSettings(!showSettings)} className="btn-ghost text-sm">⚙️ Tempos</button>
+        <div className="flex items-center gap-2">
+          {goalMet ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
+              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
+              <Check size={16} style={{ color: "#3ABAB4" }} />
+              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Meta atingida!</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{ background: "rgba(217,79,79,0.06)", border: "1px solid rgba(217,79,79,0.12)" }}>
+              <Target size={16} style={{ color: "#D94F4F" }} />
+              <span className="text-sm font-medium" style={{ color: "#D94F4F" }}>{pomodoroCount}/{pomodoroGoal}</span>
+            </div>
+          )}
+          <button onClick={() => setShowSettings(!showSettings)} className="btn-ghost text-sm">⚙️ Tempos</button>
+        </div>
       </div>
 
       {showSettings && (
@@ -197,7 +230,7 @@ export default function PomodoroPage() {
       <AmbientControls ambient={ambient} />
 
       {/* Timer */}
-      <div className="rounded-2xl flex flex-col items-center py-8"
+      <div className="rounded-2xl flex flex-col items-center py-8 shimmer"
         style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
         <input className="input text-center mb-6 max-w-xs text-sm" placeholder="Em que está trabalhando?"
           value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} />
@@ -248,15 +281,19 @@ export default function PomodoroPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 stagger-children">
         {[
-          { value: totalFocusToday, label: "Pomodoros hoje", color: "#D94F4F" },
-          { value: totalMinutesToday, label: "Minutos focados", color: "#3ABAB4" },
-          { value: pomodoroCount, label: "Total acumulado", color: "#7C6BBD" },
+          { value: totalFocusToday, label: "Pomodoros hoje", color: "#D94F4F", icon: <Timer size={14} /> },
+          { value: totalMinutesToday, label: "Minutos focados", color: "#3ABAB4", icon: <BarChart3 size={14} /> },
+          { value: streak, label: "Streak", color: "#E8844A", icon: <Flame size={14} /> },
         ].map((stat, i) => (
           <div key={i} className="rounded-2xl p-4 text-center glow-border"
             style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <p className="text-3xl font-bold count-up" style={{ color: stat.color }}>{stat.value}</p>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2"
+              style={{ background: `${stat.color}12`, color: stat.color }}>
+              {stat.icon}
+            </div>
+            <p className="text-2xl font-bold count-up" style={{ color: stat.color }}>{stat.value}</p>
             <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>{stat.label}</p>
           </div>
         ))}
@@ -268,7 +305,7 @@ export default function PomodoroPage() {
           <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
             <BarChart3 size={16} style={{ color: "#D94F4F" }} /> Sessões de Hoje
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-2 stagger-children">
             {todaySessions.slice(-8).reverse().map((s) => (
               <div key={s.id} className="glass-hover rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
