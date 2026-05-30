@@ -9,17 +9,23 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export async function GET(req: Request) {
   if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: "Not configured" }, { status: 500 });
 
-  const { isAdmin, actorId } = await verifyAdminOrCron(req);
+  const { isAdmin } = await verifyAdminOrCron(req);
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { data: logs } = await sb
-      .from("audit_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100);
+    const url = new URL(req.url);
+    const actionFilter = url.searchParams.get("action") || "";
+    const limit = Math.min(500, Math.max(1, parseInt(url.searchParams.get("limit") || "100")));
+
+    let query = sb.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(limit);
+
+    if (actionFilter) {
+      query = query.eq("action", actionFilter);
+    }
+
+    const { data: logs } = await query;
 
     return NextResponse.json({ logs: logs || [] });
   } catch (e: any) {
