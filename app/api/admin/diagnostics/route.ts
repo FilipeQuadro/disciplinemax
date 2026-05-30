@@ -29,27 +29,28 @@ export async function GET(req: Request) {
 
   // ── 1. DATABASE ──────────────────────────────────────────────
   const dbStart = Date.now();
+  // Tables with their primary key column (some use user_id instead of id)
   const dbTables = [
-    { name: "user_settings", desc: "Configurações de usuário" },
-    { name: "books", desc: "Livros dos usuários" },
-    { name: "bible_goals", desc: "Metas bíblicas" },
-    { name: "bible_readings", desc: "Leituras bíblicas" },
-    { name: "daily_stats", desc: "Estatísticas diárias" },
-    { name: "pomodoro_sessions", desc: "Sessões de pomodoro" },
-    { name: "user_plans", desc: "Planos dos usuários" },
-    { name: "admin_users", desc: "Tabela de admins" },
-    { name: "blocked_users", desc: "Usuários bloqueados" },
-    { name: "notification_subscriptions", desc: "Inscrições de notificação" },
-    { name: "notifications_sent", desc: "Notificações enviadas" },
-    { name: "audit_logs", desc: "Logs de auditoria" },
-    { name: "achievements", desc: "Conquistas" },
+    { name: "user_settings", desc: "Configurações de usuário", pk: "user_id" },
+    { name: "books", desc: "Livros dos usuários", pk: "id" },
+    { name: "bible_goals", desc: "Metas bíblicas", pk: "id" },
+    { name: "bible_readings", desc: "Leituras bíblicas", pk: "id" },
+    { name: "daily_stats", desc: "Estatísticas diárias", pk: "id" },
+    { name: "pomodoro_sessions", desc: "Sessões de pomodoro", pk: "id" },
+    { name: "user_plans", desc: "Planos dos usuários", pk: "user_id" },
+    { name: "admin_users", desc: "Tabela de admins", pk: "user_id" },
+    { name: "blocked_users", desc: "Usuários bloqueados", pk: "user_id" },
+    { name: "notification_subscriptions", desc: "Inscrições de notificação", pk: "id" },
+    { name: "notifications_sent", desc: "Notificações enviadas", pk: "id" },
+    { name: "audit_logs", desc: "Logs de auditoria", pk: "id" },
+    { name: "achievements", desc: "Conquistas", pk: "id" },
   ];
 
   const tableResults: Record<string, { ok: boolean; error?: string; count?: number }> = {};
   let dbAllOk = true;
   for (const t of dbTables) {
     try {
-      const { error, count } = await sb.from(t.name).select("id", { count: "exact", head: true });
+      const { error, count } = await sb.from(t.name).select(t.pk, { count: "exact", head: true });
       if (error) {
         tableResults[t.name] = { ok: false, error: error.message };
         dbAllOk = false;
