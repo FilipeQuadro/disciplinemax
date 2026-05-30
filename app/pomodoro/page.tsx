@@ -80,7 +80,7 @@ export default function PomodoroPage() {
         await dataFetch({ action: "insert", table: "pomodoro_sessions", payload: session });
         trackPomodoroCompleted(user.id, customFocus).catch(() => {});
       } catch {
-        // Failed to save pomodoro session
+        toast.error("Erro ao salvar sessão — o pomodoro pode não ter sido registrado");
       }
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 

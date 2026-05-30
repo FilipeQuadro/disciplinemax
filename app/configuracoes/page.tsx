@@ -53,7 +53,7 @@ export default function ConfiguracoesPage() {
       const { data } = await dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user.id }, maybeSingle: true } });
       if (data) { setSettings(data as any); setForm({ ...form, ...(data as any) }); }
     } catch {
-      // Failed to load settings
+      toast.error("Erro ao carregar configurações");
     }
   }
 

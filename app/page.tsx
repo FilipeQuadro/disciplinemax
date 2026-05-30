@@ -124,8 +124,9 @@ export default function DashboardPage() {
           });
           setWeekStats(formatted);
         }
-      } catch {
-        // Dashboard load error — silently fail, user sees empty state
+      } catch (e) {
+        console.error("Dashboard load error:", e);
+        toast.error("Erro ao carregar dados. Verifique sua conexão.");
       } finally {
         setLoading(false);
       }

@@ -55,7 +55,7 @@ export default function BibliaPage() {
       const { data } = await dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } });
       if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: (data as any).daily_chapters, plan_name: (data as any).plan_name || "custom" }); }
     } catch {
-      // Failed to load bible goal
+      toast.error("Erro ao carregar meta bíblica");
     }
   }
 
@@ -69,7 +69,7 @@ export default function BibliaPage() {
         setTodayBibleChapters((data as any[]).filter((r: any) => r.read_at?.startsWith(today)).length);
       }
     } catch {
-      // Failed to load history
+      toast.error("Erro ao carregar histórico");
     }
   }
 
@@ -79,7 +79,7 @@ export default function BibliaPage() {
       const { data } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 7, select: "date, bible_chapters_read" } });
       if (data) setWeeklyStats((data as any[]).reverse());
     } catch {
-      // Failed to load weekly stats
+      toast.error("Erro ao carregar estatísticas semanais");
     }
   }
 

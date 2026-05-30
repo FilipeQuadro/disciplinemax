@@ -42,8 +42,8 @@ export default function LivrosPage() {
       const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
       if (error) { errorToast(error, loadBooks); return; }
       if (data) setBooks(data as Book[]);
-    } catch (e: any) {
-      toast.error("catch: " + (e?.message || e));
+    } catch {
+      toast.error("Erro ao carregar livros");
     }
   }
 
@@ -201,7 +201,9 @@ export default function LivrosPage() {
                 {BOOK_COLORS.map((c) => (
                   <button key={c} onClick={() => setForm((p) => ({ ...p, color: c }))}
                     className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2 ring-offset-[#141820]")}
-                    style={{ background: c }} />
+                    style={{ background: c }}
+                    aria-label={`Cor ${c}`}
+                    aria-pressed={form.color === c} />
                 ))}
               </div>
             </div>

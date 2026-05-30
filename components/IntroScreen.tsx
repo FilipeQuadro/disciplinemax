@@ -9,7 +9,6 @@ function createSafeAudioContext(): AudioContext | null {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     if (!AC) return null;
     const ctx = new AC();
-    // Resume if suspended (iOS requires user gesture — we'll try but not block)
     if (ctx.state === "suspended") {
       ctx.resume().catch(() => {});
     }
@@ -47,14 +46,13 @@ function playIntroChime() {
       osc.stop(now + n.start + n.dur + 0.05);
     }
 
-    // Clean up context after use
     setTimeout(() => {
       try { ctx.close(); } catch { /* silent */ }
     }, 2000);
   } catch { /* silent — audio is optional */ }
 }
 
-// Gate sound — deep metallic groan. Only plays if audio context is available.
+// Gate sound — deep metallic groan
 function playGateSound() {
   try {
     const ctx = createSafeAudioContext();
@@ -62,7 +60,6 @@ function playGateSound() {
 
     const now = ctx.currentTime;
 
-    // Low metallic groan
     const groan = ctx.createOscillator();
     const groanGain = ctx.createGain();
     const groanFilter = ctx.createBiquadFilter();
@@ -81,7 +78,6 @@ function playGateSound() {
     groan.start(now);
     groan.stop(now + 1.5);
 
-    // Clean up
     setTimeout(() => {
       try { ctx.close(); } catch { /* silent */ }
     }, 2000);
@@ -90,13 +86,14 @@ function playGateSound() {
 
 export { playGateSound, playIntroChime };
 
-const INTRO_DURATION = 2800; // Normal intro duration
-const INTRO_MAX_DURATION = 4000; // Hard fallback — MUST finish by this
-const FADE_DURATION = 800; // Fade out duration
+const INTRO_DURATION = 2800;
+const INTRO_MAX_DURATION = 4000;
+const FADE_DURATION = 800;
 
 export function IntroScreen() {
   const [visible, setVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
+  const [serverStatus, setServerStatus] = useState<"loading" | "ready" | "waking">("loading");
   const dismissed = useRef(false);
   const audioUnlocked = useRef(false);
 
@@ -117,15 +114,56 @@ export function IntroScreen() {
   }, []);
 
   useEffect(() => {
-    // Try gate sound immediately (works on desktop; silently fails on mobile)
     if (!audioUnlocked.current) playGateSound();
 
-    // Normal timer
+    // Check if server is responsive (detect cold starts)
+    const checkServer = async () => {
+      try {
+        const start = Date.now();
+        const res = await fetch("/api/health", { cache: "no-store" });
+        const elapsed = Date.now() - start;
+
+        if (res.ok) {
+          setServerStatus("ready");
+          // If server responded fast, normal intro
+          if (elapsed < 3000) {
+            setTimeout(() => dismiss(), Math.max(0, INTRO_DURATION - elapsed));
+          } else {
+            // Server was sleeping — dismiss quickly once ready
+            setTimeout(() => dismiss(), 600);
+          }
+        } else {
+          // Server responded but with error — still dismiss
+          setServerStatus("ready");
+          setTimeout(() => dismiss(), INTRO_DURATION);
+        }
+      } catch {
+        // Server is still waking up (Render cold start)
+        setServerStatus("waking");
+        // Retry every 3 seconds
+        const retryInterval = setInterval(async () => {
+          try {
+            const res = await fetch("/api/health", { cache: "no-store" });
+            if (res.ok) {
+              setServerStatus("ready");
+              clearInterval(retryInterval);
+              setTimeout(() => dismiss(), 600);
+            }
+          } catch {
+            // Still waking — keep trying
+          }
+        }, 3000);
+      }
+    };
+
+    checkServer();
+
+    // Normal timer (dismisses intro even if health check is slow)
     const normalTimer = setTimeout(() => {
       dismiss();
     }, INTRO_DURATION);
 
-    // Hard fallback — guarantee the intro finishes even if something goes wrong
+    // Hard fallback
     const maxTimer = setTimeout(() => {
       dismiss();
     }, INTRO_MAX_DURATION);
@@ -148,18 +186,13 @@ export function IntroScreen() {
     setTimeout(() => setVisible(false), FADE_DURATION);
   }
 
-  // Allow tap/click to skip intro immediately
-  function handleSkip() {
-    dismiss();
-  }
-
   if (!visible) return null;
 
   return (
     <div
       className={`intro-screen ${fadeOut ? "fade-out" : ""}`}
-      onClick={handleSkip}
-      onTouchEnd={handleSkip}
+      onClick={dismiss}
+      onTouchEnd={dismiss}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") dismiss(); }}
@@ -174,9 +207,16 @@ export function IntroScreen() {
       <div className="intro-loader">
         <div className="intro-loader-bar" />
       </div>
-      <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.15)" }}>
-        toque para pular
-      </p>
+      {serverStatus === "waking" && (
+        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(212,175,55,0.4)" }}>
+          Servidor está acordando, aguarde...
+        </p>
+      )}
+      {serverStatus === "loading" && (
+        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.15)" }}>
+          toque para pular
+        </p>
+      )}
     </div>
   );
 }
