@@ -13,7 +13,6 @@ import { ptBR } from "date-fns/locale";
 import {
   registerServiceWorker, requestNotificationPermission, subscribeToPush
 } from "@/lib/notifications";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 export default function ConfiguracoesPage() {
@@ -98,17 +97,28 @@ export default function ConfiguracoesPage() {
       toast.error("Preencha o Instance ID, Token e número WhatsApp"); return;
     }
     setTestingWa(true);
-    const result = await sendWhatsAppMessage(
-      form.greenapi_instance_id,
-      form.greenapi_token,
-      form.whatsapp_number,
-      "✅ *DisciplinaMax* configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚"
-    );
-    setTestingWa(false);
-    if (result.ok) {
-      toast.success("WhatsApp conectado! ✅");
-    } else {
-      toast.error(`Erro: ${result.error || "Verifique as credenciais."}`);
+    try {
+      // Must go through server proxy — Green-API blocks CORS from browser
+      const res = await fetch("/api/whatsapp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idInstance: form.greenapi_instance_id,
+          apiTokenInstance: form.greenapi_token,
+          phone: form.whatsapp_number,
+          message: "✅ *DisciplinaMax* configurado com sucesso!\n\nVocê receberá lembretes automáticos aqui. 🎯📚",
+        }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        toast.success("WhatsApp conectado! ✅");
+      } else {
+        toast.error(`Erro: ${result.error || "Verifique as credenciais."}`);
+      }
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message || "Falha na conexão"}`);
+    } finally {
+      setTestingWa(false);
     }
   }
 
