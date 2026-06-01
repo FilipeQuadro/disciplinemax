@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWhatsAppMessage, cleanPhone } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, cleanPhone, checkWhatsapp } from "@/lib/whatsapp";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
@@ -221,11 +221,20 @@ export async function GET(req: Request) {
     // ── Enviar WhatsApp (Green-API) ──
     if (settings.greenapi_instance_id && settings.greenapi_token && settings.whatsapp_number) {
       try {
+        const waNum = cleanPhone(settings.whatsapp_number);
+        // Resolve correct chatId (may be lid-based) for reliable delivery
+        let resolvedChatId: string | undefined;
+        try {
+          const waCheck = await checkWhatsapp(settings.greenapi_instance_id, settings.greenapi_token, waNum);
+          if (waCheck.exists && waCheck.chatId) resolvedChatId = waCheck.chatId;
+        } catch { /* non-fatal — fallback to phone@c.us */ }
+
         const waResult = await sendWhatsAppMessage(
           settings.greenapi_instance_id,
           settings.greenapi_token,
-          cleanPhone(settings.whatsapp_number),
-          waMessage
+          waNum,
+          waMessage,
+          { resolvedChatId }
         );
         if (waResult.ok) whatsappSent++;
         else if (waResult.stateInstance && waResult.stateInstance !== "authorized") {

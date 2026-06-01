@@ -112,10 +112,18 @@ export default function ConfiguracoesPage() {
         }),
       });
       const result = await res.json();
+
       if (result.ok) {
-        toast.success("WhatsApp conectado e mensagem enviada! ✅");
+        const chatIdInfo = result.resolvedChatId?.includes("@lid")
+          ? " (lid identificado — entrega garantida)"
+          : "";
+        toast.success(`WhatsApp conectado e mensagem enviada! ✅${chatIdInfo}`, { duration: 5000 });
+        setWaState("authorized");
+      } else if (result.step === "checkWhatsapp" && !result.existsOnWhatsApp) {
+        toast.error(`❌ O número ${result.phoneChecked} NÃO está no WhatsApp. Verifique o formato (ex: 5511987654321).`, { duration: 10000 });
       } else if (result.stateInstance === "notAuthorized") {
-        toast.error("Instância NÃO conectada ao WhatsApp. Escaneie o QR Code no painel do Green-API.", { duration: 8000 });
+        toast.error("Instância NÃO conectada ao WhatsApp. Clique em 'Gerar QR Code' para escanear.", { duration: 8000 });
+        setWaState("notAuthorized");
       } else if (result.stateInstance === "sleepMode") {
         toast.error("Celular desligado/sem internet. Ligue e aguarde 5 min.", { duration: 6000 });
       } else if (result.stateInstance) {

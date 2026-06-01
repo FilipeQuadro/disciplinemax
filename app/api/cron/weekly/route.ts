@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWhatsAppMessage, cleanPhone } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, cleanPhone, checkWhatsapp } from "@/lib/whatsapp";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
 
@@ -131,7 +131,14 @@ export async function GET(req: Request) {
       waMsg += `👉 disciplinemax.onrender.com`;
 
       try {
-        const waResult = await sendWhatsAppMessage(settings.greenapi_instance_id, settings.greenapi_token, cleanPhone(settings.whatsapp_number), waMsg);
+        const waNum = cleanPhone(settings.whatsapp_number);
+        let resolvedChatId: string | undefined;
+        try {
+          const waCheck = await checkWhatsapp(settings.greenapi_instance_id, settings.greenapi_token, waNum);
+          if (waCheck.exists && waCheck.chatId) resolvedChatId = waCheck.chatId;
+        } catch { /* non-fatal */ }
+
+        const waResult = await sendWhatsAppMessage(settings.greenapi_instance_id, settings.greenapi_token, waNum, waMsg, { resolvedChatId });
         if (waResult.ok) whatsappSent++;
       } catch (e) {
         console.error("Weekly WhatsApp report failed for", userId, e);

@@ -28,6 +28,46 @@ export function cleanPhone(phone: string): string {
 }
 
 /**
+ * Check if a phone number has an active WhatsApp account.
+ * Uses Green-API checkWhatsapp endpoint.
+ * Returns { exists, chatId } — chatId may be lid-based (@lid) or phone-based (@c.us).
+ * IMPORTANT: If a lid is returned, we MUST use it for sendMessage instead of phone@c.us.
+ */
+export async function checkWhatsapp(
+  idInstance: string,
+  apiTokenInstance: string,
+  phone: string
+): Promise<{ exists: boolean; chatId?: string; error?: string }> {
+  const cleanNum = cleanPhone(phone);
+  if (!cleanNum || cleanNum.length < 10) {
+    return { exists: false, error: `Número inválido: "${phone}" → "${cleanNum}"` };
+  }
+
+  try {
+    const url = `https://api.greenapi.com/waInstance${idInstance}/checkWhatsapp/${apiTokenInstance}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: parseInt(cleanNum, 10) }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Green-API checkWhatsapp failed:", res.status, data);
+      return { exists: false, error: data?.error || data?.message || `HTTP ${res.status}` };
+    }
+
+    return {
+      exists: data.existsWhatsapp === true,
+      chatId: data.chatId || `${cleanNum}@c.us`,
+    };
+  } catch (e: any) {
+    console.error("Green-API checkWhatsapp error:", e);
+    return { exists: false, error: e?.message || String(e) };
+  }
+}
+
+/**
  * Check instance connection state via Green-API getStateInstance endpoint.
  * Returns the state string (e.g. "authorized") or null on API error.
  */
@@ -56,7 +96,7 @@ export async function sendWhatsAppMessage(
   apiTokenInstance: string,
   phone: string,
   message: string,
-  options?: { checkState?: boolean }
+  options?: { checkState?: boolean; resolvedChatId?: string }
 ): Promise<WhatsAppResult> {
   // Validate inputs
   if (!idInstance || !apiTokenInstance) {
@@ -81,7 +121,11 @@ export async function sendWhatsAppMessage(
   }
 
   try {
-    const chatId = `${cleanNum}@c.us`;
+    // Use resolved chatId from checkWhatsapp if available (may be lid-based),
+    // otherwise fall back to phone@c.us
+    const chatId = options?.resolvedChatId || `${cleanNum}@c.us`;
+
+    console.log(`[WhatsApp] Sending to chatId: ${chatId} (phone: ${cleanNum})`);
 
     const url = `https://api.greenapi.com/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
     const res = await fetch(url, {
@@ -91,6 +135,7 @@ export async function sendWhatsAppMessage(
     });
 
     const data = await res.json();
+    console.log(`[WhatsApp] sendMessage response:`, JSON.stringify(data));
 
     if (!res.ok) {
       console.error("Green-API send failed:", res.status, data);
