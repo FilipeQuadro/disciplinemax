@@ -6,8 +6,8 @@ import {
 /**
  * Full diagnostic test for WhatsApp:
  * 1. Check instance state (authorized?)
- * 2. Verify phone number exists on WhatsApp (checkWhatsapp)
- * 3. Send message using the CORRECT chatId (lid-based if returned)
+ * 2. Try to resolve chatId via checkWhatsapp (non-blocking — known false negatives for some countries)
+ * 3. Send message using resolved chatId (lid) or fallback to phone@c.us
  * 4. Return full diagnostic info
  */
 export async function POST(req: NextRequest) {
@@ -48,33 +48,30 @@ export async function POST(req: NextRequest) {
     }, { status: 422 });
   }
 
-  // Step 2: Verify phone number exists on WhatsApp
-  const waCheck = await checkWhatsapp(idInstance, apiTokenInstance, cleanNum);
-  console.log(`[WhatsApp Test] checkWhatsapp: exists=${waCheck.exists} chatId=${waCheck.chatId} error=${waCheck.error}`);
+  // Step 2: Try to resolve chatId via checkWhatsapp (NON-BLOCKING)
+  // Green-API checkWhatsapp has known false negatives for some countries (BR included).
+  // We only use it to discover lid-based chatIds — if it fails, we fall back to phone@c.us.
+  let resolvedChatId: string | undefined;
+  let existsOnWhatsApp: boolean | null = null;
 
-  if (waCheck.error && !waCheck.exists) {
-    return NextResponse.json({
-      ok: false,
-      step: "checkWhatsapp",
-      phoneChecked: cleanNum,
-      existsOnWhatsApp: false,
-      error: `Não foi possível verificar se o número ${cleanNum} está no WhatsApp: ${waCheck.error}`,
-    }, { status: 422 });
+  try {
+    const waCheck = await checkWhatsapp(idInstance, apiTokenInstance, cleanNum);
+    console.log(`[WhatsApp Test] checkWhatsapp: exists=${waCheck.exists} chatId=${waCheck.chatId} error=${waCheck.error}`);
+
+    if (waCheck.exists && waCheck.chatId) {
+      resolvedChatId = waCheck.chatId;
+      existsOnWhatsApp = true;
+    } else if (waCheck.exists === false) {
+      existsOnWhatsApp = false;
+      // Don't block — known false negatives. Still try to send.
+      console.warn(`[WhatsApp Test] checkWhatsapp returned exists=false for ${cleanNum}. Sending anyway — known false negatives for some countries.`);
+    }
+  } catch (e) {
+    console.warn(`[WhatsApp Test] checkWhatsapp error (non-blocking):`, e);
   }
 
-  if (!waCheck.exists) {
-    return NextResponse.json({
-      ok: false,
-      step: "checkWhatsapp",
-      phoneChecked: cleanNum,
-      existsOnWhatsApp: false,
-      error: `O número ${cleanNum} NÃO está no WhatsApp. Verifique o número (deve ter código do país, ex: 5511987654321).`,
-    }, { status: 422 });
-  }
-
-  // Step 3: Send using the RESOLVED chatId (may be lid-based!)
-  const resolvedChatId = waCheck.chatId;
-  console.log(`[WhatsApp Test] Sending to resolved chatId: ${resolvedChatId}`);
+  // Step 3: Send message using resolved chatId or fallback to phone@c.us
+  console.log(`[WhatsApp Test] Sending to ${resolvedChatId || `${cleanNum}@c.us`}`);
 
   const result = await sendWhatsAppMessage(
     idInstance,
@@ -89,7 +86,7 @@ export async function POST(req: NextRequest) {
     step: "sendMessage",
     stateInstance: state,
     phoneChecked: cleanNum,
-    existsOnWhatsApp: waCheck.exists,
-    resolvedChatId,
+    existsOnWhatsApp,
+    resolvedChatId: resolvedChatId || `${cleanNum}@c.us`,
   }, { status: result.ok ? 200 : 422 });
 }

@@ -119,8 +119,6 @@ export default function ConfiguracoesPage() {
           : "";
         toast.success(`WhatsApp conectado e mensagem enviada! ✅${chatIdInfo}`, { duration: 5000 });
         setWaState("authorized");
-      } else if (result.step === "checkWhatsapp" && !result.existsOnWhatsApp) {
-        toast.error(`❌ O número ${result.phoneChecked} NÃO está no WhatsApp. Verifique o formato (ex: 5511987654321).`, { duration: 10000 });
       } else if (result.stateInstance === "notAuthorized") {
         toast.error("Instância NÃO conectada ao WhatsApp. Clique em 'Gerar QR Code' para escanear.", { duration: 8000 });
         setWaState("notAuthorized");
