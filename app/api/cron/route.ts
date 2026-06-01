@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, cleanPhone } from "@/lib/whatsapp";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
@@ -224,10 +224,13 @@ export async function GET(req: Request) {
         const waResult = await sendWhatsAppMessage(
           settings.greenapi_instance_id,
           settings.greenapi_token,
-          settings.whatsapp_number,
+          cleanPhone(settings.whatsapp_number),
           waMessage
         );
         if (waResult.ok) whatsappSent++;
+        else if (waResult.stateInstance && waResult.stateInstance !== "authorized") {
+          console.warn(`WhatsApp instance ${settings.greenapi_instance_id} state: ${waResult.stateInstance}`);
+        }
       } catch (e) {
         console.error("WhatsApp send failed:", e);
       }

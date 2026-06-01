@@ -98,7 +98,6 @@ export default function ConfiguracoesPage() {
     }
     setTestingWa(true);
     try {
-      // Must go through server proxy — Green-API blocks CORS from browser
       const res = await fetch("/api/whatsapp/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,7 +110,13 @@ export default function ConfiguracoesPage() {
       });
       const result = await res.json();
       if (result.ok) {
-        toast.success("WhatsApp conectado! ✅");
+        toast.success("WhatsApp conectado e mensagem enviada! ✅");
+      } else if (result.stateInstance === "notAuthorized") {
+        toast.error("Instância NÃO conectada ao WhatsApp. Escaneie o QR Code no painel do Green-API.", { duration: 8000 });
+      } else if (result.stateInstance === "sleepMode") {
+        toast.error("Celular desligado/sem internet. Ligue e aguarde 5 min.", { duration: 6000 });
+      } else if (result.stateInstance) {
+        toast.error(`Estado: ${result.stateInstance} — ${result.error}`, { duration: 6000 });
       } else {
         toast.error(`Erro: ${result.error || "Verifique as credenciais."}`);
       }

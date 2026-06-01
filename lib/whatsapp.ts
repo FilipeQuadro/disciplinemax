@@ -7,7 +7,44 @@ export type WhatsAppResult = {
   idMessage?: string;
   status?: number;
   error?: string;
+  stateInstance?: string;
 };
+
+export type InstanceState = "authorized" | "notAuthorized" | "blocked" | "sleepMode" | "starting" | "yellowCard";
+
+export const STATE_ERRORS: Record<string, string> = {
+  notAuthorized: "Instância NÃO conectada ao WhatsApp. Escaneie o QR Code no painel do Green-API (https://console.green-api.com).",
+  blocked: "Sua conta WhatsApp foi bloqueada. Contate o suporte do Green-API.",
+  sleepMode: "Celular está desligado ou sem internet. Ligue o celular e aguarde até 5 min para reconectar.",
+  starting: "Instância está iniciando. Aguarde até 5 minutos e tente novamente.",
+  yellowCard: "Envio de mensagens suspenso por suspeita de spam. Reinicie a instância no painel do Green-API.",
+};
+
+/**
+ * Clean phone number: strip +, spaces, dashes, parentheses — keep digits only.
+ */
+export function cleanPhone(phone: string): string {
+  return phone.replace(/[^0-9]/g, "");
+}
+
+/**
+ * Check instance connection state via Green-API getStateInstance endpoint.
+ * Returns the state string (e.g. "authorized") or null on API error.
+ */
+export async function getInstanceState(
+  idInstance: string,
+  apiTokenInstance: string
+): Promise<InstanceState | null> {
+  try {
+    const url = `https://api.greenapi.com/waInstance${idInstance}/getStateInstance/${apiTokenInstance}`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.stateInstance || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Send a WhatsApp message via Green-API REST endpoint.
@@ -18,19 +55,33 @@ export async function sendWhatsAppMessage(
   idInstance: string,
   apiTokenInstance: string,
   phone: string,
-  message: string
+  message: string,
+  options?: { checkState?: boolean }
 ): Promise<WhatsAppResult> {
   // Validate inputs
   if (!idInstance || !apiTokenInstance) {
     return { ok: false, error: "Instance ID e API Token são obrigatórios. Obtenha no painel do Green-API." };
   }
-  if (!phone || phone.length < 10) {
-    return { ok: false, error: "Número de telefone inválido. Use formato internacional (ex: 5511987654321)." };
+
+  // Clean phone number (strip +, spaces, dashes)
+  const cleanNum = cleanPhone(phone);
+  if (!cleanNum || cleanNum.length < 10) {
+    return { ok: false, error: `Número inválido "${phone}" → "${cleanNum}". Use formato internacional (ex: 5511987654321, sem + ou espaços).` };
+  }
+
+  // Optionally check instance state before sending
+  if (options?.checkState) {
+    const state = await getInstanceState(idInstance, apiTokenInstance);
+    if (state && state !== "authorized") {
+      return { ok: false, stateInstance: state, error: STATE_ERRORS[state] || `Estado da instância: ${state}` };
+    }
+    if (!state) {
+      return { ok: false, error: "Não foi possível verificar o estado da instância. Verifique o Instance ID e API Token." };
+    }
   }
 
   try {
-    // Format chatId: phone number + @c.us (personal chat)
-    const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
+    const chatId = `${cleanNum}@c.us`;
 
     const url = `https://api.greenapi.com/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
     const res = await fetch(url, {
@@ -43,7 +94,6 @@ export async function sendWhatsAppMessage(
 
     if (!res.ok) {
       console.error("Green-API send failed:", res.status, data);
-      // Provide user-friendly errors
       const errMsg = data?.error || data?.message || `HTTP ${res.status}`;
       if (errMsg.includes("not authorized") || errMsg.includes("timeout") || errMsg.includes("Account is not authorized")) {
         return { ok: false, status: res.status, error: "Instância não conectada. Escaneie o QR Code no painel do Green-API." };
@@ -60,7 +110,13 @@ export async function sendWhatsAppMessage(
       return { ok: false, status: res.status, error: errMsg };
     }
 
-    return { ok: true, idMessage: data.idMessage, status: res.status };
+    // Green-API returns idMessage even when not connected — verify state
+    const state = await getInstanceState(idInstance, apiTokenInstance);
+    if (state && state !== "authorized") {
+      return { ok: false, idMessage: data.idMessage, stateInstance: state, error: STATE_ERRORS[state] || `Mensagem enfileirada mas instância está: ${state}` };
+    }
+
+    return { ok: true, idMessage: data.idMessage, status: res.status, stateInstance: state || undefined };
   } catch (e: any) {
     console.error("Green-API send failed:", e);
     return { ok: false, error: e?.message || String(e) };

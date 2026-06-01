@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, getInstanceState, cleanPhone, STATE_ERRORS } from "@/lib/whatsapp";
 
 /**
  * Server-side proxy for testing WhatsApp messages.
  * The Green-API blocks CORS (403 on preflight), so browser fetch fails.
- * This route lets the client call our server, which calls Green-API server-to-server.
+ * This route also checks instance state BEFORE sending, because Green-API
+ * returns success (idMessage) even when the instance is disconnected —
+ * the message gets queued but never delivered.
  */
 export async function POST(req: NextRequest) {
   let body: any;
@@ -21,7 +23,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await sendWhatsAppMessage(idInstance, apiTokenInstance, phone, message || "✅ Teste DisciplinaMax!");
+  // Step 1: Check instance state first
+  const state = await getInstanceState(idInstance, apiTokenInstance);
 
-  return NextResponse.json(result, { status: result.ok ? 200 : 422 });
+  if (!state) {
+    return NextResponse.json({
+      ok: false,
+      stateInstance: null,
+      error: "Instância não encontrada ou credenciais inválidas. Verifique o Instance ID e API Token no painel do Green-API.",
+    }, { status: 422 });
+  }
+
+  if (state !== "authorized") {
+    return NextResponse.json({
+      ok: false,
+      stateInstance: state,
+      error: STATE_ERRORS[state] || `Estado da instância: ${state}`,
+    }, { status: 422 });
+  }
+
+  // Step 2: Instance is authorized — send the message
+  const cleanNum = cleanPhone(phone);
+  const result = await sendWhatsAppMessage(idInstance, apiTokenInstance, cleanNum, message || "✅ Teste DisciplinaMax!");
+
+  return NextResponse.json({
+    ...result,
+    stateInstance: state,
+  }, { status: result.ok ? 200 : 422 });
 }

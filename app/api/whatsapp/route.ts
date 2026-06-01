@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendWhatsAppMessage, buildReminderMessage, buildCompletionMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, buildReminderMessage, buildCompletionMessage, cleanPhone } from "@/lib/whatsapp";
 import { verifyCronSecret } from "@/lib/admin-auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     const result = await sendWhatsAppMessage(
       settings.greenapi_instance_id,
       settings.greenapi_token,
-      settings.whatsapp_number,
+      cleanPhone(settings.whatsapp_number),
       message
     );
     if (result.ok) sent++;
