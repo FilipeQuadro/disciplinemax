@@ -41,6 +41,9 @@ export default function ConfiguracoesPage() {
   const [testingTg, setTestingTg] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [waState, setWaState] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -143,6 +146,65 @@ export default function ConfiguracoesPage() {
     } catch (e: any) {
       toast.error(`Erro: ${e?.message || e}`);
     } finally { setTestingTg(false); }
+  }
+
+  async function fetchQRCode() {
+    if (!form.greenapi_instance_id || !form.greenapi_token) {
+      toast.error("Preencha o Instance ID e Token primeiro"); return;
+    }
+    setQrLoading(true);
+    setQrCode(null);
+    try {
+      const res = await fetch("/api/whatsapp/qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idInstance: form.greenapi_instance_id, apiTokenInstance: form.greenapi_token }),
+      });
+      const result = await res.json();
+      if (result.ok && result.qrBase64) {
+        setQrCode(result.qrBase64);
+        setWaState("notAuthorized");
+        toast.success("QR Code gerado! Escaneie com o WhatsApp.", { duration: 5000 });
+      } else if (result.ok && result.alreadyAuthorized) {
+        setWaState("authorized");
+        setQrCode(null);
+        toast.success("Instância já está conectada ao WhatsApp! ✅");
+      } else if (result.needLogout) {
+        toast.error("Sessão expirada. Desconectando para gerar novo QR...", { duration: 4000 });
+        await logoutInstance();
+      } else {
+        toast.error(`Erro: ${result.error || "Não foi possível gerar o QR Code"}`);
+      }
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message || "Falha na conexão"}`);
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
+  async function logoutInstance() {
+    if (!form.greenapi_instance_id || !form.greenapi_token) return;
+    setQrLoading(true);
+    try {
+      const res = await fetch("/api/whatsapp/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idInstance: form.greenapi_instance_id, apiTokenInstance: form.greenapi_token }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        toast.success("Instância desconectada. Gerando novo QR Code...");
+        // Wait 2s for Green-API to process logout, then fetch new QR
+        await new Promise((r) => setTimeout(r, 2000));
+        await fetchQRCode();
+      } else {
+        toast.error(`Erro ao desconectar: ${result.error}`);
+        setQrLoading(false);
+      }
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message || "Falha na conexão"}`);
+      setQrLoading(false);
+    }
   }
 
   async function saveSettings() {
@@ -274,7 +336,7 @@ export default function ConfiguracoesPage() {
             <h2 className="font-semibold text-white">WhatsApp (Green-API)</h2>
           </div>
           <p className="text-sm mb-1" style={{ color: "#8B95A5" }}>Receba lembretes instantâneos via WhatsApp</p>
-          <a href="https://green-api.com" target="_blank" rel="noopener noreferrer"
+          <a href="https://console.green-api.com" target="_blank" rel="noopener noreferrer"
             className="text-xs flex items-center gap-1 mb-4" style={{ color: "#D4AF37" }}>
             <ExternalLink size={11} /> Criar conta gratuita no Green-API
           </a>
@@ -283,7 +345,7 @@ export default function ConfiguracoesPage() {
               <label className="label">Número WhatsApp (com código do país)</label>
               <input className="input" placeholder="55119XXXXXXXX" value={form.whatsapp_number}
                 onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Ex: 5511987654321 (Brasil = 55)</p>
+              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Ex: 5511987654321 (Brasil = 55, sem + ou espaços)</p>
             </div>
             <div>
               <label className="label">Instance ID (Green-API)</label>
@@ -295,6 +357,47 @@ export default function ConfiguracoesPage() {
               <input className="input" placeholder="d75b3a663749..." value={form.greenapi_token}
                 onChange={(e) => setForm((p) => ({ ...p, greenapi_token: e.target.value }))} />
             </div>
+
+            {/* QR Code Section */}
+            {form.greenapi_instance_id && form.greenapi_token && (
+              <div className="mt-3">
+                {!qrCode && waState !== "authorized" && (
+                  <button onClick={fetchQRCode} disabled={qrLoading} className="btn-ghost text-sm w-full">
+                    {qrLoading ? "Carregando QR Code..." : "📷 Gerar QR Code para conectar"}
+                  </button>
+                )}
+                {qrCode && (
+                  <div className="flex flex-col items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(58,186,180,0.15)" }}>
+                    <p className="text-sm text-center" style={{ color: "#8B95A5" }}>
+                      Abra o <strong className="text-white">WhatsApp</strong> → Menu → <strong className="text-white">Aparelhos conectados</strong> → <strong className="text-white">Conectar</strong> e escaneie:
+                    </p>
+                    <img
+                      src={`data:image/png;base64,${qrCode}`}
+                      alt="WhatsApp QR Code"
+                      className="w-52 h-52 rounded-lg"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                    <p className="text-xs" style={{ color: "#555E6E" }}>QR Code atualiza a cada 20s. Clique no botão abaixo para atualizar.</p>
+                    <div className="flex gap-2">
+                      <button onClick={fetchQRCode} disabled={qrLoading} className="btn-ghost text-xs">
+                        🔄 Atualizar QR
+                      </button>
+                      <button onClick={logoutInstance} disabled={qrLoading} className="text-xs px-3 py-1.5 rounded-lg"
+                        style={{ color: "#D94F4F", border: "1px solid rgba(217,79,79,0.2)" }}>
+                        Desconectar
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {waState === "authorized" && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(58,186,180,0.06)", border: "1px solid rgba(58,186,180,0.2)" }}>
+                    <Check size={16} style={{ color: "#3ABAB4" }} />
+                    <span className="text-sm" style={{ color: "#3ABAB4" }}>Instância conectada ao WhatsApp!</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button onClick={testWhatsApp} disabled={testingWa} className="btn-ghost text-sm">
               {testingWa ? "Enviando..." : "📱 Testar envio WhatsApp"}
             </button>
