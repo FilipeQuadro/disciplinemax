@@ -118,9 +118,13 @@ export default function ConfiguracoesPage() {
     }
     setTestingTg(true);
     try {
-      await sendTelegramMessage(form.telegram_bot_token, form.telegram_chat_id,
+      const result = await sendTelegramMessage(form.telegram_bot_token, form.telegram_chat_id,
         "✅ DisciplinaMax configurado com sucesso! 🎯📚");
-      toast.success("Telegram conectado! ✅");
+      if (result.ok) {
+        toast.success("Telegram conectado! ✅");
+      } else {
+        toast.error(result.error || "Erro ao enviar mensagem");
+      }
     } catch (e: any) {
       toast.error(`Erro: ${e?.message || e}`);
     } finally { setTestingTg(false); }
@@ -304,7 +308,7 @@ export default function ConfiguracoesPage() {
               <label className="label">Telegram chat_id</label>
               <input className="input" placeholder="123456789" value={form.telegram_chat_id}
                 onChange={(e) => setForm((p) => ({ ...p, telegram_chat_id: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Use o chat_id do seu usuário ou grupo.</p>
+              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Seu ID numérico. Envie /start ao bot antes de testar. Use <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" style={{ color: "#D4AF37" }}>@userinfobot</a> para descobrir.</p>
             </div>
             <button onClick={testTelegram} disabled={testingTg} className="btn-ghost text-sm">
               {testingTg ? "Enviando..." : "📱 Testar envio Telegram"}

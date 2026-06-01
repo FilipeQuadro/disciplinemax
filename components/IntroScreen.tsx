@@ -86,9 +86,10 @@ function playGateSound() {
 
 export { playGateSound, playIntroChime };
 
-const INTRO_DURATION = 2800;
-const INTRO_MAX_DURATION = 4000;
-const FADE_DURATION = 800;
+const INTRO_DURATION = 2200;       // Reduced from 2800
+const INTRO_MAX_DURATION = 3000;   // Reduced from 4000
+const FADE_DURATION = 600;          // Reduced from 800
+const INTRO_SEEN_KEY = "dm-intro-seen";
 
 export function IntroScreen() {
   const [visible, setVisible] = useState(true);
@@ -97,8 +98,15 @@ export function IntroScreen() {
   const dismissed = useRef(false);
   const audioUnlocked = useRef(false);
 
-  // Unlock audio on first user gesture (required by iOS/Android)
+  // Check if intro was already seen this session — skip for returning users
   useEffect(() => {
+    try {
+      if (sessionStorage.getItem(INTRO_SEEN_KEY)) {
+        setVisible(false);
+        return;
+      }
+    } catch { /* private browsing */ }
+
     function unlock() {
       audioUnlocked.current = true;
       playGateSound();
@@ -114,9 +122,11 @@ export function IntroScreen() {
   }, []);
 
   useEffect(() => {
+    // Already skipped
+    if (!visible) return;
+
     if (!audioUnlocked.current) playGateSound();
 
-    // Check if server is responsive (detect cold starts)
     const checkServer = async () => {
       try {
         const start = Date.now();
@@ -125,29 +135,27 @@ export function IntroScreen() {
 
         if (res.ok) {
           setServerStatus("ready");
-          // If server responded fast, normal intro
           if (elapsed < 3000) {
+            // Fast response — normal intro
             setTimeout(() => dismiss(), Math.max(0, INTRO_DURATION - elapsed));
           } else {
-            // Server was sleeping — dismiss quickly once ready
-            setTimeout(() => dismiss(), 600);
+            // Server was sleeping (cold start) — dismiss quickly
+            setTimeout(() => dismiss(), 400);
           }
         } else {
-          // Server responded but with error — still dismiss
           setServerStatus("ready");
           setTimeout(() => dismiss(), INTRO_DURATION);
         }
       } catch {
         // Server is still waking up (Render cold start)
         setServerStatus("waking");
-        // Retry every 3 seconds
         const retryInterval = setInterval(async () => {
           try {
             const res = await fetch("/api/health", { cache: "no-store" });
             if (res.ok) {
               setServerStatus("ready");
               clearInterval(retryInterval);
-              setTimeout(() => dismiss(), 600);
+              setTimeout(() => dismiss(), 400);
             }
           } catch {
             // Still waking — keep trying
@@ -158,7 +166,7 @@ export function IntroScreen() {
 
     checkServer();
 
-    // Normal timer (dismisses intro even if health check is slow)
+    // Normal timer
     const normalTimer = setTimeout(() => {
       dismiss();
     }, INTRO_DURATION);
@@ -172,11 +180,16 @@ export function IntroScreen() {
       clearTimeout(normalTimer);
       clearTimeout(maxTimer);
     };
-  }, []);
+  }, [visible]);
 
   function dismiss() {
     if (dismissed.current) return;
     dismissed.current = true;
+
+    // Mark as seen so it doesn't show again this session
+    try {
+      sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+    } catch { /* private browsing */ }
 
     try {
       playIntroChime();

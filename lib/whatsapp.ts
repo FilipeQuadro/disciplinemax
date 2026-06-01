@@ -20,6 +20,14 @@ export async function sendWhatsAppMessage(
   phone: string,
   message: string
 ): Promise<WhatsAppResult> {
+  // Validate inputs
+  if (!idInstance || !apiTokenInstance) {
+    return { ok: false, error: "Instance ID e API Token são obrigatórios. Obtenha no painel do Green-API." };
+  }
+  if (!phone || phone.length < 10) {
+    return { ok: false, error: "Número de telefone inválido. Use formato internacional (ex: 5511987654321)." };
+  }
+
   try {
     // Format chatId: phone number + @c.us (personal chat)
     const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
@@ -35,7 +43,21 @@ export async function sendWhatsAppMessage(
 
     if (!res.ok) {
       console.error("Green-API send failed:", res.status, data);
-      return { ok: false, status: res.status, error: data?.error || data?.message || `HTTP ${res.status}` };
+      // Provide user-friendly errors
+      const errMsg = data?.error || data?.message || `HTTP ${res.status}`;
+      if (errMsg.includes("not authorized") || errMsg.includes("timeout") || errMsg.includes("Account is not authorized")) {
+        return { ok: false, status: res.status, error: "Instância não conectada. Escaneie o QR Code no painel do Green-API." };
+      }
+      if (errMsg.includes("not found") || errMsg.includes("Instance not found")) {
+        return { ok: false, status: res.status, error: "Instance ID não encontrado. Verifique no painel do Green-API." };
+      }
+      if (errMsg.includes("Invalid token")) {
+        return { ok: false, status: res.status, error: "API Token inválido. Verifique o token no painel do Green-API." };
+      }
+      if (errMsg.includes("not in chat") || errMsg.includes("phone")) {
+        return { ok: false, status: res.status, error: "Número não está no WhatsApp ou formato incorreto. Use: 5511987654321" };
+      }
+      return { ok: false, status: res.status, error: errMsg };
     }
 
     return { ok: true, idMessage: data.idMessage, status: res.status };

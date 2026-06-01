@@ -39,11 +39,17 @@ export function Sidebar() {
     }
   }, [user]);
 
+  const closeMobile = () => setMobileOpen(false);
+
   return (
     <>
-      {/* Mobile toggle */}
+      {/* Mobile toggle — positioned below status bar with safe area */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden glass p-2.5 rounded-xl hover:bg-white/5 transition-all duration-300"
+        className="fixed z-50 md:hidden glass p-2.5 rounded-xl hover:bg-white/5 transition-all duration-300"
+        style={{
+          top: "max(16px, env(safe-area-inset-top, 16px))",
+          left: "max(16px, env(safe-area-inset-left, 16px))",
+        }}
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? <X size={18} className="text-slate-300" /> : <Menu size={18} className="text-slate-400" />}
@@ -53,7 +59,7 @@ export function Sidebar() {
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden transition-opacity"
-          onClick={() => setMobileOpen(false)}
+          onClick={closeMobile}
         />
       )}
 
@@ -65,10 +71,17 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           sidebarOpen ? "w-64" : "w-16"
         )}
-        style={{ background: "#0D1018", borderColor: "rgba(255,255,255,0.04)", WebkitOverflowScrolling: "touch" }}
+        style={{
+          background: "#0D1018",
+          borderColor: "rgba(255,255,255,0.04)",
+          WebkitOverflowScrolling: "touch",
+          // Safe area for iOS
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+        }}
       >
         {/* Logo */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="p-5 flex items-center justify-between shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
           {sidebarOpen && (
             <div className="flex items-center gap-3">
               <div
@@ -97,7 +110,7 @@ export function Sidebar() {
 
         {/* Streak */}
         {sidebarOpen && streak > 0 && (
-          <div className="mx-3 mt-4 p-3 rounded-xl transition-all duration-300"
+          <div className="mx-3 mt-4 p-3 rounded-xl transition-all duration-300 shrink-0"
             style={{
               background: "linear-gradient(135deg, rgba(232,132,74,0.08), rgba(217,79,79,0.04))",
               border: "1px solid rgba(232,132,74,0.12)",
@@ -113,52 +126,54 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 mt-2">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
+        {/* Nav — grows to fill space, items spread evenly */}
+        <nav className="flex-1 p-3 space-y-0.5 flex flex-col justify-center" style={{ minHeight: 0 }}>
+          <div className="space-y-0.5">
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobile}
+                  className={clsx(
+                    "nav-item",
+                    active && "active",
+                    !sidebarOpen && "justify-center px-2"
+                  )}
+                  title={!sidebarOpen ? item.label : undefined}
+                >
+                  <item.icon size={18} className={clsx("transition-colors duration-300", active ? item.color : "text-[#555E6E]")} />
+                  {sidebarOpen && <span className={clsx(active && "text-white font-medium")}>{item.label}</span>}
+                  {sidebarOpen && active && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
+                  )}
+                  {sidebarOpen && pomodoroActive && item.href === "/pomodoro" && (
+                    <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  )}
+                </Link>
+              );
+            })}
+            {isAdmin && (
               <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={clsx(
-                  "nav-item",
-                  active && "active",
-                  !sidebarOpen && "justify-center px-2"
-                )}
-                title={!sidebarOpen ? item.label : undefined}
+                href="/admin"
+                onClick={closeMobile}
+                className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
+                title={!sidebarOpen ? "Admin" : undefined}
               >
-                <item.icon size={18} className={clsx("transition-colors duration-300", active ? item.color : "text-[#555E6E]")} />
-                {sidebarOpen && <span className={clsx(active && "text-white font-medium")}>{item.label}</span>}
-                {sidebarOpen && active && (
+                <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
+                {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Admin</span>}
+                {sidebarOpen && pathname === "/admin" && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
                 )}
-                {sidebarOpen && pomodoroActive && item.href === "/pomodoro" && (
-                  <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                )}
               </Link>
-            );
-          })}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={() => setMobileOpen(false)}
-              className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
-              title={!sidebarOpen ? "Admin" : undefined}
-            >
-              <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
-              {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Admin</span>}
-              {sidebarOpen && pathname === "/admin" && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
-              )}
-            </Link>
-          )}
+            )}
+          </div>
         </nav>
 
         {/* Footer */}
         {sidebarOpen && (
-          <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="p-3 shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
             {user && (
               <div className="rounded-xl p-3 mb-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
                 <div className="flex items-center gap-2">

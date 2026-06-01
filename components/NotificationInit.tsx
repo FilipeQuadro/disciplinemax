@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { registerServiceWorker, setupPeriodicSync, subscribeToPush } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
@@ -13,32 +13,49 @@ export function NotificationInit() {
     settings?.notification_times?.length ? settings.notification_times : ["07:00", "12:00", "19:00"],
     [settings?.notification_times]
   );
+  const swRegistered = useRef(false);
 
   // Register service worker once
   useEffect(() => {
+    if (swRegistered.current) return;
+    swRegistered.current = true;
+
     registerServiceWorker().then((reg) => {
       if (reg) setupPeriodicSync(reg);
     });
   }, []);
 
-  // Restore notificationsEnabled from browser permission on mount
-  // Also ensure push subscription exists so server-side push works when tab is closed
+  // Restore notificationsEnabled from browser permission + ensure push subscription
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
+
     if (Notification.permission === "granted") {
       if (!notificationsEnabled) {
         setNotificationsEnabled(true);
       }
-      // Ensure push subscription exists for server-side delivery
-      registerServiceWorker().then(async (reg) => {
-        if (!reg) return;
-        const existingSub = await reg.pushManager.getSubscription();
-        if (!existingSub) {
-          await subscribeToPush(reg);
+      // Ensure push subscription exists for server-side delivery when tab is closed
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(async (reg) => {
+          const existingSub = await reg.pushManager.getSubscription();
+          if (!existingSub) {
+            await subscribeToPush(reg);
+          }
+        });
+      } else {
+        // SW not ready yet — wait for it
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            navigator.serviceWorker.ready.then(async (reg) => {
+              const existingSub = await reg.pushManager.getSubscription();
+              if (!existingSub) {
+                await subscribeToPush(reg);
+              }
+            });
+          });
         }
-      });
+      }
     }
-  }, []);
+  }, [user]); // Re-run when user changes to ensure subscription is tied to correct user
 
   // Capacitor Push (iOS/Android)
   useEffect(() => {
@@ -114,10 +131,10 @@ export function NotificationInit() {
 
       const totalPagesGoal = books.reduce((s, b) => s + b.daily_goal, 0);
       const totalPagesRead = books.reduce((s, b) => s + b.pages_read_today, 0);
-      const booksGoalMet = totalPagesRead >= totalPagesGoal;
-      const bibleGoalMet = bibleGoal ? todayBibleChapters >= bibleGoal.daily_chapters : true;
+      const booksGoalMet = totalPagesGoal === 0 || totalPagesRead >= totalPagesGoal;
+      const bibleGoalMet = !bibleGoal || todayBibleChapters >= bibleGoal.daily_chapters;
 
-      if (booksGoalMet && bibleGoalMet) return;
+      if (booksGoalMet && bibleGoalMet) return; // All done — no notification needed
 
       // 5-minute tolerance window
       const matched = notifTimes.find((t) => {

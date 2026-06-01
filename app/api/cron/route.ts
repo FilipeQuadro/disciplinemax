@@ -210,8 +210,9 @@ export async function GET(req: Request) {
     // ── Enviar Telegram ──
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
-        await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, tgMessage);
-        telegramSent++;
+        const tgResult = await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, tgMessage);
+        if (tgResult.ok) telegramSent++;
+        else console.error("Telegram send failed:", tgResult.error);
       } catch (e) {
         console.error("Telegram send failed:", e);
       }
