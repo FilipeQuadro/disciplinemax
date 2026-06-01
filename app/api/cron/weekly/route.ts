@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWhatsAppMessage, cleanPhone, checkWhatsapp } from "@/lib/whatsapp";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
 
@@ -12,7 +11,6 @@ const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) :
 export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ ok: false }, { status: 500 });
 
-  // CRON_SECRET — accept Bearer header OR ?secret= query param (cron-job.org sends query)
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -25,13 +23,11 @@ export async function GET(req: Request) {
   const { data: allSettings } = await sb.from("user_settings").select("*");
 
   let telegramSent = 0;
-  let whatsappSent = 0;
   let pushSent = 0;
 
   for (const settings of allSettings || []) {
     const userId = settings.user_id;
 
-    // Get weekly stats
     const { data: weekStats } = await sb
       .from("daily_stats")
       .select("*")
@@ -39,17 +35,14 @@ export async function GET(req: Request) {
       .gte("date", weekAgoStr)
       .lte("date", todayStr);
 
-    // Get books
     const { data: books } = await sb.from("books").select("*").eq("user_id", userId);
 
-    // Get bible readings count this week
     const { data: bibleReadings } = await sb
       .from("bible_readings")
       .select("id")
       .eq("user_id", userId)
       .gte("read_at", weekAgoStr);
 
-    // Get pomodoro sessions this week
     const { data: pomodoros } = await sb
       .from("pomodoro_sessions")
       .select("duration_minutes")
@@ -57,7 +50,6 @@ export async function GET(req: Request) {
       .eq("completed", true)
       .gte("started_at", weekAgoStr);
 
-    // Calculate totals
     const totalPages = (weekStats || []).reduce((s: number, d: any) => s + (d.books_pages_read || 0), 0);
     const totalChapters = (weekStats || []).reduce((s: number, d: any) => s + (d.bible_chapters_read || 0), 0);
     const totalPomodoros = (pomodoros || []).length;
@@ -65,7 +57,6 @@ export async function GET(req: Request) {
     const daysCompleted = (weekStats || []).filter((d: any) => d.goals_completed).length;
     const booksFinished = (books || []).filter((b: any) => b.current_page >= b.total_pages).length;
 
-    // Streak
     const { data: recentStats } = await sb
       .from("daily_stats")
       .select("date, goals_completed")
@@ -80,10 +71,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // Rating
     const rating = daysCompleted >= 6 ? "🌟🌟🌟" : daysCompleted >= 4 ? "🌟🌟" : daysCompleted >= 2 ? "🌟" : "💪 continue firme!";
-
-    // Active books
     const activeBooks = (books || []).filter((b: any) => b.current_page < b.total_pages);
 
     // ── Telegram ──
@@ -117,34 +105,6 @@ export async function GET(req: Request) {
       }
     }
 
-    // ── WhatsApp (Green-API) ──
-    if (settings.greenapi_instance_id && settings.greenapi_token && settings.whatsapp_number) {
-      let waMsg = `📊 *Relatório Semanal — DisciplinaMax*\n\n`;
-      waMsg += `📅 Última semana:\n\n`;
-      waMsg += `📚 ${totalPages} páginas lidas\n`;
-      waMsg += `📖 ${booksFinished} livros concluídos\n`;
-      waMsg += `✝️ ${totalChapters} capítulos bíblicos\n`;
-      waMsg += `🍅 ${totalPomodoros} pomodoros (${totalFocusMin} min)\n`;
-      waMsg += `✅ ${daysCompleted}/7 dias cumpridos\n\n`;
-      waMsg += `🔥 Streak: *${streak} dias*\n`;
-      waMsg += `Avaliação: ${rating}\n\n`;
-      waMsg += `👉 disciplinemax.onrender.com`;
-
-      try {
-        const waNum = cleanPhone(settings.whatsapp_number);
-        let resolvedChatId: string | undefined;
-        try {
-          const waCheck = await checkWhatsapp(settings.greenapi_instance_id, settings.greenapi_token, waNum);
-          if (waCheck.exists && waCheck.chatId) resolvedChatId = waCheck.chatId;
-        } catch { /* non-fatal */ }
-
-        const waResult = await sendWhatsAppMessage(settings.greenapi_instance_id, settings.greenapi_token, waNum, waMsg, { resolvedChatId });
-        if (waResult.ok) whatsappSent++;
-      } catch (e) {
-        console.error("Weekly WhatsApp report failed for", userId, e);
-      }
-    }
-
     // ── Web Push ──
     try {
       const { data: subs } = await sb
@@ -168,5 +128,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, telegramSent, whatsappSent, pushSent, date: todayStr });
+  return NextResponse.json({ ok: true, telegramSent, pushSent, date: todayStr });
 }

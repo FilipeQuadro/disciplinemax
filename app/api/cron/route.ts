@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWhatsAppMessage, cleanPhone, checkWhatsapp } from "@/lib/whatsapp";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
@@ -76,7 +75,6 @@ export async function GET(req: Request) {
     .from("daily_stats").select("*").eq("date", today);
 
   let telegramSent = 0;
-  let whatsappSent = 0;
   let pushSent = 0;
   let skipped = 0;
 
@@ -187,26 +185,6 @@ export async function GET(req: Request) {
       tgMessage += `👉 disciplinemax.onrender.com`;
     }
 
-    // WhatsApp message (plain text with bold — Green-API supports WhatsApp formatting)
-    let waMessage = "";
-    if (booksGoalMet && bibleGoalMet) {
-      waMessage = `🎉 *Parabéns! Todas as metas de hoje foram cumpridas!*\n\n📜 "${verse.verse}" — ${verse.reference}\n\n💪 Continue firme amanhã!`;
-    } else {
-      const timeEmoji = brtHour < 12 ? "☀️" : brtHour < 18 ? "☀️" : "🌙";
-      waMessage = `${timeEmoji} *Lembrete DisciplinaMax*\n\nAinda faltam completar:\n\n`;
-
-      const pendingBooks = userBooks.filter((b: any) => b.pages_read_today < b.daily_goal);
-      for (const b of pendingBooks) {
-        waMessage += `📖 ${b.title}: *${b.daily_goal - b.pages_read_today}* páginas\n`;
-      }
-
-      if (!bibleGoalMet && bibleGoalChapters > 0) {
-        waMessage += `✝️ Bíblia: *${Math.max(0, bibleGoalChapters - bibleChaptersRead)}* capítulos\n`;
-      }
-
-      waMessage += `\n📜 "${verse.verse}" — ${verse.reference}\n\n💪 ${motivational}\n\n👉 disciplinemax.onrender.com`;
-    }
-
     // ── Enviar Telegram ──
     if (settings.telegram_bot_token && settings.telegram_chat_id) {
       try {
@@ -215,33 +193,6 @@ export async function GET(req: Request) {
         else console.error("Telegram send failed:", tgResult.error);
       } catch (e) {
         console.error("Telegram send failed:", e);
-      }
-    }
-
-    // ── Enviar WhatsApp (Green-API) ──
-    if (settings.greenapi_instance_id && settings.greenapi_token && settings.whatsapp_number) {
-      try {
-        const waNum = cleanPhone(settings.whatsapp_number);
-        // Resolve correct chatId (may be lid-based) for reliable delivery
-        let resolvedChatId: string | undefined;
-        try {
-          const waCheck = await checkWhatsapp(settings.greenapi_instance_id, settings.greenapi_token, waNum);
-          if (waCheck.exists && waCheck.chatId) resolvedChatId = waCheck.chatId;
-        } catch { /* non-fatal — fallback to phone@c.us */ }
-
-        const waResult = await sendWhatsAppMessage(
-          settings.greenapi_instance_id,
-          settings.greenapi_token,
-          waNum,
-          waMessage,
-          { resolvedChatId }
-        );
-        if (waResult.ok) whatsappSent++;
-        else if (waResult.stateInstance && waResult.stateInstance !== "authorized") {
-          console.warn(`WhatsApp instance ${settings.greenapi_instance_id} state: ${waResult.stateInstance}`);
-        }
-      } catch (e) {
-        console.error("WhatsApp send failed:", e);
       }
     }
 
@@ -272,5 +223,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, telegramSent, whatsappSent, pushSent, skipped, brtTime });
+  return NextResponse.json({ ok: true, telegramSent, pushSent, skipped, brtTime });
 }

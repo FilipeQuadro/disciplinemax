@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
         await sb.from(table).delete().eq("user_id", user_id);
       }
       const resetPayload: Record<string, any> = {
-        whatsapp_number: null,
         telegram_bot_token: null,
         telegram_chat_id: null,
         notification_times: ["07:00", "12:00", "19:00"],
@@ -115,13 +114,11 @@ export async function POST(req: NextRequest) {
         streak_freeze_used: 0,
       };
       try {
-        await sb.from("user_settings").update({
-          ...resetPayload,
-          greenapi_instance_id: null,
-          greenapi_token: null,
-        }).eq("user_id", user_id);
-      } catch {
         await sb.from("user_settings").update(resetPayload).eq("user_id", user_id);
+      } catch {
+        // Fallback if some columns don't exist
+        const { greenapi_instance_id, greenapi_token, ...safePayload } = resetPayload;
+        await sb.from("user_settings").update(safePayload).eq("user_id", user_id);
       }
 
       await sb.from("audit_logs").insert({

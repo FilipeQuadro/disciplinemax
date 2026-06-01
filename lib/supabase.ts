@@ -87,9 +87,6 @@ export type NotificationSub = {
 export type UserSettings = {
   id: string;
   user_id: string;
-  whatsapp_number?: string;
-  greenapi_instance_id?: string;
-  greenapi_token?: string;
   telegram_bot_token?: string;
   telegram_chat_id?: string;
   notification_times: string[];

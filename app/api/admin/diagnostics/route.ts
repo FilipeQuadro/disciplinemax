@@ -345,70 +345,7 @@ export async function GET(req: Request) {
     });
   }
 
-  // ── 6. WHATSAPP (GreenAPI) ────────────────────────────────────
-  try {
-    const { data: waSettings } = await sb.from("user_settings").select("greenapi_instance_id, greenapi_token").limit(1).maybeSingle();
-
-    if (!waSettings?.greenapi_instance_id || !waSettings?.greenapi_token) {
-      results.push({
-        status: "disabled",
-        name: "WhatsApp (GreenAPI)",
-        description: "Verifica se a integração com WhatsApp via GreenAPI está configurada.",
-        explanation: "O WhatsApp não está configurado no sistema. As notificações via WhatsApp não serão enviadas. Isso pode ser intencional se o recurso não estiver em uso.",
-        suggestion: "Para ativar: configure o greenapi_instance_id e greenapi_token em Configurações. Obtenha as credenciais em green-api.com.",
-      });
-    } else {
-      const waStart = Date.now();
-      try {
-        const res = await fetch(
-          `https://api.green-api.com/waInstance${waSettings.greenapi_instance_id}/getStateInstance/${waSettings.greenapi_token}`,
-          { signal: AbortSignal.timeout(10000) }
-        );
-        const data = await res.json();
-
-        if (data.stateInstance === "authorized") {
-          results.push({
-            status: "healthy",
-            name: "WhatsApp (GreenAPI)",
-            description: "Verifica se a integração com WhatsApp via GreenAPI está configurada.",
-            explanation: `A instância do WhatsApp está autorizada e funcionando. Notificações via WhatsApp podem ser enviadas normalmente.`,
-            suggestion: "Nenhuma ação necessária.",
-            latency_ms: Date.now() - waStart,
-            details: { state: data.stateInstance },
-          });
-        } else {
-          const state = data.stateInstance || data.error || "desconhecido";
-          results.push({
-            status: "warning",
-            name: "WhatsApp (GreenAPI)",
-            description: "Verifica se a integração com WhatsApp via GreenAPI está configurada.",
-            explanation: `A instância do WhatsApp está no estado "${state}", que NÃO é "authorized". Causas: (1) o QR code não foi escaneado, (2) a sessão expirou e precisa ser re-escaneada, (3) a instância foi bloqueada pelo GreenAPI.`,
-            suggestion: "Para resolver: acesse green-api.com, escaneie o QR code novamente com o WhatsApp. Se a instância foi bloqueada, crie uma nova.",
-            latency_ms: Date.now() - waStart,
-            details: { state },
-          });
-          issues.push(`WhatsApp: estado "${state}"`);
-        }
-      } catch (e: any) {
-        results.push({
-          status: "error",
-          name: "WhatsApp (GreenAPI)",
-          description: "Verifica se a integração com WhatsApp via GreenAPI está configurada.",
-          explanation: `Falha ao conectar com a GreenAPI: "${e.message}". O servidor pode estar sem conectividade ou a GreenAPI está fora do ar.`,
-          suggestion: "Verifique a conectividade do servidor. Se o problema persistir, as notificações via WhatsApp ficarão indisponíveis.",
-          latency_ms: Date.now() - waStart,
-        });
-      }
-    }
-  } catch (e: any) {
-    results.push({
-      status: "error",
-      name: "WhatsApp (GreenAPI)",
-      description: "Verifica se a integração com WhatsApp via GreenAPI está configurada.",
-      explanation: `Erro ao verificar WhatsApp: "${e.message}".`,
-      suggestion: "Verifique a tabela user_settings.",
-    });
-  }
+  // ── 6. WhatsApp — REMOVED ──
 
   // ── 7. OLLAMA (local) ─────────────────────────────────────────
   const ollamaStart = Date.now();
