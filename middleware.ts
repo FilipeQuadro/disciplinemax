@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// In-memory rate limiter — resets on deploy (acceptable for this scale)
+// In-memory rate limiter — resets on deploy.
+// Edge Runtime cannot access filesystem; DB-backed limiting would add latency to every request.
+// At current scale (<1K users), in-memory is sufficient: the 60 req/min/IP limit is generous
+// and resets only on cold starts (rare on Render paid tier) or deploys (a few seconds of window).
+// For higher scale, migrate to Upstash Redis or similar edge-compatible store.
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 
 const RATE_LIMIT_WINDOW = 60_000; // 1 minute

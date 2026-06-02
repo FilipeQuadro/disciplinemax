@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { logger } from "@/lib/logger";
+import { getAdminUsers } from "@/lib/admin-users-cache";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -110,7 +113,7 @@ export async function GET(req: Request) {
         latency_ms: Date.now() - geminiStart,
       });
     } else {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
         {
           method: "POST",
@@ -119,8 +122,8 @@ export async function GET(req: Request) {
             contents: [{ parts: [{ text: "ping" }] }],
             generationConfig: { maxOutputTokens: 5, temperature: 0.1 },
           }),
-          signal: AbortSignal.timeout(15000),
-        }
+        },
+        15_000
       );
       const data = await res.json();
 
@@ -177,9 +180,7 @@ export async function GET(req: Request) {
         suggestion: "Para ativar: peça para um usuário configurar o token do bot e chat_id em Configurações. Ou configure TELEGRAM_BOT_TOKEN nas variáveis de ambiente.",
       });
     } else {
-      const res = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetchWithTimeout(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, {}, 10_000);
       const data = await res.json();
 
       if (data.ok) {
@@ -350,7 +351,7 @@ export async function GET(req: Request) {
   // ── 7. OLLAMA (local) ─────────────────────────────────────────
   const ollamaStart = Date.now();
   try {
-    const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(3000) });
+    const res = await fetchWithTimeout("http://localhost:11434/api/tags", {}, 3_000);
     const data = await res.json();
     const models = data.models?.map((m: any) => m.name) || [];
     results.push({
@@ -385,12 +386,12 @@ export async function GET(req: Request) {
     const orphanIds: string[] = [];
     if (settingsCount !== null) {
       // Users in auth but not in user_settings (shouldn't happen with triggers)
-      const { data: authData } = await sb.auth.admin.listUsers();
+      const authUsers = await getAdminUsers();
       const settingsIds = new Set<string>();
       const { data: allSettings } = await sb.from("user_settings").select("user_id");
       for (const s of (allSettings || [])) settingsIds.add(s.user_id);
 
-      for (const u of (authData?.users || [])) {
+      for (const u of (authUsers || [])) {
         if (!settingsIds.has(u.id)) {
           orphanCount++;
           orphanIds.push(u.id);

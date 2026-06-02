@@ -1,7 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const FETCH_TIMEOUT = 10_000;
 
 function restUrl(table: string) {
   return `${supabaseUrl}/rest/v1/${table}`;
@@ -53,9 +55,9 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
       }
 
       const qs = params.toString();
-      const res = await fetch(`${restUrl(table)}${qs ? `?${qs}` : ""}`, {
+      const res = await fetchWithTimeout(`${restUrl(table)}${qs ? `?${qs}` : ""}`, {
         headers: authHeaders(token),
-      });
+      }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
 
@@ -67,11 +69,11 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
 
     // ── INSERT ──────────────────────────────────────────────────────
     if (action === "insert") {
-      const res = await fetch(restUrl(table), {
+      const res = await fetchWithTimeout(restUrl(table), {
         method: "POST",
         headers: authHeaders(token),
         body: JSON.stringify(payload),
-      });
+      }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
       return { data: (Array.isArray(json) ? json[0] : json) as T, error: null };
@@ -80,11 +82,11 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
     // ── UPDATE ──────────────────────────────────────────────────────
     if (action === "update") {
       const params = new URLSearchParams({ id: `eq.${id}` });
-      const res = await fetch(`${restUrl(table)}?${params}`, {
+      const res = await fetchWithTimeout(`${restUrl(table)}?${params}`, {
         method: "PATCH",
         headers: authHeaders(token),
         body: JSON.stringify(payload),
-      });
+      }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
       return { data: (Array.isArray(json) ? json[0] : json) as T, error: null };
@@ -100,11 +102,11 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
         // and the unique column must be in the query string
       }
       const params = onConflict ? new URLSearchParams({ on_conflict: onConflict }) : new URLSearchParams();
-      const res = await fetch(`${restUrl(table)}${params.toString() ? `?${params}` : ""}`, {
+      const res = await fetchWithTimeout(`${restUrl(table)}${params.toString() ? `?${params}` : ""}`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
-      });
+      }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
       return { data: (Array.isArray(json) ? json[0] : json) as T, error: null };
@@ -113,10 +115,10 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
     // ── DELETE ──────────────────────────────────────────────────────
     if (action === "delete") {
       const params = new URLSearchParams({ id: `eq.${id}` });
-      const res = await fetch(`${restUrl(table)}?${params}`, {
+      const res = await fetchWithTimeout(`${restUrl(table)}?${params}`, {
         method: "DELETE",
         headers: { ...authHeaders(token), Prefer: "return=minimal" },
-      });
+      }, FETCH_TIMEOUT);
       if (!res.ok) {
         const json = await res.json();
         return { data: null, error: json.message || json.msg || JSON.stringify(json) };

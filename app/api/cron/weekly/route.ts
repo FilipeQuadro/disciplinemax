@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
+import { logger } from "@/lib/logger";
+
+const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://disciplinemax.onrender.com";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -95,13 +98,13 @@ export async function GET(req: Request) {
         message += `\n`;
       }
 
-      message += `👉 disciplinemax.onrender.com`;
+      message += `👉 ${APP_URL}`;
 
       try {
         await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
         telegramSent++;
       } catch (e) {
-        console.error("Weekly report failed for", userId, e);
+        logger.error("Weekly report failed", { userId, error: String(e) });
       }
     }
 
@@ -124,9 +127,10 @@ export async function GET(req: Request) {
         }
       }
     } catch (e) {
-      console.error("Weekly Web Push failed for", userId, e);
+      logger.error("Weekly Web Push failed", { userId, error: String(e) });
     }
   }
 
+  logger.info("Weekly cron run completed", { telegramSent, pushSent, date: todayStr, userCount: (allSettings || []).length });
   return NextResponse.json({ ok: true, telegramSent, pushSent, date: todayStr });
 }

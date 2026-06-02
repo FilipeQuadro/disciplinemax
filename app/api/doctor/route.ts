@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { logger } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
     const apiKey = process.env.GEMINI_API_KEY ||
       (await sb.from("user_settings").select("gemini_api_key").limit(1).maybeSingle()).data?.gemini_api_key;
     if (apiKey) {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
         {
           method: "POST",
@@ -65,7 +67,8 @@ export async function GET(req: Request) {
             contents: [{ parts: [{ text: "ping" }] }],
             generationConfig: { maxOutputTokens: 5, temperature: 0.1 },
           }),
-        }
+        },
+        15_000
       );
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
@@ -89,9 +92,7 @@ export async function GET(req: Request) {
   try {
     const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
     if (settings?.telegram_bot_token) {
-      const res = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetchWithTimeout(`https://api.telegram.org/bot${settings.telegram_bot_token}/getMe`, {}, 10_000);
       const data = await res.json();
       report.services.telegram = {
         ok: data.ok === true,
@@ -163,7 +164,7 @@ export async function GET(req: Request) {
 
   // 7. Ollama (won't work on Render, but check anyway)
   try {
-    const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(3000) });
+    const res = await fetchWithTimeout("http://localhost:11434/api/tags", {}, 3_000);
     const data = await res.json();
     report.services.ollama = { ok: true, detail: data.models?.map((m: any) => m.name).join(", ") || "no models" };
   } catch {
@@ -180,11 +181,11 @@ export async function GET(req: Request) {
       const { data: settings } = await sb.from("user_settings").select("telegram_bot_token, telegram_chat_id").limit(1).maybeSingle();
       if (settings?.telegram_bot_token && settings?.telegram_chat_id) {
         const alertMsg = `🚨 *DisciplinaMax Auto-Diagnóstico*\n\n❌ ${report.issues.length} problema(s) encontrado(s):\n${report.issues.map((i) => `• ${i}`).join("\n")}\n\n⏰ ${report.timestamp}`;
-        await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {
+        await fetchWithTimeout(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ chat_id: settings.telegram_chat_id, text: alertMsg, parse_mode: "Markdown" }),
-        });
+        }, 10_000);
       }
     } catch { /* don't fail the diagnostic if alert fails */ }
   }

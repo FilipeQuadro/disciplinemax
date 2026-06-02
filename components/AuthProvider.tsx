@@ -8,6 +8,8 @@ import type { User } from "@supabase/supabase-js";
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  timedOut: boolean;
+  retry: () => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -16,6 +18,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  timedOut: false,
+  retry: () => {},
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
@@ -24,13 +28,17 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
   const { setUserId, clearUserData } = useStore();
 
-  useEffect(() => {
+  function initSession() {
     if (!supabase) { setLoading(false); return; }
 
-    // Safety timeout — if getSession hangs (network issue), stop loading after 8s
+    setLoading(true);
+    setTimedOut(false);
+
     const safetyTimeout = setTimeout(() => {
+      setTimedOut(true);
       setLoading(false);
     }, 8000);
 
@@ -40,10 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       setUserId(uid);
       setLoading(false);
+      setTimedOut(false);
     }).catch(() => {
       clearTimeout(safetyTimeout);
       setLoading(false);
+      setTimedOut(true);
     });
+
+    return safetyTimeout;
+  }
+
+  useEffect(() => {
+    if (!supabase) { setLoading(false); return; }
+
+    const safetyTimeout = initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const newUid = session?.user?.id ?? null;
@@ -58,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      clearTimeout(safetyTimeout);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [setUserId, clearUserData]);
@@ -101,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, timedOut, retry: initSession, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

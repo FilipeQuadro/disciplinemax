@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { callOllama } from "@/lib/ai";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 const STATIC_MESSAGES = [
   "Hoje é o primeiro dia do resto da sua jornada. Comece agora! 🚀",
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     const apiKey = await getApiKey();
     if (apiKey) {
       try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
           {
             method: "POST",
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
             }),
-          }
+          },
+          15_000
         );
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || null;

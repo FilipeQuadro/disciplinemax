@@ -1,9 +1,11 @@
+const path = require("path");
+
 module.exports = {
   apps: [
     {
       name: "disciplina-app",
       script: "server.js",
-      cwd: "C:/Users/quadr/Downloads/disciplina-app/disciplina-app",
+      cwd: __dirname,
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",

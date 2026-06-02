@@ -4,6 +4,9 @@ import { sendTelegramMessage } from "@/lib/telegram";
 import { getMotivationalMessage, getBibleVerseOfDay } from "@/lib/ai";
 import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
+import { logger } from "@/lib/logger";
+
+const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://disciplinemax.onrender.com";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -60,10 +63,10 @@ export async function GET(req: Request) {
   if (brtHour === 0 && currentMinutes < 30) {
     try {
       const { error: resetErr } = await supabase.from("books").update({ pages_read_today: 0 }).neq("pages_read_today", 0);
-      if (resetErr) console.error("Daily pages reset failed:", resetErr);
-      else console.log("Daily pages_read_today reset done at", brtTime);
+      if (resetErr) logger.error("Daily pages reset failed", { error: resetErr.message });
+      else logger.info("Daily pages_read_today reset done", { brtTime });
     } catch (e) {
-      console.error("Daily pages reset error:", e);
+      logger.error("Daily pages reset error", { error: String(e) });
     }
   }
 
@@ -156,7 +159,7 @@ export async function GET(req: Request) {
 
       tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
       tgMessage += `💡 _${motivational}_\n\n`;
-      tgMessage += `👉 disciplinemax.onrender.com`;
+      tgMessage += `👉 ${APP_URL}`;
     } else if (booksGoalMet && bibleGoalMet) {
       tgMessage = `🎉 *Parabéns! Você completou todas as metas de hoje!* 🎉\n\n`;
       tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
@@ -182,7 +185,7 @@ export async function GET(req: Request) {
 
       tgMessage += `📜 _"${verse.verse}"_ — ${verse.reference}\n\n`;
       tgMessage += `💪 _${motivational}_\n\n`;
-      tgMessage += `👉 disciplinemax.onrender.com`;
+      tgMessage += `👉 ${APP_URL}`;
     }
 
     // ── Enviar Telegram ──
@@ -190,9 +193,9 @@ export async function GET(req: Request) {
       try {
         const tgResult = await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, tgMessage);
         if (tgResult.ok) telegramSent++;
-        else console.error("Telegram send failed:", tgResult.error);
+        else logger.error("Telegram send failed", { userId, error: tgResult.error });
       } catch (e) {
-        console.error("Telegram send failed:", e);
+        logger.error("Telegram send failed", { userId, error: String(e) });
       }
     }
 
@@ -219,9 +222,10 @@ export async function GET(req: Request) {
         }
       }
     } catch (e) {
-      console.error("Web Push send failed:", e);
+      logger.error("Web Push send failed", { userId, error: String(e) });
     }
   }
 
+  logger.info("Cron run completed", { telegramSent, pushSent, skipped, brtTime, userCount: (allSettings || []).length });
   return NextResponse.json({ ok: true, telegramSent, pushSent, skipped, brtTime });
 }

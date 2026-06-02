@@ -22,7 +22,8 @@ const ADMIN_ONLY_TABLES = new Set(["admin_users", "blocked_users"]);
 // Tables where upsert should conflict on user_id instead of primary key
 const UPSERT_USER_SCOPED = new Set(["user_settings", "bible_goals", "user_plans"]);
 
-// Simple in-memory rate limiter
+// Per-user rate limiter — resets on deploy (acceptable for current scale).
+// See middleware.ts for rationale on in-memory vs persistent approach.
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 60;

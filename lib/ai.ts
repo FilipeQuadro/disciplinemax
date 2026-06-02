@@ -1,6 +1,11 @@
 // Integração com Google Gemini AI (gratuito)
 // Chave gratuita: https://aistudio.google.com/app/apikey
 
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+
+const GEMINI_TIMEOUT = 15_000;
+const OLLAMA_TIMEOUT = 30_000;
+
 export async function getMotivationalMessage(context: {
   streak: number;
   booksRead: number;
@@ -58,7 +63,7 @@ async function getGeminiKeyFromDB(): Promise<string | null> {
 
 async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
       {
         method: "POST",
@@ -67,7 +72,8 @@ async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
         }),
-      }
+      },
+      GEMINI_TIMEOUT
     );
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
@@ -76,12 +82,11 @@ async function callGeminiWithKey(prompt: string, apiKey: string): Promise<string
 
 export async function callOllama(prompt: string, model = "llama3.2:3b"): Promise<string | null> {
   try {
-    const res = await fetch("http://localhost:11434/api/generate", {
+    const res = await fetchWithTimeout("http://localhost:11434/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt, stream: false, options: { num_predict: 100, temperature: 0.8 } }),
-      signal: AbortSignal.timeout(30000),
-    });
+    }, OLLAMA_TIMEOUT);
     const data = await res.json();
     return data.response?.trim() || null;
   } catch { return null; }

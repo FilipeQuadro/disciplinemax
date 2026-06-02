@@ -4,25 +4,25 @@ import { useAuth } from "@/components/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { dataFetch } from "@/lib/data-fetch";
-import { ShieldOff } from "lucide-react";
+import { ShieldOff, RefreshCw } from "lucide-react";
 
 const PUBLIC_PATHS = ["/login"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, timedOut, retry, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [blocked, setBlocked] = useState(false);
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p);
 
   useEffect(() => {
-    if (!loading && !user && !isPublic) {
+    if (!loading && !timedOut && !user && !isPublic) {
       router.replace("/login");
     }
-    if (!loading && user && isPublic) {
+    if (!loading && !timedOut && user && isPublic) {
       router.replace("/");
     }
-  }, [user, loading, router, isPublic]);
+  }, [user, loading, timedOut, router, isPublic]);
 
   useEffect(() => {
     async function checkBlocked() {
@@ -39,6 +39,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
     if (user) checkBlocked();
   }, [user]);
+
+  if (timedOut && !user) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: "#0B0E14" }}>
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm px-6">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{ background: "rgba(212,175,55,0.1)" }}>
+            <RefreshCw size={28} style={{ color: "#D4AF37" }} />
+          </div>
+          <h2 className="text-xl font-serif font-bold text-white">Conexão lenta</h2>
+          <p className="text-sm" style={{ color: "#8B95A5" }}>Não foi possível verificar sua sessão. Verifique sua conexão e tente novamente.</p>
+          <button onClick={retry} className="btn-primary text-sm mt-2">Tentar novamente</button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+
 export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
@@ -12,7 +14,7 @@ export async function sendTelegramMessage(
   }
 
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -20,7 +22,7 @@ export async function sendTelegramMessage(
       text: message,
       parse_mode: "Markdown",
     }),
-  });
+  }, 10_000);
 
   const result = await response.json();
   if (!response.ok || !result.ok) {
@@ -38,11 +40,11 @@ export async function sendTelegramMessage(
     }
     if (desc.includes("can't parse")) {
       // Retry without Markdown formatting
-      const retryRes = await fetch(url, {
+      const retryRes = await fetchWithTimeout(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text: message.replace(/[*_`\[\]]/g, "") }),
-      });
+      }, 10_000);
       const retryResult = await retryRes.json();
       if (retryResult.ok) return { ok: true };
       return { ok: false, error: "Erro de formatação na mensagem. Tente novamente." };

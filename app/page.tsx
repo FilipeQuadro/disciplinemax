@@ -227,8 +227,9 @@ export default function DashboardPage() {
   }, [allGoalsMet, pagesReadToday, totalPagesGoal, bibleGoalMet]);
 
   function shareProgress() {
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://disciplinemax.onrender.com";
     const bibleStatus = bibleGoal ? `${todayBibleChapters}/${bibleGoal.daily_chapters} cap.` : "✓";
-    const text = `🔥 DisciplinaMax — Meu progresso hoje!\n\n📚 ${pagesReadToday}/${totalPagesGoal} páginas\n✝️ Bíblia: ${bibleStatus}\n🍅 ${pomodoroCount} pomodoros\n🔥 ${streak} dias de streak\n\n👉 disciplinemax.onrender.com`;
+    const text = `🔥 DisciplinaMax — Meu progresso hoje!\n\n📚 ${pagesReadToday}/${totalPagesGoal} páginas\n✝️ Bíblia: ${bibleStatus}\n🍅 ${pomodoroCount} pomodoros\n🔥 ${streak} dias de streak\n\n👉 ${appUrl}`;
     if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({ title: "DisciplinaMax — Progresso", text }).catch(() => {});
     } else if (typeof navigator !== "undefined" && navigator.clipboard) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { getAdminUsers } from "@/lib/admin-users-cache";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,16 +22,11 @@ export async function GET(req: Request) {
     const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get("per_page") || "50")));
     const search = url.searchParams.get("search")?.trim() || "";
 
-    // 1. Fetch all user IDs + emails via Supabase Auth Admin API
-    const { data: authData, error: authError } = await sb.auth.admin.listUsers();
-    if (authError) {
-      return NextResponse.json({ error: `Auth API error: ${authError.message}` }, { status: 500 });
-    }
+    // 1. Fetch all user IDs + emails via cached Auth Admin API
+    const allAuthUsers = await getAdminUsers();
 
-    // Build email map from auth.users
     const emailMap = new Map<string, string>();
     const nameMap = new Map<string, string>();
-    const allAuthUsers = authData?.users || [];
     for (const u of allAuthUsers) {
       emailMap.set(u.id, u.email || "");
       nameMap.set(u.id, u.user_metadata?.name || "");
