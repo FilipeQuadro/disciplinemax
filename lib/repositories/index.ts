@@ -5,3 +5,4 @@ export { SettingsRepository } from "./settings-repository";
 export { UserRepository } from "./user-repository";
 export { NotificationRepository } from "./notification-repository";
 export { SubscriptionRepository } from "./subscription-repository";
+export { NotificationQueueRepository, RetryService } from "./notification-queue-repository";

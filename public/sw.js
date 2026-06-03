@@ -1,7 +1,7 @@
-// Service Worker — DisciplinaMax v4
-// Offline-first shell + aggressive cache busting for JS/CSS
-const CACHE_NAME = "disciplina-v4";
-const SHELL_CACHE = "disciplina-shell-v4";
+// Service Worker — DisciplinaMax v5
+// Improved offline experience with faster reconnection
+const CACHE_NAME = "disciplina-v5";
+const SHELL_CACHE = "disciplina-shell-v5";
 
 // Assets to pre-cache on install (static, never change)
 const PRE_CACHE = [

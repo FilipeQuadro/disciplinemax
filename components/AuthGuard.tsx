@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { ShieldOff, RefreshCw } from "lucide-react";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/onboarding"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, timedOut, retry, signOut } = useAuth();

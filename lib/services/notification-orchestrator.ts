@@ -3,6 +3,8 @@ import { NotificationDedupService } from "./notification-dedup-service";
 import { NotificationDeliveryService } from "./notification-delivery-service";
 import { NotificationHistoryService } from "./notification-history-service";
 import { NotificationRepository } from "@/lib/repositories/notification-repository";
+import { NotificationQueueRepository, RetryService } from "@/lib/repositories/notification-queue-repository";
+import { EventTrackingService, EVENT_TYPES } from "@/lib/repositories/event-tracking-repository";
 import { SubscriptionRepository } from "@/lib/repositories/subscription-repository";
 import { logger } from "@/lib/logger";
 import { MetricsService } from "@/lib/metrics";
@@ -36,6 +38,7 @@ export interface OrchestratorWeeklyUserData {
 export class NotificationOrchestrator {
   private dedupService: NotificationDedupService;
   private deliveryService: NotificationDeliveryService;
+  private eventService: EventTrackingService;
 
   constructor(
     notificationRepo?: NotificationRepository,
@@ -43,8 +46,10 @@ export class NotificationOrchestrator {
   ) {
     const nRepo = notificationRepo ?? new NotificationRepository();
     const sRepo = subscriptionRepo ?? new SubscriptionRepository();
+    const qRepo = new NotificationQueueRepository();
     this.dedupService = new NotificationDedupService(nRepo);
-    this.deliveryService = new NotificationDeliveryService(sRepo);
+    this.deliveryService = new NotificationDeliveryService(sRepo, qRepo);
+    this.eventService = new EventTrackingService();
   }
 
   /**
@@ -100,6 +105,14 @@ export class NotificationOrchestrator {
       telegramSent: result.telegramSent,
       pushSent: result.pushSent,
     });
+
+    // Track event
+    this.eventService.track(userId, EVENT_TYPES.NOTIFICATION_SENT, {
+      matchedTime: schedule.matchedTime,
+      telegramSent: result.telegramSent,
+      pushSent: result.pushSent,
+      isMorning,
+    }).catch(() => { /* best effort */ });
 
     return { status: "sent", telegramSent: result.telegramSent, pushSent: result.pushSent };
   }

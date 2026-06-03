@@ -4,8 +4,11 @@ import { initRequestId, logger } from "@/lib/logger";
 import { SettingsRepository } from "@/lib/repositories/settings-repository";
 import { UserRepository } from "@/lib/repositories/user-repository";
 import { NotificationRepository } from "@/lib/repositories/notification-repository";
+import { NotificationQueueRepository, RetryService } from "@/lib/repositories/notification-queue-repository";
+import { SubscriptionRepository } from "@/lib/repositories/subscription-repository";
 import { NotificationOrchestrator } from "@/lib/services/notification-orchestrator";
 import { NotificationSchedulerService } from "@/lib/services/notification-scheduler-service";
+import { NotificationDeliveryService } from "@/lib/services/notification-delivery-service";
 import { MetricsService, METRICS } from "@/lib/metrics";
 import { AlertService } from "@/lib/alert";
 
@@ -85,11 +88,44 @@ export async function GET(req: Request) {
     // Check alerts after run
     await AlertService.checkAlerts();
 
+    // Process notification retries
+    let retryResult = { retried: 0, delivered: 0, deadLettered: 0, failed: 0 };
+    try {
+      const queueRepo = new NotificationQueueRepository();
+      const deliveryService = new NotificationDeliveryService(new SubscriptionRepository(), queueRepo);
+
+      retryResult = await RetryService.processRetries(queueRepo, async (entry) => {
+        if (entry.channel === "telegram") {
+          const payload = entry.payload as { message?: string; bot_token?: string; chat_id?: string };
+          if (payload.bot_token && payload.chat_id && payload.message) {
+            const ok = await deliveryService.sendTelegram(payload.bot_token, payload.chat_id, payload.message, entry.user_id);
+            return ok;
+          }
+          return false;
+        }
+        if (entry.channel === "push") {
+          const payload = entry.payload as { title?: string; body?: string; tag?: string };
+          if (payload.title && payload.body) {
+            const result = await deliveryService.sendPushToUser(entry.user_id, payload as { title: string; body: string; tag?: string });
+            return result.sent > 0;
+          }
+          return false;
+        }
+        return false;
+      });
+
+      // Cleanup old dead-letter entries
+      await queueRepo.cleanupOld();
+    } catch (e: unknown) {
+      logger.error("Retry processing failed", { error: String(e) });
+    }
+
     return NextResponse.json({
       ok: true,
       telegramSent: result.telegramSent,
       pushSent: result.pushSent,
       skipped: result.skipped,
+      retries: retryResult,
       brtTime: `${brtHour}:${currentMinutes - brtHour * 60}`,
       duration_ms: duration,
     });

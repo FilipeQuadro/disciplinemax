@@ -14,6 +14,7 @@ import {
   BarChart3, Wifi, WifiOff, Copy, ExternalLink,
   Bell, MessageSquare, Database, Cpu, Globe, Key,
   CalendarDays, TrendingDown, UserCheck, UserX,
+  PieChart, Layers, ArrowUpRight, ArrowDownRight, Percent,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { format } from "date-fns";
@@ -68,6 +69,25 @@ interface DiagnosticsData {
   summary: { healthy: number; warnings: number; errors: number; disabled: number };
 }
 
+interface AnalyticsData {
+  daily_active_users: number;
+  weekly_active_users: number;
+  monthly_active_users: number;
+  active_streak_users: number;
+  notifications_sent: number;
+  notifications_delivered: number;
+  notifications_failed: number;
+  average_streak: number;
+  average_daily_pages: number;
+  average_daily_pomodoros: number;
+  retention_7d: number;
+  retention_30d: number;
+  total_users: number;
+  new_users_today: number;
+  new_users_this_week: number;
+  captured_at: string;
+}
+
 // ── Main Component ─────────────────────────────────────────────
 export default function AdminPage() {
   const { user } = useAuth();
@@ -77,7 +97,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(null);
-  const [tab, setTab] = useState<"overview" | "users" | "diagnostics" | "audit" | "plans">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "diagnostics" | "audit" | "plans" | "analytics">("overview");
   const [confirmAction, setConfirmAction] = useState<{ userId: string; action: "block" | "unblock" | "reset_data" | "delete" | "add_admin" | "remove_admin" | "change_plan" } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -87,6 +107,7 @@ export default function AdminPage() {
   const [auditFilter, setAuditFilter] = useState("");
   const [expandedDiagnostic, setExpandedDiagnostic] = useState<string | null>(null);
   const [systemHealth, setSystemHealth] = useState<"healthy" | "warning" | "error" | "loading">("loading");
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => { checkAdmin(); }, [user]);
 
@@ -144,6 +165,17 @@ export default function AdminPage() {
     } catch { toast.error("Falha ao carregar diagnósticos"); }
   }
 
+  async function loadAnalytics() {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/admin/analytics?fresh=true`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data.analytics);
+      }
+    } catch { toast.error("Falha ao carregar analytics"); }
+  }
+
   async function loadUsersPage(page: number) {
     try {
       const headers = await getAuthHeaders();
@@ -189,6 +221,7 @@ export default function AdminPage() {
 
   const tabs = [
     { key: "overview" as const, label: "Visão Geral", icon: TrendingUp },
+    { key: "analytics" as const, label: "Analytics", icon: PieChart },
     { key: "users" as const, label: "Usuários", icon: Users },
     { key: "diagnostics" as const, label: "Diagnóstico", icon: Activity },
     { key: "audit" as const, label: "Auditoria", icon: FileText },
@@ -216,7 +249,7 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-2xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
         {tabs.map((t) => (
-          <button key={t.key} onClick={() => { setTab(t.key); if (t.key === "diagnostics") loadDiagnostics(); }}
+          <button key={t.key} onClick={() => { setTab(t.key); if (t.key === "diagnostics") loadDiagnostics(); if (t.key === "analytics") loadAnalytics(); }}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 min-w-0 whitespace-nowrap px-2")}
             style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "#F0F0F0" : "#555E6E" }}>
             <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
@@ -662,6 +695,122 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Analytics */}
+      {tab === "analytics" && (
+        <div className="space-y-4 stagger-children">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <PieChart size={16} style={{ color: "#D4AF37" }} /> Analytics de Produto
+            </h3>
+            <button onClick={loadAnalytics} className="btn-ghost text-xs flex items-center gap-2">
+              <RefreshCw size={12} /> Atualizar
+            </button>
+          </div>
+
+          {analyticsData ? (
+            <>
+              {/* Active Users */}
+              <div className="card">
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                  <Users size={12} /> Usuários Ativos
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <AnalyticsMetric icon={<Users size={14} style={{ color: "#D4AF37" }} />} label="DAU" value={analyticsData.daily_active_users} sub="hoje" />
+                  <AnalyticsMetric icon={<CalendarDays size={14} style={{ color: "#7C6BBD" }} />} label="WAU" value={analyticsData.weekly_active_users} sub="semana" />
+                  <AnalyticsMetric icon={<Layers size={14} style={{ color: "#3ABAB4" }} />} label="MAU" value={analyticsData.monthly_active_users} sub="mês" />
+                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "#E8844A" }} />} label="Streak Ativos" value={analyticsData.active_streak_users} sub="streak ≥3" />
+                </div>
+              </div>
+
+              {/* Retention & Growth */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="card">
+                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                    <Percent size={12} /> Retenção
+                  </h4>
+                  <div className="space-y-3">
+                    <RetentionBar label="7 dias" value={analyticsData.retention_7d} />
+                    <RetentionBar label="30 dias" value={analyticsData.retention_30d} />
+                  </div>
+                </div>
+                <div className="card">
+                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                    <UserPlus size={12} /> Crescimento
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <AnalyticsMetric icon={<ArrowUpRight size={14} style={{ color: "#3ABAB4" }} />} label="Novos Hoje" value={analyticsData.new_users_today} />
+                    <AnalyticsMetric icon={<TrendingUp size={14} style={{ color: "#7C6BBD" }} />} label="Novos Semana" value={analyticsData.new_users_this_week} />
+                  </div>
+                  <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: "#555E6E" }}>Total de Usuários</span>
+                      <span className="text-lg font-bold text-white">{analyticsData.total_users}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (analyticsData.weekly_active_users / Math.max(analyticsData.total_users, 1)) * 100)}%`, background: "linear-gradient(90deg, #7C6BBD, #D4AF37)" }} />
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px]" style={{ color: "#555E6E" }}>Engajamento semanal</span>
+                      <span className="text-[10px]" style={{ color: "#8B95A5" }}>{analyticsData.total_users > 0 ? Math.round((analyticsData.weekly_active_users / analyticsData.total_users) * 100) : 0}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Averages */}
+              <div className="card">
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                  <BarChart3 size={12} /> Médias Diárias
+                </h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "#E8844A" }} />} label="Streak Médio" value={analyticsData.average_streak} sub="dias" />
+                  <AnalyticsMetric icon={<BookOpen size={14} style={{ color: "#7C6BBD" }} />} label="Páginas/Dia" value={analyticsData.average_daily_pages} />
+                  <AnalyticsMetric icon={<Timer size={14} style={{ color: "#D94F4F" }} />} label="Pomodoros/Dia" value={analyticsData.average_daily_pomodoros} />
+                </div>
+              </div>
+
+              {/* Notifications */}
+              <div className="card">
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                  <Bell size={12} /> Notificações
+                </h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <AnalyticsMetric icon={<Bell size={14} style={{ color: "#3ABAB4" }} />} label="Enviadas" value={analyticsData.notifications_sent} />
+                  <AnalyticsMetric icon={<CheckCircle size={14} style={{ color: "#D4AF37" }} />} label="Entregues" value={analyticsData.notifications_delivered} />
+                  <AnalyticsMetric icon={<AlertTriangle size={14} style={{ color: "#D94F4F" }} />} label="Falharam" value={analyticsData.notifications_failed} />
+                </div>
+                {analyticsData.notifications_sent > 0 && (
+                  <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs" style={{ color: "#555E6E" }}>Taxa de entrega</span>
+                      <span className="text-sm font-semibold" style={{ color: "#3ABAB4" }}>
+                        {Math.round((analyticsData.notifications_delivered / analyticsData.notifications_sent) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${(analyticsData.notifications_delivered / analyticsData.notifications_sent) * 100}%`, background: "#3ABAB4" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Last updated */}
+              <div className="text-center">
+                <p className="text-[10px]" style={{ color: "#555E6E" }}>
+                  Última atualização: {analyticsData.captured_at ? format(new Date(analyticsData.captured_at), "dd/MM/yyyy HH:mm:ss") : "—"}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="card text-center py-12">
+              <PieChart size={40} className="mx-auto mb-4" style={{ color: "#555E6E" }} />
+              <p className="text-sm mb-2" style={{ color: "#8B95A5" }}>Carregando analytics de produto...</p>
+              <button onClick={loadAnalytics} className="btn-primary text-sm mt-2">Carregar Analytics</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* User Detail Modal */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
@@ -940,6 +1089,36 @@ function DiagnosticCard({ check, expanded, onToggle }: { check: DiagnosticCheck;
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AnalyticsMetric({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number; sub?: string }) {
+  return (
+    <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+      <div className="flex items-center gap-2 mb-1">
+        {icon}
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>{label}</span>
+      </div>
+      <p className="text-xl font-bold text-white">{typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(1)) : value}</p>
+      {sub && <p className="text-[10px] mt-0.5" style={{ color: "#555E6E" }}>{sub}</p>}
+    </div>
+  );
+}
+
+function RetentionBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs" style={{ color: "#8B95A5" }}>{label}</span>
+        <span className="text-sm font-semibold" style={{ color: value >= 40 ? "#3ABAB4" : value >= 20 ? "#E8844A" : "#D94F4F" }}>{value}%</span>
+      </div>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{
+          width: `${value}%`,
+          background: value >= 40 ? "#3ABAB4" : value >= 20 ? "#E8844A" : "#D94F4F",
+        }} />
+      </div>
     </div>
   );
 }

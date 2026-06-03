@@ -1,6 +1,7 @@
 import { sendTelegramMessage } from "@/lib/telegram";
 import { sendWebPush } from "@/lib/web-push-server";
 import { SubscriptionRepository } from "@/lib/repositories/subscription-repository";
+import { NotificationQueueRepository } from "@/lib/repositories/notification-queue-repository";
 import type { PushSubscription } from "@/lib/repositories/subscription-repository";
 import { logger } from "@/lib/logger";
 import { MetricsService, METRICS } from "@/lib/metrics";
@@ -19,9 +20,11 @@ export interface DeliveryResult {
  */
 export class NotificationDeliveryService {
   private subRepo: SubscriptionRepository;
+  private queueRepo: NotificationQueueRepository;
 
-  constructor(subRepo: SubscriptionRepository) {
+  constructor(subRepo: SubscriptionRepository, queueRepo?: NotificationQueueRepository) {
     this.subRepo = subRepo;
+    this.queueRepo = queueRepo ?? new NotificationQueueRepository();
   }
 
   /**
@@ -123,13 +126,33 @@ export class NotificationDeliveryService {
         userId
       );
       if (ok) result.telegramSent++;
-      else result.telegramErrors++;
+      else {
+        result.telegramErrors++;
+        // Enqueue for retry
+        try {
+          await this.queueRepo.enqueue(userId, "telegram", {
+            message: telegramMessage,
+            bot_token: settings.telegram_bot_token,
+            chat_id: settings.telegram_chat_id,
+          });
+        } catch { /* best effort */ }
+      }
     }
 
     // Web Push
     const pushResult = await this.sendPushToUser(userId, pushPayload);
     result.pushSent = pushResult.sent;
     result.expiredEndpoints = pushResult.expiredEndpoints;
+
+    // If push had failures and user has subscriptions, enqueue for retry
+    if (pushResult.sent === 0 && pushResult.expiredEndpoints.length === 0) {
+      try {
+        const subs = await this.subRepo.getWebSubscriptions(userId);
+        if (subs.length > 0) {
+          await this.queueRepo.enqueue(userId, "push", pushPayload);
+        }
+      } catch { /* best effort */ }
+    }
 
     return result;
   }

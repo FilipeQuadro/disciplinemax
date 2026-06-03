@@ -1,12 +1,15 @@
 {
   "name": "DisciplinaMax – Mentor de Disciplina",
   "short_name": "DisciplinaMax",
-  "description": "Seu mentor de leitura, foco e disciplina diária",
-  "start_url": "/",
+  "description": "Seu mentor de leitura, foco e disciplina diária — leia livros, estude a Bíblia e mantenha sua streak",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#0B0E14",
   "theme_color": "#D4AF37",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -34,7 +37,35 @@
     }
   ],
   "categories": ["productivity", "education", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Registrar Leitura",
+      "short_name": "Livros",
+      "url": "/livros?source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pomodoro",
+      "short_name": "Foco",
+      "url": "/pomodoro?source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Bíblia",
+      "short_name": "Bíblia",
+      "url": "/biblia?source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "screenshots": [],
   "related_applications": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "/livros",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text"
+    }
+  }
 }
