@@ -29,6 +29,16 @@ export function generateRequestId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Extract Request-Id from request headers and set it in the logger context.
+ * Call this at the start of every API route handler.
+ */
+export function initRequestId(req: Request): string {
+  const id = req.headers.get("x-request-id") || generateRequestId();
+  setRequestId(id);
+  return id;
+}
+
 function log(level: LogLevel, message: string, data?: Record<string, unknown>) {
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),

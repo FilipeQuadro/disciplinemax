@@ -23,14 +23,6 @@ export class SubscriptionRepository {
     return (data as PushSubscription[]) ?? [];
   }
 
-  async getAllWebSubscriptions(): Promise<Array<PushSubscription & { user_id: string }>> {
-    const { data } = await this.client
-      .from("notification_subscriptions")
-      .select("user_id, endpoint, p256dh, auth")
-      .eq("platform", "web");
-    return (data as Array<PushSubscription & { user_id: string }>) ?? [];
-  }
-
   async removeExpiredSubscription(endpoint: string): Promise<boolean> {
     const { error } = await this.client
       .from("notification_subscriptions")

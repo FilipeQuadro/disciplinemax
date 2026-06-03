@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { RateLimitService } from "@/lib/rate-limit";
+import { initRequestId } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function GET(req: Request) {
+  initRequestId(req);
+
+  const rateLimited = RateLimitService.checkRequest(req, "admin");
+  if (rateLimited) return rateLimited;
+
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }

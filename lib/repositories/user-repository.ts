@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/db-client";
-import { MetricsService, METRICS } from "@/lib/metrics";
+import { MetricsService } from "@/lib/metrics";
+import { ApplicationCacheService } from "@/lib/cache";
 import type { Book, BibleGoal, DailyStats, PomodoroSession } from "@/lib/supabase";
 
 export class UserRepository {
@@ -11,11 +12,15 @@ export class UserRepository {
   }
 
   async getAllBooks(): Promise<Book[]> {
-    return MetricsService.measure("user_getAllBooks", async () => {
-      const { data, error } = await this.client.from("books").select("*");
-      if (error) return [];
-      return (data as Book[]) ?? [];
-    }, { table: "books" });
+    return ApplicationCacheService.getOrSet(
+      "all_books",
+      () => MetricsService.measure("user_getAllBooks", async () => {
+        const { data, error } = await this.client.from("books").select("*");
+        if (error) return [];
+        return (data as Book[]) ?? [];
+      }, { table: "books" }),
+      "user_books"
+    );
   }
 
   async getBooksByUserId(userId: string): Promise<Book[]> {
@@ -29,6 +34,8 @@ export class UserRepository {
   }
 
   async resetDailyPages(): Promise<number> {
+    // Invalidate cache after mutation
+    ApplicationCacheService.invalidateNamespace("user_books");
     return MetricsService.measure("user_resetDailyPages", async () => {
       const { error } = await this.client
         .from("books")
@@ -39,10 +46,14 @@ export class UserRepository {
   }
 
   async getAllBibleGoals(): Promise<BibleGoal[]> {
-    return MetricsService.measure("user_getAllGoals", async () => {
-      const { data } = await this.client.from("bible_goals").select("*");
-      return (data as BibleGoal[]) ?? [];
-    }, { table: "bible_goals" });
+    return ApplicationCacheService.getOrSet(
+      "all_bible_goals",
+      () => MetricsService.measure("user_getAllGoals", async () => {
+        const { data } = await this.client.from("bible_goals").select("*");
+        return (data as BibleGoal[]) ?? [];
+      }, { table: "bible_goals" }),
+      "user_bible_goals"
+    );
   }
 
   async getBibleGoalByUserId(userId: string): Promise<BibleGoal | null> {
@@ -57,13 +68,18 @@ export class UserRepository {
   }
 
   async getTodayStats(today: string): Promise<DailyStats[]> {
-    return MetricsService.measure("user_getTodayStats", async () => {
-      const { data } = await this.client
-        .from("daily_stats")
-        .select("*")
-        .eq("date", today);
-      return (data as DailyStats[]) ?? [];
-    }, { table: "daily_stats" });
+    return ApplicationCacheService.getOrSet(
+      `stats:${today}`,
+      () => MetricsService.measure("user_getTodayStats", async () => {
+        const { data } = await this.client
+          .from("daily_stats")
+          .select("*")
+          .eq("date", today);
+        return (data as DailyStats[]) ?? [];
+      }, { table: "daily_stats" }),
+      "user_stats",
+      60_000
+    );
   }
 
   async getWeeklyStats(userId: string, fromDate: string, toDate: string): Promise<DailyStats[]> {

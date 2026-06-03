@@ -36,12 +36,4 @@ export class NotificationRepository {
       .lt("sent_at", olderThan);
   }
 
-  async getRecent(limit = 10): Promise<Array<{ sent_at: string; notif_key: string }>> {
-    const { data } = await this.client
-      .from("notifications_sent")
-      .select("sent_at, notif_key")
-      .order("sent_at", { ascending: false })
-      .limit(limit);
-    return (data as Array<{ sent_at: string; notif_key: string }>) ?? [];
-  }
 }

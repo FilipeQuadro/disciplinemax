@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { booksRequestSchema } from "@/lib/schemas";
+import { initRequestId } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -13,6 +14,7 @@ function getAdminClient(): SupabaseClient {
 // POST /api/books — insert, update, or delete (uses service_role to bypass RLS)
 // Requires authenticated user — validates via Authorization header
 export async function POST(req: NextRequest) {
+  initRequestId(req);
   if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }

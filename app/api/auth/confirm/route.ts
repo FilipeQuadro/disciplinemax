@@ -3,8 +3,14 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/admin-auth";
 import { authConfirmSchema } from "@/lib/schemas";
+import { RateLimitService } from "@/lib/rate-limit";
+import { initRequestId } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
+  initRequestId(req);
+
+  const rateLimited = RateLimitService.checkRequest(req, "auth");
+  if (rateLimited) return rateLimited;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { generateRequestId } from "@/lib/logger";
 
 // In-memory rate limiter — resets on deploy.
 // Edge Runtime cannot access filesystem; DB-backed limiting would add latency to every request.
@@ -87,6 +88,10 @@ export function middleware(request: NextRequest) {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
   }
+
+  // Propagate or generate Request-Id for tracing
+  const requestId = request.headers.get("x-request-id") || generateRequestId();
+  response.headers.set("X-Request-Id", requestId);
 
   return response;
 }

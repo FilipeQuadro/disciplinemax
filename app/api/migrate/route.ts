@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyCronSecret } from "@/lib/admin-auth";
+import { initRequestId } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -11,6 +12,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
  * Requires CRON_SECRET or admin auth.
  */
 export async function GET(req: Request) {
+  initRequestId(req);
+
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }

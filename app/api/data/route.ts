@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/admin-auth";
 import { dataFetchSchema } from "@/lib/schemas";
+import { initRequestId } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -53,6 +54,8 @@ function apiResponse(data: Record<string, unknown>, status = 200) {
 }
 
 export async function POST(req: Request) {
+  initRequestId(req);
+
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     return apiResponse({ error: "Not configured" }, 500);
   }

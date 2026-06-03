@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
-import { logger } from "@/lib/logger";
+import { initRequestId, logger } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function GET(req: Request) {
+  initRequestId(req);
+
   const { isAdmin } = await verifyAdminOrCron(req);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

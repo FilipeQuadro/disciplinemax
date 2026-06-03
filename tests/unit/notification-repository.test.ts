@@ -8,8 +8,6 @@ const mockDelete = vi.fn();
 const mockEq = vi.fn();
 const mockLt = vi.fn();
 const mockMaybeSingle = vi.fn();
-const mockOrder = vi.fn();
-const mockLimit = vi.fn();
 
 function createMockClient() {
   const chain = {
@@ -19,8 +17,6 @@ function createMockClient() {
     eq: mockEq,
     lt: mockLt,
     maybeSingle: mockMaybeSingle,
-    order: mockOrder,
-    limit: mockLimit,
   };
   // Setup chaining
   mockSelect.mockReturnValue(chain);
@@ -29,8 +25,6 @@ function createMockClient() {
   mockEq.mockReturnValue(chain);
   mockLt.mockReturnValue(chain);
   mockMaybeSingle.mockResolvedValue({ data: null });
-  mockOrder.mockReturnValue(chain);
-  mockLimit.mockReturnValue(chain);
 
   return {
     from: vi.fn().mockReturnValue(chain),
@@ -67,13 +61,11 @@ describe("NotificationRepository", () => {
     it("inserts a record without error", async () => {
       mockInsert.mockReturnValue({ error: null });
       await repo.recordSent("user1", "2026-01-01_07:00");
-      // No throw = success
     });
 
     it("ignores UNIQUE constraint violations", async () => {
       mockInsert.mockReturnValue({ error: { code: "23505" } });
       await repo.recordSent("user1", "2026-01-01_07:00");
-      // No throw = handled
     });
   });
 
@@ -82,16 +74,6 @@ describe("NotificationRepository", () => {
       mockLt.mockReturnValue({ error: null });
       await repo.cleanupOld("2026-01-01");
       expect(mockLt).toHaveBeenCalled();
-    });
-  });
-
-  describe("getRecent", () => {
-    it("returns recent notifications", async () => {
-      mockLimit.mockResolvedValue({
-        data: [{ sent_at: "2026-01-01T07:00:00Z", notif_key: "2026-01-01_07:00" }],
-      });
-      const result = await repo.getRecent(10);
-      expect(result).toHaveLength(1);
     });
   });
 });

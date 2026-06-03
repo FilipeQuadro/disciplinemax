@@ -102,7 +102,7 @@ describe("NotificationOrchestrator", () => {
         makeSettings(), "2026-01-01", 7 * 60 + 15,
         [makeBook()], makeBibleGoal(), makeStats(), 7
       );
-      expect(result).toBe("sent");
+      expect(result.status).toBe("sent");
       expect(mockDeliveryService.deliverToUser).toHaveBeenCalled();
     });
 
@@ -111,7 +111,7 @@ describe("NotificationOrchestrator", () => {
         makeSettings(), "2026-01-01", 3 * 60,
         [makeBook()], makeBibleGoal(), makeStats(), 3
       );
-      expect(result).toBe("skipped");
+      expect(result.status).toBe("skipped");
       expect(mockDeliveryService.deliverToUser).not.toHaveBeenCalled();
     });
 
@@ -121,7 +121,7 @@ describe("NotificationOrchestrator", () => {
         makeSettings(), "2026-01-01", 7 * 60 + 15,
         [makeBook()], makeBibleGoal(), makeStats(), 7
       );
-      expect(result).toBe("skipped");
+      expect(result.status).toBe("skipped");
     });
   });
 

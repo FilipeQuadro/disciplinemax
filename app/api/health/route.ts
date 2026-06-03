@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { MetricsService, METRICS } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
+import { MetricsFlushService } from "@/lib/metrics-flush";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -17,6 +18,9 @@ export async function GET(req: Request) {
   const withMetrics = url.searchParams.get("metrics") !== null;
 
   MetricsService.increment(METRICS.HEALTH_CHECKS, { endpoint: "health" });
+
+  // Ensure flush service is running
+  MetricsFlushService.start();
 
   // Basic liveness — always returns 200
   if (!detailed && !withMetrics) {

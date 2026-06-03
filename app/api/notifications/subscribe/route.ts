@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { notificationSubscribeSchema } from "@/lib/schemas";
+import { RateLimitService } from "@/lib/rate-limit";
+import { initRequestId } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,6 +23,11 @@ async function getAuthUserId(req: Request): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
+  initRequestId(req);
+
+  const rateLimited = RateLimitService.checkRequest(req, "notifications");
+  if (rateLimited) return rateLimited;
+
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
   }

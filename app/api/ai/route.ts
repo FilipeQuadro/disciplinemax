@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { callOllama } from "@/lib/ai";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { aiPromptSchema } from "@/lib/schemas";
+import { RateLimitService } from "@/lib/rate-limit";
+import { initRequestId } from "@/lib/logger";
 
 const STATIC_MESSAGES = [
   "Hoje é o primeiro dia do resto da sua jornada. Comece agora! 🚀",
@@ -34,6 +36,11 @@ async function getApiKey(): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
+  initRequestId(req);
+
+  const rateLimited = RateLimitService.checkRequest(req, "ai");
+  if (rateLimited) return rateLimited;
+
   try {
     const parsed = aiPromptSchema.safeParse(await req.json());
     if (!parsed.success) {

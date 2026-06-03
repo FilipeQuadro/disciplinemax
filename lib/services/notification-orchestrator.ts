@@ -5,6 +5,7 @@ import { NotificationHistoryService } from "./notification-history-service";
 import { NotificationRepository } from "@/lib/repositories/notification-repository";
 import { SubscriptionRepository } from "@/lib/repositories/subscription-repository";
 import { logger } from "@/lib/logger";
+import { MetricsService } from "@/lib/metrics";
 import type { Book, BibleGoal, DailyStats, UserSettings } from "@/lib/supabase";
 
 export interface OrchestratorDailyResult {
@@ -48,7 +49,7 @@ export class NotificationOrchestrator {
 
   /**
    * Process a single user's daily notification.
-   * Returns whether the notification was sent or skipped.
+   * Returns send counts and whether it was sent or skipped.
    */
   async processDailyNotification(
     settings: UserSettings,
@@ -58,7 +59,7 @@ export class NotificationOrchestrator {
     bibleGoal: BibleGoal | null,
     stats: DailyStats | null,
     brtHour: number
-  ): Promise<"sent" | "skipped"> {
+  ): Promise<{ status: "sent" | "skipped"; telegramSent: number; pushSent: number }> {
     const userId = settings.user_id;
 
     // 1. Schedule check
@@ -67,12 +68,12 @@ export class NotificationOrchestrator {
       settings,
       today
     );
-    if (!schedule.shouldSend || !schedule.matchedTime) return "skipped";
+    if (!schedule.shouldSend || !schedule.matchedTime) return { status: "skipped", telegramSent: 0, pushSent: 0 };
 
     // 2. Dedup (persistent only)
     const notifKey = `${today}_${schedule.matchedTime}`;
     const shouldSend = await this.dedupService.shouldSend(userId, notifKey);
-    if (!shouldSend) return "skipped";
+    if (!shouldSend) return { status: "skipped", telegramSent: 0, pushSent: 0 };
 
     // 3. Build messages
     const progress = NotificationHistoryService.calculateProgress(userBooks, bibleGoal, stats);
@@ -100,11 +101,14 @@ export class NotificationOrchestrator {
       pushSent: result.pushSent,
     });
 
-    return "sent";
+    return { status: "sent", telegramSent: result.telegramSent, pushSent: result.pushSent };
   }
 
   /**
    * Run the daily cron job for all users.
+   * Uses batch processing: processes CHUNK_SIZE users in parallel,
+   * then moves to the next batch. This prevents memory/CPU spikes
+   * while being significantly faster than sequential processing.
    */
   async runDailyCron(
     allSettings: UserSettings[],
@@ -115,11 +119,9 @@ export class NotificationOrchestrator {
     currentMinutes: number,
     brtHour: number
   ): Promise<OrchestratorDailyResult> {
-    let telegramSent = 0;
-    let pushSent = 0;
-    let skipped = 0;
+    const CHUNK_SIZE = 50;
 
-    // Group data by user_id for O(1) lookup (avoids O(N*M) filter per user)
+    // Group data by user_id for O(1) lookup
     const booksByUser = new Map<string, Book[]>();
     for (const b of allBooks) {
       const arr = booksByUser.get(b.user_id) ?? [];
@@ -137,53 +139,48 @@ export class NotificationOrchestrator {
       statsByUser.set(s.user_id, s);
     }
 
-    for (const settings of allSettings) {
-      const userId = settings.user_id;
-      const userBooks = booksByUser.get(userId) ?? [];
-      const bibleGoal = goalsByUser.get(userId) ?? null;
-      const stats = statsByUser.get(userId) ?? null;
+    let telegramSent = 0;
+    let pushSent = 0;
+    let skipped = 0;
 
-      // 1. Schedule check
-      const schedule = NotificationSchedulerService.checkSchedule(
-        currentMinutes,
-        settings,
-        today
-      );
-      if (!schedule.shouldSend || !schedule.matchedTime) { skipped++; continue; }
+    // Process in chunks for controlled parallelism
+    for (let i = 0; i < allSettings.length; i += CHUNK_SIZE) {
+      const chunk = allSettings.slice(i, i + CHUNK_SIZE);
+      const chunkStart = Date.now();
 
-      // 2. Dedup (persistent only)
-      const notifKey = `${today}_${schedule.matchedTime}`;
-      const shouldSend = await this.dedupService.shouldSend(userId, notifKey);
-      if (!shouldSend) { skipped++; continue; }
-
-      // 3. Build messages
-      const progress = NotificationHistoryService.calculateProgress(userBooks, bibleGoal, stats);
-      const isMorning = brtHour < 12;
-
-      const telegramMessage = await NotificationHistoryService.buildDailyTelegramMessage(
-        progress,
-        isMorning,
-        brtHour
-      );
-      const pushPayload = NotificationHistoryService.buildDailyPushPayload(progress);
-
-      // 4. Deliver
-      const result = await this.deliveryService.deliverToUser(
-        userId,
-        telegramMessage,
-        pushPayload,
-        settings
+      const results = await Promise.all(
+        chunk.map((settings) =>
+          this.processDailyNotification(
+            settings,
+            today,
+            currentMinutes,
+            booksByUser.get(settings.user_id) ?? [],
+            goalsByUser.get(settings.user_id) ?? null,
+            statsByUser.get(settings.user_id) ?? null,
+            brtHour
+          )
+        )
       );
 
-      telegramSent += result.telegramSent;
-      pushSent += result.pushSent;
+      for (const result of results) {
+        if (result.status === "sent") {
+          telegramSent += result.telegramSent;
+          pushSent += result.pushSent;
+        } else {
+          skipped++;
+        }
+      }
 
-      logger.info("Daily notification processed", {
-        userId,
-        matchedTime: schedule.matchedTime,
-        telegramSent: result.telegramSent,
-        pushSent: result.pushSent,
-      });
+      const chunkDuration = Date.now() - chunkStart;
+      MetricsService.recordDuration("cron_chunk_duration_ms", chunkDuration, { chunkSize: String(chunk.length) });
+
+      if (allSettings.length > CHUNK_SIZE) {
+        logger.info("Cron batch processed", {
+          chunk: `${i / CHUNK_SIZE + 1}/${Math.ceil(allSettings.length / CHUNK_SIZE)}`,
+          chunkSize: chunk.length,
+          duration_ms: chunkDuration,
+        });
+      }
     }
 
     return { telegramSent, pushSent, skipped };

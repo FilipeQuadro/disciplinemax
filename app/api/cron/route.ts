@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/admin-auth";
-import { logger } from "@/lib/logger";
+import { initRequestId, logger } from "@/lib/logger";
 import { SettingsRepository } from "@/lib/repositories/settings-repository";
 import { UserRepository } from "@/lib/repositories/user-repository";
 import { NotificationRepository } from "@/lib/repositories/notification-repository";
@@ -10,6 +10,8 @@ import { MetricsService, METRICS } from "@/lib/metrics";
 import { AlertService } from "@/lib/alert";
 
 export async function GET(req: Request) {
+  initRequestId(req);
+
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
