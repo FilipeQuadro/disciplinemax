@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
 import { getAdminUsers } from "@/lib/admin-users-cache";
+import { logger } from "@/lib/logger";
+
+// NOTE: This route uses auth.admin.listUsers() via getAdminUsers() because
+// email addresses are only available in auth.users, not in any public table.
+// This is ONLY used in the admin panel (low traffic, cached for 60s).
+// Cron routes do NOT depend on listUsers().
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -147,7 +153,7 @@ export async function GET(req: Request) {
       users,
       pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }

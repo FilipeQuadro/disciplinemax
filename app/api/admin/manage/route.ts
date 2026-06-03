@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { adminManageSchema } from "@/lib/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -13,11 +14,11 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  let body: any;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-  const { user_id, action, reason, new_plan } = body;
-
-  if (!user_id || !action) return NextResponse.json({ error: "user_id and action required" }, { status: 400 });
+  const parsed = adminManageSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { user_id, action, reason, new_plan } = parsed.data;
 
   try {
     if (action === "block") {
@@ -74,11 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "change_plan") {
-      const validPlans = ["free", "pro", "premium"];
       const plan = new_plan || "free";
-      if (!validPlans.includes(plan)) {
-        return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
-      }
       const { error } = await sb.from("user_plans").upsert({
         user_id,
         plan,
@@ -148,8 +145,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
 

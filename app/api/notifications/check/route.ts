@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import type { Book, BibleGoal, DailyStats } from "@/lib/supabase";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,15 +47,15 @@ export async function GET(req: Request) {
   const { data: books } = await sb.from("books").select("*").eq("user_id", callerId);
   const { data: bibleGoal } = await sb.from("bible_goals").select("*").eq("user_id", callerId).maybeSingle();
 
-  const totalGoal = (books || []).reduce((s: number, b: any) => s + b.daily_goal, 0);
-  const totalRead = (books || []).reduce((s: number, b: any) => s + b.pages_read_today, 0);
-  const bibleGoalMet = bibleGoal ? (stats?.bible_chapters_read || 0) >= bibleGoal.daily_chapters : true;
+  const totalGoal = (books as Book[] || []).reduce((s: number, b: Book) => s + b.daily_goal, 0);
+  const totalRead = (books as Book[] || []).reduce((s: number, b: Book) => s + b.pages_read_today, 0);
+  const bibleGoalMet = bibleGoal ? (stats?.bible_chapters_read || 0) >= (bibleGoal as BibleGoal).daily_chapters : true;
   const booksGoalMet = totalRead >= totalGoal;
   const hasPending = !booksGoalMet || !bibleGoalMet;
 
   let message = "Você tem metas pendentes hoje!";
   if (!booksGoalMet) message += ` Faltam ${totalGoal - totalRead} páginas.`;
-  if (!bibleGoalMet) message += ` Bíblia: ${(bibleGoal?.daily_chapters || 0) - (stats?.bible_chapters_read || 0)} capítulos.`;
+  if (!bibleGoalMet) message += ` Bíblia: ${((bibleGoal as BibleGoal)?.daily_chapters || 0) - (stats?.bible_chapters_read || 0)} capítulos.`;
 
   return NextResponse.json({ hasPending, message });
 }

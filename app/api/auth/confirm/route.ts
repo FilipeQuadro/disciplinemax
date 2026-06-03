@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/admin-auth";
+import { authConfirmSchema } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,17 +12,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  let json: unknown;
+  try { json = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
 
-  const { userId } = body;
-  if (!userId) {
-    return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const parsed = authConfirmSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
   }
+  const { userId } = parsed.data;
 
   // Auth: accept CRON_SECRET (server-to-server) OR a valid user session
   // where the caller is confirming their OWN account (userId matches token subject)

@@ -55,16 +55,16 @@ export async function GET(req: Request) {
     ]);
 
     // Aggregate today
-    const pagesToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.books_pages_read || 0), 0);
-    const chaptersToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.bible_chapters_read || 0), 0);
-    const pomodorosToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.pomodoros_completed || 0), 0);
-    const focusMinToday = (todayAgg || []).reduce((s: number, r: any) => s + (r.total_focus_minutes || 0), 0);
+    const pagesToday = (todayAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.books_pages_read || 0), 0);
+    const chaptersToday = (todayAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.bible_chapters_read || 0), 0);
+    const pomodorosToday = (todayAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.pomodoros_completed || 0), 0);
+    const focusMinToday = (todayAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.total_focus_minutes || 0), 0);
 
     // Aggregate this week
-    const pagesWeek = (weekAgg || []).reduce((s: number, r: any) => s + (r.books_pages_read || 0), 0);
-    const chaptersWeek = (weekAgg || []).reduce((s: number, r: any) => s + (r.bible_chapters_read || 0), 0);
-    const pomodorosWeek = (weekAgg || []).reduce((s: number, r: any) => s + (r.pomodoros_completed || 0), 0);
-    const focusMinWeek = (weekAgg || []).reduce((s: number, r: any) => s + (r.total_focus_minutes || 0), 0);
+    const pagesWeek = (weekAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.books_pages_read || 0), 0);
+    const chaptersWeek = (weekAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.bible_chapters_read || 0), 0);
+    const pomodorosWeek = (weekAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.pomodoros_completed || 0), 0);
+    const focusMinWeek = (weekAgg || []).reduce((s: number, r: Record<string, number>) => s + (r.total_focus_minutes || 0), 0);
 
     // Daily trend (last 7 days) — aggregate per date
     const dailyTrend = new Map<string, { pages: number; chapters: number; pomodoros: number }>();
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
       plans: { free: freePlan || 0, pro: proPlan || 0, premium: premiumPlan || 0 },
       trend,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }

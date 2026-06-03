@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { dataFetchSchema } from "@/lib/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -47,7 +48,7 @@ const SECURITY_HEADERS = {
   "Cache-Control": "no-store",
 };
 
-function apiResponse(data: any, status = 200) {
+function apiResponse(data: Record<string, unknown>, status = 200) {
   return NextResponse.json(data, { status, headers: SECURITY_HEADERS });
 }
 
@@ -57,16 +58,28 @@ export async function POST(req: Request) {
   }
 
   // Read body as text first, then parse — avoids stream consumption issues
-  let body: any;
+  let rawBody: string;
   try {
-    const rawBody = await req.text();
+    rawBody = await req.text();
     if (!rawBody || rawBody.trim().length === 0) {
       return apiResponse({ error: "Empty body" }, 400);
     }
-    body = JSON.parse(rawBody);
-  } catch (e: any) {
-    return apiResponse({ error: "Invalid json: " + e.message }, 400);
+  } catch {
+    return apiResponse({ error: "Failed to read request body" }, 400);
   }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(rawBody);
+  } catch {
+    return apiResponse({ error: "Invalid JSON" }, 400);
+  }
+
+  const parsed = dataFetchSchema.safeParse(json);
+  if (!parsed.success) {
+    return apiResponse({ error: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+  const body = parsed.data;
 
   // Auth check
   const authHeader = req.headers.get("authorization") || "";
@@ -128,10 +141,11 @@ export async function POST(req: Request) {
 
     // INSERT
     if (action === "insert") {
-      if (payload && !payload.user_id) {
+      if (!payload) return apiResponse({ error: "Payload required for insert" }, 400);
+      if (!payload.user_id) {
         payload.user_id = user.id;
       }
-      if (payload?.user_id && payload.user_id !== user.id) {
+      if (payload.user_id && payload.user_id !== user.id) {
         return apiResponse({ error: "User mismatch" }, 403);
       }
       const { data, error } = await sb.from(table).insert(payload).select();
@@ -141,6 +155,8 @@ export async function POST(req: Request) {
 
     // UPDATE
     if (action === "update") {
+      if (!payload) return apiResponse({ error: "Payload required for update" }, 400);
+      if (!id) return apiResponse({ error: "ID required for update" }, 400);
       const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
       if (!row) {
         return apiResponse({ error: "Not found" }, 404);
@@ -155,10 +171,11 @@ export async function POST(req: Request) {
 
     // UPSERT
     if (action === "upsert") {
+      if (!payload) return apiResponse({ error: "Payload required for upsert" }, 400);
       if (!payload.user_id) {
         payload.user_id = user.id;
       }
-      if (payload?.user_id && payload.user_id !== user.id) {
+      if (payload.user_id && payload.user_id !== user.id) {
         return apiResponse({ error: "User mismatch" }, 403);
       }
       const upsertOpts = UPSERT_USER_SCOPED.has(table) ? { onConflict: "user_id" } : undefined;
@@ -169,6 +186,7 @@ export async function POST(req: Request) {
 
     // DELETE
     if (action === "delete") {
+      if (!id) return apiResponse({ error: "ID required for delete" }, 400);
       const { data: row } = await sb.from(table).select("user_id").eq("id", id).maybeSingle();
       if (!row) {
         return apiResponse({ error: "Not found" }, 404);
@@ -182,7 +200,7 @@ export async function POST(req: Request) {
     }
 
     return apiResponse({ error: "Invalid action" }, 400);
-  } catch (e: any) {
-    return apiResponse({ error: e.message }, 500);
+  } catch (e: unknown) {
+    return apiResponse({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 }

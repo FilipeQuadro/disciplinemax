@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { callOllama } from "@/lib/ai";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { aiPromptSchema } from "@/lib/schemas";
 
 const STATIC_MESSAGES = [
   "Hoje é o primeiro dia do resto da sua jornada. Comece agora! 🚀",
@@ -34,12 +35,11 @@ async function getApiKey(): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   try {
-    let body: any;
-    try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-    const { prompt } = body;
-    if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    const parsed = aiPromptSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
     }
+    const { prompt } = parsed.data;
 
     // 1. Gemini
     const apiKey = await getApiKey();

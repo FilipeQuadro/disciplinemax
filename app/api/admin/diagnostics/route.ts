@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { logger } from "@/lib/logger";
-import { getAdminUsers } from "@/lib/admin-users-cache";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,10 +60,11 @@ export async function GET(req: Request) {
       } else {
         tableResults[t.name] = { ok: true, count: count ?? 0 };
       }
-    } catch (e: any) {
-      tableResults[t.name] = { ok: false, error: e.message };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      tableResults[t.name] = { ok: false, error: msg };
       dbAllOk = false;
-      issues.push(`Tabela "${t.name}" (${t.desc}) falhou: ${e.message}`);
+      issues.push(`Tabela "${t.name}" (${t.desc}) falhou: ${msg}`);
     }
   }
 
@@ -152,10 +152,11 @@ export async function GET(req: Request) {
         details: { keySource, model: "gemini-2.5-flash-lite" },
       });
     }
-  } catch (e: any) {
-    geminiExplanation = `Falha ao conectar com a API Gemini: "${e.message}". Isso geralmente significa: (1) problema de rede/DNS, (2) o servidor do Google está temporariamente indisponível, (3) firewall bloqueando a requisição.`;
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    geminiExplanation = `Falha ao conectar com a API Gemini: "${msg}". Isso geralmente significa: (1) problema de rede/DNS, (2) o servidor do Google está temporariamente indisponível, (3) firewall bloqueando a requisição.`;
     geminiSuggestion = "Para resolver: verifique a conectividade do servidor com a internet. Se o problema persistir, o app usará fallback estático automaticamente.";
-    issues.push(`Gemini: ${e.message}`);
+    issues.push(`Gemini: ${msg}`);
     results.push({
       status: "error",
       name: "Gemini AI",
@@ -222,16 +223,17 @@ export async function GET(req: Request) {
         issues.push(`Telegram: ${tgErr}`);
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     results.push({
       status: "error",
       name: "Telegram Bot",
       description: "Verifica se o bot do Telegram está configurado e funcionando para envio de notificações.",
-      explanation: `Falha ao conectar com a API do Telegram: "${e.message}". Isso pode ser um problema de rede ou o Telegram está temporariamente indisponível.`,
+      explanation: `Falha ao conectar com a API do Telegram: "${msg}". Isso pode ser um problema de rede ou o Telegram está temporariamente indisponível.`,
       suggestion: "Verifique a conectividade do servidor. Se o problema persistir, as notificações via Telegram ficarão indisponíveis até que a conexão seja restaurada.",
       latency_ms: Date.now() - tgStart,
     });
-    issues.push(`Telegram: ${e.message}`);
+    issues.push(`Telegram: ${msg}`);
   }
 
   // ── 4. PUSH NOTIFICATIONS ─────────────────────────────────────
@@ -274,12 +276,13 @@ export async function GET(req: Request) {
         });
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     results.push({
       status: "error",
       name: "Notificações Push",
       description: "Verifica se as notificações push (Web/iOS) estão configuradas e ativas.",
-      explanation: `Erro ao verificar inscrições de push: "${e.message}". Não foi possível verificar o status das notificações push.`,
+      explanation: `Erro ao verificar inscrições de push: "${msg}". Não foi possível verificar o status das notificações push.`,
       suggestion: "Verifique se a tabela notification_subscriptions existe e está acessível.",
     });
   }
@@ -293,7 +296,7 @@ export async function GET(req: Request) {
       .limit(10);
 
     const lastNotif = notifs?.[0]?.sent_at || null;
-    const notifKeys = notifs?.map((n: any) => n.notif_key) || [];
+    const notifKeys = notifs?.map((n: { notif_key: string }) => n.notif_key) || [];
 
     if (!lastNotif) {
       results.push({
@@ -336,12 +339,13 @@ export async function GET(req: Request) {
         });
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     results.push({
       status: "error",
       name: "Cron / Agendador",
       description: "Verifica se o agendador de tarefas (cron) está executando as notificações periodicamente.",
-      explanation: `Erro ao verificar o cron: "${e.message}". Não foi possível determinar o status do agendador.`,
+      explanation: `Erro ao verificar o cron: "${msg}". Não foi possível determinar o status do agendador.`,
       suggestion: "Verifique se a tabela notifications_sent existe e está acessível.",
     });
   }
@@ -353,7 +357,7 @@ export async function GET(req: Request) {
   try {
     const res = await fetchWithTimeout("http://localhost:11434/api/tags", {}, 3_000);
     const data = await res.json();
-    const models = data.models?.map((m: any) => m.name) || [];
+    const models = data.models?.map((m: { name: string }) => m.name) || [];
     results.push({
       status: "healthy",
       name: "Ollama (IA Local)",
@@ -375,34 +379,24 @@ export async function GET(req: Request) {
   }
 
   // ── 8. DATA INTEGRITY ─────────────────────────────────────────
+  // Uses direct table queries instead of auth.admin.listUsers() to avoid
+  // rate-limited API calls. Checks for data in tables without corresponding
+  // user_settings (which would indicate a broken auto-creation trigger).
   try {
-    // Check for orphaned data
-    const { data: orphanedBooks } = await sb.from("books").select("user_id").limit(500);
-    const bookUserIds = new Set((orphanedBooks || []).map((b: any) => b.user_id));
+    const { data: allSettings } = await sb.from("user_settings").select("user_id");
+    const settingsIds = new Set((allSettings || []).map((s: { user_id: string }) => s.user_id));
 
-    const { count: settingsCount } = await sb.from("user_settings").select("id", { count: "exact", head: true });
+    // Check if any books/daily_stats reference users without user_settings
+    const { data: allBooks } = await sb.from("books").select("user_id").limit(500);
+    const bookUserIds = new Set((allBooks || []).map((b: { user_id: string }) => b.user_id));
 
-    let orphanCount = 0;
-    const orphanIds: string[] = [];
-    if (settingsCount !== null) {
-      // Users in auth but not in user_settings (shouldn't happen with triggers)
-      const authUsers = await getAdminUsers();
-      const settingsIds = new Set<string>();
-      const { data: allSettings } = await sb.from("user_settings").select("user_id");
-      for (const s of (allSettings || [])) settingsIds.add(s.user_id);
-
-      for (const u of (authUsers || [])) {
-        if (!settingsIds.has(u.id)) {
-          orphanCount++;
-          orphanIds.push(u.id);
-        }
-      }
-    }
+    const orphanUserIds = Array.from(bookUserIds).filter((id) => !settingsIds.has(id));
+    const orphanCount = orphanUserIds.length;
 
     if (orphanCount > 0) {
       // Auto-heal: create missing user_settings + user_plans + bible_goals
       let healedCount = 0;
-      for (const uid of orphanIds) {
+      for (const uid of orphanUserIds) {
         try {
           await sb.from("user_settings").upsert({
             user_id: uid,
@@ -421,9 +415,9 @@ export async function GET(req: Request) {
           status: "healthy",
           name: "Integridade dos Dados",
           description: "Verifica se não há dados órfãos ou inconsistências no banco.",
-          explanation: `${orphanCount} usuário(s) estavam sem user_settings, mas foram CORRIGIDOS automaticamente. Os registros em user_settings, user_plans e bible_goals foram criados. Causa original: o trigger de auto-criação falhou ou o usuário se cadastrou antes do trigger existir.`,
-          suggestion: "O problema foi resolvido automaticamente. Se ocorrer novamente, verifique se o trigger `on_auth_user_created` está ativo no banco executando: SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';",
-          details: { orphanCount, healedCount, orphanIds },
+          explanation: `${orphanCount} usuário(s) com livros mas sem user_settings foram CORRIGIDOS automaticamente. Os registros em user_settings, user_plans e bible_goals foram criados. Causa original: o trigger de auto-criação falhou ou o usuário se cadastrou antes do trigger existir.`,
+          suggestion: "O problema foi resolvido automaticamente. Se ocorrer novamente, verifique se o trigger `on_auth_user_created` está ativo no banco.",
+          details: { orphanCount, healedCount, orphanIds: orphanUserIds },
         });
         issues.push(`Integridade: ${orphanCount} usuários sem user_settings (auto-corrigido)`);
       } else {
@@ -431,9 +425,9 @@ export async function GET(req: Request) {
           status: "warning",
           name: "Integridade dos Dados",
           description: "Verifica se não há dados órfãos ou inconsistências no banco.",
-          explanation: `${orphanCount} usuário(s) existem em auth.users mas NÃO têm registro em user_settings. Tentativa de auto-correção criou ${healedCount} de ${orphanCount}. Os registros restantes precisam ser criados manualmente.`,
-          suggestion: `Para resolver manualmente: acesse o Supabase SQL Editor e execute: INSERT INTO user_settings (user_id, notification_times, pomodoro_duration, short_break, long_break, pomodoros_until_long, daily_books_goal, daily_bible_chapters, timezone) VALUES ('USER_ID', ARRAY['07:00','12:00','19:00'], 25, 5, 15, 4, 20, 3, 'America/Sao_Paulo'); para cada usuário órfão.`,
-          details: { orphanCount, healedCount, orphanIds },
+          explanation: `${orphanCount} usuário(s) com livros mas sem user_settings. Tentativa de auto-correção criou ${healedCount} de ${orphanCount}.`,
+          suggestion: `Para resolver manualmente: acesse o Supabase SQL Editor e crie os registros em user_settings para os usuários órfãos.`,
+          details: { orphanCount, healedCount, orphanIds: orphanUserIds },
         });
         issues.push(`Integridade: ${orphanCount - healedCount} usuários ainda sem user_settings`);
       }
@@ -442,17 +436,18 @@ export async function GET(req: Request) {
         status: "healthy",
         name: "Integridade dos Dados",
         description: "Verifica se não há dados órfãos ou inconsistências no banco.",
-        explanation: "Todos os usuários cadastrados têm seus registros correspondentes em user_settings. Não há inconsistências detectadas.",
+        explanation: "Todos os dados em books referenciam usuários com registros em user_settings. Não há inconsistências detectadas.",
         suggestion: "Nenhuma ação necessária.",
       });
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     results.push({
       status: "warning",
       name: "Integridade dos Dados",
       description: "Verifica se não há dados órfãos ou inconsistências no banco.",
-      explanation: `Não foi possível verificar a integridade dos dados: "${e.message}".`,
-      suggestion: "Verifique manualmente se todos os usuários em auth.users têm registros em user_settings.",
+      explanation: `Não foi possível verificar a integridade dos dados: "${msg}".`,
+      suggestion: "Verifique manualmente se todos os usuários têm registros em user_settings.",
     });
   }
 

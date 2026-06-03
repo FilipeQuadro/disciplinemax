@@ -22,7 +22,22 @@ function authHeaders(token: string): Record<string, string> {
  * Direct Supabase REST API calls via fetch — no createClient overhead.
  * Gets the JWT from the singleton's session, then calls PostgREST directly.
  */
-export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; error: string | null }> {
+export interface DataFetchBody {
+  action: "select" | "insert" | "update" | "upsert" | "delete";
+  table: string;
+  filters?: {
+    select?: string;
+    eq?: Record<string, string | number | boolean>;
+    gte?: Record<string, string | number>;
+    order?: { column: string; ascending?: boolean };
+    limit?: number;
+    maybeSingle?: boolean;
+  };
+  payload?: Record<string, unknown>;
+  id?: string;
+}
+
+export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ data: T | null; error: string | null }> {
   try {
     if (!supabase) return { data: null, error: "Supabase not configured" };
 
@@ -127,7 +142,7 @@ export async function dataFetch<T = any>(body: any): Promise<{ data: T | null; e
     }
 
     return { data: null, error: "Invalid action" };
-  } catch (e: any) {
-    return { data: null, error: e.message };
+  } catch (e: unknown) {
+    return { data: null, error: e instanceof Error ? e.message : String(e) };
   }
 }

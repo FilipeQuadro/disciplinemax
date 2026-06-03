@@ -32,9 +32,10 @@ export async function sendWebPush(
         keys: { p256dh: sub.p256dh, auth: sub.auth },
       }, data);
       sent++;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const statusCode = err instanceof Error && 'statusCode' in err ? (err as unknown as { statusCode: number }).statusCode : 0;
       // 410 Gone or 404 = subscription expired — mark for cleanup
-      if (err?.statusCode === 410 || err?.statusCode === 404) {
+      if (statusCode === 410 || statusCode === 404) {
         expiredEndpoints.push(sub.endpoint);
       }
       failed++;
@@ -48,7 +49,7 @@ export async function sendWebPush(
  * Called after sendWebPush returns expired endpoints.
  */
 export async function cleanupExpiredSubscriptions(
-  supabase: any,
+  supabase: { from: (table: string) => { delete: () => { eq: (col: string, val: string) => PromiseLike<{ error: unknown }> } } },
   expiredEndpoints: string[]
 ): Promise<number> {
   if (!supabase || expiredEndpoints.length === 0) return 0;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdminOrCron } from "@/lib/admin-auth";
+import { auditLogSchema, auditQuerySchema } from "@/lib/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,8 +17,11 @@ export async function GET(req: Request) {
 
   try {
     const url = new URL(req.url);
-    const actionFilter = url.searchParams.get("action") || "";
-    const limit = Math.min(500, Math.max(1, parseInt(url.searchParams.get("limit") || "100")));
+    const parsed = auditQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid query params", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { action: actionFilter, limit } = parsed.data;
 
     let query = sb.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(limit);
 
@@ -28,8 +32,8 @@ export async function GET(req: Request) {
     const { data: logs } = await query;
 
     return NextResponse.json({ logs: logs || [] });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
 
@@ -40,11 +44,11 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = createClient(supabaseUrl, supabaseKey);
-  let body: any;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-  const { action, target_type, target_id, details, ip_address } = body;
-
-  if (!action) return NextResponse.json({ error: "action is required" }, { status: 400 });
+  const parsed = auditLogSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { action, target_type, target_id, details, ip_address } = parsed.data;
 
   try {
     const { error } = await sb.from("audit_logs").insert({
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }

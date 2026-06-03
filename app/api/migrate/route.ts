@@ -38,7 +38,7 @@ export async function GET(req: Request) {
  * Returns a human-readable status message.
  */
 async function checkAndAddColumn(
-  sb: any,
+  sb: { from: (table: string) => { select: (col: string) => { limit: (n: number) => PromiseLike<{ error: unknown }> } } },
   table: string,
   column: string,
   type: string
@@ -50,8 +50,9 @@ async function checkAndAddColumn(
     return `${table}.${column}: already exists`;
   }
 
-  if (!error.message?.includes("does not exist")) {
-    return `${table}.${column}: probe error — ${error.message}`;
+  const errMsg = (error as { message?: string }).message || String(error);
+  if (!errMsg?.includes("does not exist")) {
+    return `${table}.${column}: probe error — ${errMsg}`;
   }
 
   // Column doesn't exist — we can't add it programmatically (no exec_sql RPC).

@@ -16,6 +16,7 @@ import { clsx } from "clsx";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/components/AuthProvider";
 import { useAchievements, AchievementGrid, AchievementNotification } from "@/components/Achievements";
+import type { DailyStats, Book, BibleReading } from "@/lib/supabase";
 
 // ─── Custom Hook: Dashboard Data ───────────────────────────────────
 function useDashboardData() {
@@ -102,9 +103,9 @@ function useDashboardData() {
         getBibleVerseOfDay(),
         getMotivationalMessage({
           streak: newStreak,
-          booksRead: booksRes.data?.length ?? books.length,
-          bibleChapters: bibleReadingsRes.data?.length ?? todayBibleChapters,
-          completedToday: (statsRes.data as any)?.goals_completed ?? false,
+          booksRead: (booksRes.data as Book[] | null)?.length ?? books.length,
+          bibleChapters: (bibleReadingsRes.data as BibleReading[] | null)?.length ?? todayBibleChapters,
+          completedToday: (statsRes.data as DailyStats | null)?.goals_completed ?? false,
         }),
       ]);
       setVerse(v);

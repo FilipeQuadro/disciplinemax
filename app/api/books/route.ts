@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { booksRequestSchema } from "@/lib/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -33,9 +34,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    let body: any;
-    try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-    const { action, payload, id } = body;
+    const parsed = booksRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { action, payload, id } = parsed.data;
 
     // Enforce user_id matches authenticated user
     if (payload?.user_id && payload.user_id !== user.id) {
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
     const sb = getAdminClient();
 
     if (action === "insert") {
-      const { data, error } = await sb.from("books").insert(payload).select();
+      const insertData = payload ? { ...payload, user_id: user.id } : { user_id: user.id };
+      const { data, error } = await sb.from("books").insert(insertData).select();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ data });
     }
@@ -56,7 +60,8 @@ export async function POST(req: NextRequest) {
       if (!book || book.user_id !== user.id) {
         return NextResponse.json({ error: "Not your book" }, { status: 403 });
       }
-      const { data, error } = await sb.from("books").update(payload).eq("id", id).select();
+      const updateData = payload || {};
+      const { data, error } = await sb.from("books").update(updateData).eq("id", id).select();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ data });
     }
@@ -79,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }

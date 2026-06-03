@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { dataFetch } from "@/lib/data-fetch";
+import type { DailyStats } from "@/lib/supabase";
 
 export async function getTodayStats(userId: string) {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -7,16 +8,16 @@ export async function getTodayStats(userId: string) {
   return data || null;
 }
 
-export async function upsertTodayStats(userId: string, updates: Partial<Record<string, any>>) {
+export async function upsertTodayStats(userId: string, updates: Partial<DailyStats>) {
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: existing } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: userId, date: today }, maybeSingle: true } });
 
   const now = new Date().toISOString();
 
   if (existing) {
-    const { id, user_id, date, created_at, ...mutableFields } = existing as any;
+    const { id, user_id, date, ...mutableFields } = existing as DailyStats;
     const payload = { ...mutableFields, ...updates, updated_at: now };
-    const { data } = await dataFetch({ action: "update", table: "daily_stats", id: (existing as any).id, payload });
+    const { data } = await dataFetch({ action: "update", table: "daily_stats", id: (existing as DailyStats).id, payload });
     return data;
   }
 
@@ -41,7 +42,7 @@ export async function upsertTodayStats(userId: string, updates: Partial<Record<s
  * Call this from logReading in livros page.
  */
 export async function trackPagesRead(userId: string, pagesRead: number, totalPagesGoal: number, totalPagesRead: number, bibleChaptersRead: number, bibleGoalChapters: number) {
-  const stats: any = await getTodayStats(userId);
+  const stats = await getTodayStats(userId) as DailyStats | null;
   const prevPages = stats?.books_pages_read || 0;
   const newPages = prevPages + pagesRead;
   const booksGoalMet = newPages >= totalPagesGoal;
@@ -57,7 +58,7 @@ export async function trackPagesRead(userId: string, pagesRead: number, totalPag
  * Auto-update daily_stats when a pomodoro is completed.
  */
 export async function trackPomodoroCompleted(userId: string, durationMinutes: number) {
-  const stats: any = await getTodayStats(userId);
+  const stats = await getTodayStats(userId) as DailyStats | null;
   const prevPomodoros = stats?.pomodoros_completed || 0;
   const prevFocusMin = stats?.total_focus_minutes || 0;
 

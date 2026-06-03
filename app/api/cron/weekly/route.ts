@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { sendTelegramMessage } from "@/lib/telegram";
-import { sendWebPush, cleanupExpiredSubscriptions } from "@/lib/web-push-server";
 import { verifyCronSecret } from "@/lib/admin-auth";
 import { logger } from "@/lib/logger";
-
-const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://disciplinemax.onrender.com";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+import { SettingsRepository } from "@/lib/repositories/settings-repository";
+import { UserRepository } from "@/lib/repositories/user-repository";
+import { NotificationOrchestrator } from "@/lib/services/notification-orchestrator";
+import { NotificationHistoryService } from "@/lib/services/notification-history-service";
+import { NotificationSchedulerService } from "@/lib/services/notification-scheduler-service";
 
 export async function GET(req: Request) {
-  if (!sb) return NextResponse.json({ ok: false }, { status: 500 });
-
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -21,116 +15,76 @@ export async function GET(req: Request) {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const weekAgoStr = weekAgo.toISOString().split("T")[0];
-  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
+  const todayStr = NotificationSchedulerService.getTodayBrt();
 
-  const { data: allSettings } = await sb.from("user_settings").select("*");
+  // Repositories
+  const settingsRepo = new SettingsRepository();
+  const userRepo = new UserRepository();
 
+  // Batch fetch all data upfront (eliminates N+1 — was 6 queries/user, now 5 queries total)
+  const [allSettings, allBooks, weekStats, pomodoros, recentStats] = await Promise.all([
+    settingsRepo.getAllSettings(),
+    userRepo.getAllBooks(),
+    userRepo.getWeeklyStatsBatch(weekAgoStr, todayStr),
+    userRepo.getPomodorosBatch(weekAgoStr),
+    userRepo.getRecentStatsBatch(30),
+  ]);
+
+  // Group data by user_id for O(1) lookup
+  const booksByUser = new Map<string, typeof allBooks>();
+  for (const b of allBooks) {
+    const arr = booksByUser.get(b.user_id) ?? [];
+    arr.push(b);
+    booksByUser.set(b.user_id, arr);
+  }
+
+  const statsByUser = new Map<string, typeof weekStats>();
+  for (const s of weekStats) {
+    const arr = statsByUser.get(s.user_id) ?? [];
+    arr.push(s);
+    statsByUser.set(s.user_id, arr);
+  }
+
+  const pomodorosByUser = new Map<string, typeof pomodoros>();
+  for (const p of pomodoros) {
+    const arr = pomodorosByUser.get(p.user_id) ?? [];
+    arr.push(p);
+    pomodorosByUser.set(p.user_id, arr);
+  }
+
+  const recentStatsByUser = new Map<string, typeof recentStats>();
+  for (const s of recentStats) {
+    const arr = recentStatsByUser.get(s.user_id) ?? [];
+    arr.push(s);
+    recentStatsByUser.set(s.user_id, arr);
+  }
+
+  // Orchestrator handles delivery
+  const orchestrator = new NotificationOrchestrator();
   let telegramSent = 0;
   let pushSent = 0;
 
-  for (const settings of allSettings || []) {
+  for (const settings of allSettings) {
     const userId = settings.user_id;
 
-    const { data: weekStats } = await sb
-      .from("daily_stats")
-      .select("*")
-      .eq("user_id", userId)
-      .gte("date", weekAgoStr)
-      .lte("date", todayStr);
+    const result = await orchestrator.processWeeklyNotification(settings, {
+      weekStats: statsByUser.get(userId) ?? [],
+      books: booksByUser.get(userId) ?? [],
+      bibleReadingsCount: 0, // Not used in weekly message
+      pomodoros: pomodorosByUser.get(userId) ?? [],
+      recentStats: recentStatsByUser.get(userId) ?? [],
+    });
 
-    const { data: books } = await sb.from("books").select("*").eq("user_id", userId);
-
-    const { data: bibleReadings } = await sb
-      .from("bible_readings")
-      .select("id")
-      .eq("user_id", userId)
-      .gte("read_at", weekAgoStr);
-
-    const { data: pomodoros } = await sb
-      .from("pomodoro_sessions")
-      .select("duration_minutes")
-      .eq("user_id", userId)
-      .eq("completed", true)
-      .gte("started_at", weekAgoStr);
-
-    const totalPages = (weekStats || []).reduce((s: number, d: any) => s + (d.books_pages_read || 0), 0);
-    const totalChapters = (weekStats || []).reduce((s: number, d: any) => s + (d.bible_chapters_read || 0), 0);
-    const totalPomodoros = (pomodoros || []).length;
-    const totalFocusMin = (pomodoros || []).reduce((s: number, p: any) => s + (p.duration_minutes || 0), 0);
-    const daysCompleted = (weekStats || []).filter((d: any) => d.goals_completed).length;
-    const booksFinished = (books || []).filter((b: any) => b.current_page >= b.total_pages).length;
-
-    const { data: recentStats } = await sb
-      .from("daily_stats")
-      .select("date, goals_completed")
-      .eq("user_id", userId)
-      .order("date", { ascending: false })
-      .limit(30);
-    let streak = 0;
-    if (recentStats) {
-      for (const stat of recentStats as any[]) {
-        if (stat.goals_completed) streak++;
-        else break;
-      }
-    }
-
-    const rating = daysCompleted >= 6 ? "🌟🌟🌟" : daysCompleted >= 4 ? "🌟🌟" : daysCompleted >= 2 ? "🌟" : "💪 continue firme!";
-    const activeBooks = (books || []).filter((b: any) => b.current_page < b.total_pages);
-
-    // ── Telegram ──
-    if (settings.telegram_bot_token && settings.telegram_chat_id) {
-      let message = `📊 *Relatório Semanal — DisciplinaMax*\n\n`;
-      message += `📅 Período: última semana\n\n`;
-      message += `📚 *Páginas lidas:* ${totalPages}\n`;
-      message += `📖 *Livros concluídos:* ${booksFinished}\n`;
-      message += `✝️ *Capítulos bíblicos:* ${totalChapters}\n`;
-      message += `🍅 *Pomodoros:* ${totalPomodoros} (${totalFocusMin} min de foco)\n`;
-      message += `✅ *Dias com metas cumpridas:* ${daysCompleted}/7\n\n`;
-      message += `🔥 *Streak atual:* ${streak} dias\n\n`;
-      message += `Avaliação da semana: ${rating}\n\n`;
-
-      if (activeBooks.length > 0) {
-        message += `📖 *Livros em progresso:*\n`;
-        for (const b of activeBooks.slice(0, 3)) {
-          const pct = Math.round(((b as any).current_page / (b as any).total_pages) * 100);
-          message += `• ${(b as any).title}: ${pct}%\n`;
-        }
-        message += `\n`;
-      }
-
-      message += `👉 ${APP_URL}`;
-
-      try {
-        await sendTelegramMessage(settings.telegram_bot_token, settings.telegram_chat_id, message);
-        telegramSent++;
-      } catch (e) {
-        logger.error("Weekly report failed", { userId, error: String(e) });
-      }
-    }
-
-    // ── Web Push ──
-    try {
-      const { data: subs } = await sb
-        .from("notification_subscriptions")
-        .select("endpoint, p256dh, auth")
-        .eq("user_id", userId)
-        .eq("platform", "web");
-      if (subs && subs.length > 0) {
-        const pushResult = await sendWebPush(subs, {
-          title: "📊 Relatório Semanal",
-          body: `${daysCompleted}/7 dias cumpridos · ${totalPages} págs · 🔥 ${streak} dias streak`,
-          tag: "disciplina-weekly",
-        });
-        pushSent += pushResult.sent;
-        if (pushResult.expiredEndpoints.length > 0) {
-          await cleanupExpiredSubscriptions(sb, pushResult.expiredEndpoints);
-        }
-      }
-    } catch (e) {
-      logger.error("Weekly Web Push failed", { userId, error: String(e) });
-    }
+    if (result.telegramSent) telegramSent++;
+    if (result.pushSent) pushSent++;
   }
 
-  logger.info("Weekly cron run completed", { telegramSent, pushSent, date: todayStr, userCount: (allSettings || []).length });
+  logger.info("Weekly cron run completed", {
+    telegramSent,
+    pushSent,
+    date: todayStr,
+    userCount: allSettings.length,
+  });
+
   return NextResponse.json({ ok: true, telegramSent, pushSent, date: todayStr });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notificationSubscribeSchema } from "@/lib/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,9 +31,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  let body: any;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
-  const { endpoint, keys, device_token, platform, bundle_id, user_id } = body;
+  const parsed = notificationSubscribeSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { platform, user_id } = parsed.data;
 
   // Verify the caller owns this user_id
   if (user_id !== callerId) {
@@ -42,9 +45,7 @@ export async function POST(req: NextRequest) {
   const sb = createClient(supabaseUrl, supabaseKey);
 
   if (platform === "apns") {
-    if (!device_token) {
-      return NextResponse.json({ error: "Invalid APNS registration" }, { status: 400 });
-    }
+    const { device_token, bundle_id } = parsed.data;
     const { error } = await sb.from("notification_subscriptions").upsert({
       user_id: callerId,
       platform: "apns",
@@ -57,10 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (!endpoint || !keys?.p256dh || !keys?.auth) {
-    return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
-  }
-
+  const { endpoint, keys } = parsed.data;
   const { error } = await sb.from("notification_subscriptions").upsert({
     user_id: callerId,
     platform: "web",

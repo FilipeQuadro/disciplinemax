@@ -82,9 +82,10 @@ export async function GET(req: Request) {
       report.services.gemini = { ok: false, detail: "No API key" };
       report.issues.push("Gemini: no API key configured");
     }
-  } catch (e: any) {
-    report.services.gemini = { ok: false, detail: e.message, latency_ms: Date.now() - geminiStart };
-    report.issues.push(`Gemini: ${e.message}`);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    report.services.gemini = { ok: false, detail: msg, latency_ms: Date.now() - geminiStart };
+    report.issues.push(`Gemini: ${msg}`);
   }
 
   // 3. Telegram
@@ -105,9 +106,10 @@ export async function GET(req: Request) {
       report.services.telegram = { ok: false, detail: "No bot token" };
       report.issues.push("Telegram: no bot token configured");
     }
-  } catch (e: any) {
-    report.services.telegram = { ok: false, detail: e.message, latency_ms: Date.now() - tgStart };
-    report.issues.push(`Telegram: ${e.message}`);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    report.services.telegram = { ok: false, detail: msg, latency_ms: Date.now() - tgStart };
+    report.issues.push(`Telegram: ${msg}`);
   }
 
   // 4. Push notifications
@@ -166,7 +168,7 @@ export async function GET(req: Request) {
   try {
     const res = await fetchWithTimeout("http://localhost:11434/api/tags", {}, 3_000);
     const data = await res.json();
-    report.services.ollama = { ok: true, detail: data.models?.map((m: any) => m.name).join(", ") || "no models" };
+    report.services.ollama = { ok: true, detail: data.models?.map((m: { name: string }) => m.name).join(", ") || "no models" };
   } catch {
     report.services.ollama = { ok: false, detail: "not running" };
   }
