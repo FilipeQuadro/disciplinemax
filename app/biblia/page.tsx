@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { trackBibleChapter } from "@/lib/stats";
 import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
+import { processGamification } from "@/lib/gamification";
 
 const BIBLE_BOOKS = [
   "Gênesis","Êxodo","Levítico","Números","Deuteronômio","Josué","Juízes","Rute",
@@ -102,6 +103,7 @@ export default function BibliaPage() {
         const totalPagesRead = books.reduce((s: number, b: any) => s + b.pages_read_today, 0);
         const totalPagesGoal = books.reduce((s: number, b: any) => s + b.daily_goal, 0);
         trackBibleChapter(user.id, freshCount + 1, freshGoal?.daily_chapters || 0, totalPagesRead, totalPagesGoal).catch(() => {});
+        processGamification("bible_chapter").catch(() => {});
         checkAndNotifyGoalCompletion({ pagesReadToday: totalPagesRead, pagesGoal: totalPagesGoal, bibleChaptersToday: freshCount + 1, bibleChaptersGoal: freshGoal?.daily_chapters || 0 });
         setLogForm((p) => ({ ...p, chapter: p.chapter + 1, notes: "" }));
       } else toast.error("Erro: " + error);

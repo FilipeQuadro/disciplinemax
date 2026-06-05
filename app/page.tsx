@@ -7,7 +7,7 @@ import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
 import {
   BookOpen, BookMarked, Timer, Flame, Target, CheckCircle2,
   TrendingUp, Calendar, Zap, ChevronRight, Star, Sparkles, Trophy,
-  Share2, ArrowRight
+  Share2, ArrowRight, Lightbulb, Lock
 } from "lucide-react";
 import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
@@ -15,7 +15,12 @@ import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/components/AuthProvider";
-import { useAchievements, AchievementGrid, AchievementNotification } from "@/components/Achievements";
+import { useAchievements, AchievementNotification } from "@/components/Achievements";
+import { SkeletonStats, SkeletonList } from "@/components/Skeleton";
+import { ErrorCard } from "@/components/ErrorCard";
+import { LevelService } from "@/lib/services/level-service";
+import { CHALLENGES } from "@/lib/services/challenge-service";
+import { ACHIEVEMENTS } from "@/lib/services/achievement-service";
 import type { DailyStats, Book, BibleReading } from "@/lib/supabase";
 
 // ─── Custom Hook: Dashboard Data ───────────────────────────────────
@@ -25,13 +30,18 @@ function useDashboardData() {
     books, setBooks, streak, setStreak, todayStats, setTodayStats,
     bibleGoal, setBibleGoal, todayBibleChapters, setTodayBibleChapters,
     pomodoroCount, settings, setSettings,
+    totalXp, setTotalXp, currentLevel, setCurrentLevel,
   } = useStore();
 
   const [verse, setVerse] = useState<{ verse: string; reference: string } | null>(null);
   const [motivation, setMotivation] = useState("");
   const [weekStats, setWeekStats] = useState<DayStat[]>([]);
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([]);
+  const [activeChallenges, setActiveChallenges] = useState<ChallengeData[]>([]);
+  const [insights, setInsights] = useState<InsightData[]>([]);
+  const [serverAchievements, setServerAchievements] = useState<AchievementData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -149,15 +159,32 @@ function useDashboardData() {
           return { date: dateStr, done: stat?.goals_completed || false, partial: !!stat && !stat.goals_completed };
         }));
       }
+
+      // Phase 5: Gamification data (XP, challenges, insights, server achievements)
+      const [xpRes, chalRes, insRes, achRes] = await Promise.all([
+        dataFetch({ action: "select", table: "user_xp", filters: { eq: { user_id: user!.id }, maybeSingle: true } }),
+        dataFetch({ action: "select", table: "user_challenges", filters: { eq: { user_id: user!.id }, select: "challenge_id,progress,target,completed,xp_reward,week_key" } }),
+        dataFetch({ action: "select", table: "user_insights", filters: { eq: { user_id: user!.id }, order: { column: "created_at", ascending: false }, limit: 3 } }),
+        dataFetch({ action: "select", table: "user_achievements", filters: { eq: { user_id: user!.id } } }),
+      ]);
+
+      if (xpRes.data) {
+        const xp = xpRes.data as { total_xp: number; current_level: number };
+        setTotalXp(xp.total_xp);
+        setCurrentLevel(xp.current_level);
+      }
+      if (chalRes.data) setActiveChallenges((chalRes.data as ChallengeData[]).filter((c) => !c.completed));
+      if (insRes.data) setInsights(insRes.data as InsightData[]);
+      if (achRes.data) setServerAchievements(achRes.data as AchievementData[]);
     } catch (e) {
       console.error("Dashboard load error:", e);
-      toast.error("Erro ao carregar dados. Verifique sua conexão.");
+      setError("Não foi possível carregar os dados do dashboard.");
     } finally {
       setLoading(false);
     }
   }
 
-  return { books, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, loading, user };
+  return { books, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, totalXp, currentLevel, activeChallenges, insights, serverAchievements, loading, error, user };
 }
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -176,10 +203,32 @@ interface CalendarDay {
   partial: boolean;
 }
 
+interface ChallengeData {
+  challenge_id: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  xp_reward: number;
+  week_key: string;
+}
+
+interface InsightData {
+  insight_type: string;
+  message: string;
+  created_at: string;
+}
+
+interface AchievementData {
+  achievement_id: string;
+  progress: number;
+  completed: boolean;
+  unlocked_at: string | null;
+}
+
 // ─── Main Component ─────────────────────────────────────────────────
 export default function DashboardPage() {
   const data = useDashboardData();
-  const { books, streak, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, loading, user } = data;
+  const { books, streak, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, totalXp, currentLevel, activeChallenges, insights, serverAchievements, loading, error, user } = data;
   const [mounted, setMounted] = useState(false);
   const achievements = useAchievements();
   const today = new Date();
@@ -249,17 +298,27 @@ export default function DashboardPage() {
           </div>
           <div className="h-9 w-32 rounded-xl bg-white/5" />
         </div>
-        <div className="flex justify-center">
-          <div className="h-44 w-44 rounded-full bg-white/[0.02]" />
+        <SkeletonStats count={4} />
+        <SkeletonList count={3} />
+      </div>
+    );
+  }
+
+  // ─── Error State ────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs mb-1" style={{ color: "#6B7585" }}>
+              {format(today, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+            <h1 className="text-2xl font-serif font-bold text-white">
+              Olá, <span className="gradient-text-gold">{userName}!</span> 👋
+            </h1>
+          </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-xl bg-white/[0.02]" />)}
-        </div>
-        <div className="h-32 rounded-2xl bg-white/[0.02]" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[0, 1, 2, 3].map((i) => <div key={i} className="h-28 rounded-xl bg-white/[0.02]" />)}
-        </div>
-        <div className="h-48 rounded-xl bg-white/[0.02]" />
+        <ErrorCard onRetry={() => window.location.reload()} />
       </div>
     );
   }
@@ -270,7 +329,7 @@ export default function DashboardPage() {
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
+          <p className="text-xs mb-1" style={{ color: "#6B7585" }}>
             {format(today, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
           <h1 className="text-2xl font-serif font-bold text-white">
@@ -279,8 +338,9 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={shareProgress} className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <Share2 size={14} style={{ color: "#555E6E" }} />
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}
+            aria-label="Compartilhar progresso">
+            <Share2 size={14} style={{ color: "#6B7585" }} />
           </button>
           {allGoalsMet ? (
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
@@ -318,7 +378,7 @@ export default function DashboardPage() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-white">{Math.round(overallProgress)}%</span>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Hoje</span>
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: "#6B7585" }}>Hoje</span>
             </div>
           </div>
           <div className="flex items-center gap-4 mt-4">
@@ -338,7 +398,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-2xl font-bold text-white">{streak}<span className="text-sm font-normal ml-1" style={{ color: "#8B95A5" }}>dias</span></p>
-              <p className="text-xs" style={{ color: "#555E6E" }}>{streak === 0 ? "Comece sua streak hoje!" : streak < 7 ? "Continue firme! A consistência constrói hábitos." : streak < 30 ? "Uma semana+ de dedicação! 🔥" : "Você é imparável! 💪"}</p>
+              <p className="text-xs" style={{ color: "#6B7585" }}>{streak === 0 ? "Comece sua streak hoje!" : streak < 7 ? "Continue firme! A consistência constrói hábitos." : streak < 30 ? "Uma semana+ de dedicação! 🔥" : "Você é imparável! 💪"}</p>
             </div>
             {streak >= 7 && (
               <div className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: "rgba(232,132,74,0.12)", color: "#E8844A" }}>
@@ -364,7 +424,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-white">{nextAction.label}</p>
-                <p className="text-xs" style={{ color: "#555E6E" }}>Próximo passo para completar o dia</p>
+                <p className="text-xs" style={{ color: "#6B7585" }}>Próximo passo para completar o dia</p>
               </div>
               <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" style={{ color: "#D4AF37" }} />
             </Link>
@@ -372,42 +432,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Versículo do dia */}
-      {verse && (
-        <div className="rounded-2xl p-5 relative overflow-hidden shimmer"
-          style={{
-            background: "linear-gradient(145deg, rgba(212,175,55,0.06) 0%, rgba(20,24,32,0.9) 60%, rgba(124,107,189,0.04) 100%)",
-            border: "1px solid rgba(212,175,55,0.15)",
-          }}
-        >
-          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
-          <div className="relative">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
-              <Star size={11} /> Versículo do Dia
-            </p>
-            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
-            <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
+      {/* XP & Level Banner */}
+      <div className="rounded-2xl p-4" style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.08), rgba(168,137,43,0.04))", border: "1px solid rgba(212,175,55,0.12)" }}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(212,175,55,0.12)" }}>
+            <Star size={22} style={{ color: "#D4AF37" }} />
           </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-bold text-white">Nível {currentLevel}</p>
+              <p className="text-[10px]" style={{ color: "#8B95A5" }}>{totalXp.toLocaleString()} XP</p>
+            </div>
+            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${LevelService.levelProgress(totalXp)}%`, background: "linear-gradient(90deg, #A8892B, #D4AF37)" }} />
+            </div>
+            <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>{LevelService.xpToNextLevel(totalXp)} XP para o próximo nível</p>
+          </div>
+          <Link href="/progresso" className="shrink-0 p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#D4AF37" }}>
+            <ChevronRight size={16} />
+          </Link>
         </div>
-      )}
-
-      {/* Motivação da IA */}
-      {motivation && (
-        <div className="rounded-2xl p-4 flex items-start gap-3 glow-border"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", boxShadow: "0 4px 20px rgba(212,175,55,0.15)" }}>
-            <Sparkles size={16} className="text-[#0B0E14]" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
-              <Zap size={10} /> IA Motivacional
-            </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#C8CCD4" }}>{motivation}</p>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
@@ -451,6 +496,39 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Active Challenges */}
+      {activeChallenges.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Target size={16} style={{ color: "#3ABAB4" }} />
+              Desafios da Semana
+            </h2>
+            <Link href="/progresso" className="text-xs flex items-center gap-1 transition-colors" style={{ color: "#3ABAB4" }}>
+              Ver todos <ChevronRight size={12} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 stagger-children">
+            {activeChallenges.slice(0, 3).map((challenge) => {
+              const def = CHALLENGES.find((d) => d.id === challenge.challenge_id);
+              const pct = Math.min((challenge.progress / challenge.target) * 100, 100);
+              return (
+                <div key={challenge.challenge_id} className="rounded-xl p-3 glow-border" style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.1)" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-white">{def?.label ?? challenge.challenge_id}</p>
+                    <span className="text-[10px] font-bold" style={{ color: "#D4AF37" }}>+{challenge.xp_reward} XP</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#3ABAB4" }} />
+                  </div>
+                  <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>{Math.floor(challenge.progress)}/{challenge.target}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Livros em andamento */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -464,7 +542,7 @@ export default function DashboardPage() {
         </div>
         {books.length === 0 ? (
           <div className="card text-center py-8">
-            <BookOpen size={32} className="mx-auto mb-3" style={{ color: "#555E6E" }} />
+            <BookOpen size={32} className="mx-auto mb-3" style={{ color: "#6B7585" }} />
             <p className="text-sm" style={{ color: "#8B95A5" }}>Nenhum livro cadastrado</p>
             <Link href="/livros" className="btn-primary mt-3 inline-flex text-sm">
               Adicionar Livro
@@ -547,12 +625,99 @@ export default function DashboardPage() {
 
       {/* Conquistas */}
       <div className="card">
-        <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Trophy size={16} style={{ color: "#D4AF37" }} />
-          Conquistas
-        </h2>
-        <AchievementGrid unlocked={achievements.unlocked} compact />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            <Trophy size={16} style={{ color: "#D4AF37" }} />
+            Conquistas
+          </h2>
+          <span className="text-[10px]" style={{ color: "#8B95A5" }}>
+            {serverAchievements.filter((a) => a.completed).length}/{ACHIEVEMENTS.length}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
+          {ACHIEVEMENTS.map((ach) => {
+            const userAch = serverAchievements.find((a) => a.achievement_id === ach.id);
+            const unlocked = userAch?.completed ?? false;
+            const progress = userAch?.progress ?? 0;
+            return (
+              <div
+                key={ach.id}
+                title={unlocked ? `${ach.label}: ${ach.description}` : progress > 0 ? `${ach.label} (${Math.round(progress)}%)` : "???"}
+                className="rounded-xl p-2 flex flex-col items-center justify-center transition-all duration-300 cursor-default"
+                style={{
+                  background: unlocked ? `${ach.color}12` : "rgba(255,255,255,0.01)",
+                  border: unlocked ? `1px solid ${ach.color}25` : "1px solid rgba(255,255,255,0.03)",
+                  opacity: unlocked ? 1 : progress > 0 ? 0.6 : 0.3,
+                }}
+              >
+                {unlocked ? (
+                  <Trophy size={16} style={{ color: ach.color }} />
+                ) : (
+                  <Lock size={12} style={{ color: "#6B7585" }} />
+                )}
+                <p className="text-[8px] mt-1 text-center" style={{ color: unlocked ? ach.color : "#6B7585" }}>
+                  {unlocked ? ach.label : "???"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <div className="card">
+          <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
+            <Lightbulb size={16} style={{ color: "#7C6BBD" }} />
+            Insights
+          </h2>
+          <div className="space-y-2">
+            {insights.map((ins, i) => (
+              <div key={i} className="p-3 rounded-xl flex items-start gap-2" style={{ background: "rgba(124,107,189,0.05)" }}>
+                <TrendingUp size={14} className="shrink-0 mt-0.5" style={{ color: "#7C6BBD" }} />
+                <p className="text-xs" style={{ color: "#8B95A5" }}>{ins.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Versículo do dia */}
+      {verse && (
+        <div className="rounded-2xl p-5 relative overflow-hidden shimmer"
+          style={{
+            background: "linear-gradient(145deg, rgba(212,175,55,0.06) 0%, rgba(20,24,32,0.9) 60%, rgba(124,107,189,0.04) 100%)",
+            border: "1px solid rgba(212,175,55,0.15)",
+          }}
+        >
+          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
+          <div className="relative">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
+              <Star size={11} /> Versículo do Dia
+            </p>
+            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
+            <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Motivação da IA */}
+      {motivation && (
+        <div className="rounded-2xl p-4 flex items-start gap-3 glow-border"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", boxShadow: "0 4px 20px rgba(212,175,55,0.15)" }}>
+            <Sparkles size={16} className="text-[#0B0E14]" />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
+              <Zap size={10} /> IA Motivacional
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "#C8CCD4" }}>{motivation}</p>
+          </div>
+        </div>
+      )}
 
       <AchievementNotification badgeKey={achievements.newBadge} />
     </div>
@@ -575,7 +740,7 @@ function MiniProgress({ label, pct, color }: { label: string; pct: number; color
         style={{ background: `${color}12` }}>
         <span className="text-[10px] font-bold" style={{ color }}>{Math.round(pct)}%</span>
       </div>
-      <span className="text-[9px] uppercase tracking-wider" style={{ color: "#555E6E" }}>{label}</span>
+      <span className="text-[9px] uppercase tracking-wider" style={{ color: "#6B7585" }}>{label}</span>
     </div>
   );
 }
@@ -596,7 +761,7 @@ function QuickAction({ href, icon, label, sub, color, done }: { href: string; ic
       </div>
       <div className="text-center">
         <p className="text-sm font-semibold text-white">{label}</p>
-        <p className="text-[10px]" style={{ color: "#555E6E" }}>{sub}</p>
+        <p className="text-[10px]" style={{ color: "#6B7585" }}>{sub}</p>
       </div>
     </Link>
   );
@@ -606,13 +771,13 @@ function StatCard({ icon, label, value, sub, cardClass, iconBg, progress, progre
   return (
     <div className={clsx("stat-card", cardClass)}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#555E6E" }}>{label}</span>
+        <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#6B7585" }}>{label}</span>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: iconBg }}>
           {icon}
         </div>
       </div>
       <p className="text-xl font-bold text-white count-up">{value}</p>
-      <p className="text-[11px] mt-0.5" style={{ color: "#555E6E" }}>{sub}</p>
+      <p className="text-[11px] mt-0.5" style={{ color: "#6B7585" }}>{sub}</p>
       {progress !== undefined && (
         <div className="progress-bar mt-3">
           <div className="progress-fill" style={{ width: `${Math.min(100, progress)}%`, background: progressColor }} />
@@ -637,7 +802,7 @@ function BookMiniCard({ book }: { book: any }) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm truncate">{book.title}</p>
-          <p className="text-xs" style={{ color: "#555E6E" }}>{book.current_page}/{book.total_pages} pgs</p>
+          <p className="text-xs" style={{ color: "#6B7585" }}>{book.current_page}/{book.total_pages} pgs</p>
         </div>
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 relative"
           style={{ background: `${book.color}12` }}>
@@ -655,7 +820,7 @@ function BookMiniCard({ book }: { book: any }) {
         <div className="progress-fill" style={{ width: `${progress}%`, background: done ? "#3ABAB4" : book.color }} />
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs" style={{ color: "#555E6E" }}>
+        <span className="text-xs" style={{ color: "#6B7585" }}>
           Hoje: {book.pages_read_today}/{book.daily_goal} pgs
         </span>
         {done ? (
@@ -701,15 +866,15 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
       <div className="flex items-center gap-4 mt-3">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded" style={{ background: "rgba(212,175,55,0.5)" }} />
-          <span className="text-xs" style={{ color: "#555E6E" }}>Meta cumprida</span>
+          <span className="text-xs" style={{ color: "#6B7585" }}>Meta cumprida</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded" style={{ background: "rgba(212,175,55,0.12)" }} />
-          <span className="text-xs" style={{ color: "#555E6E" }}>Parcial</span>
+          <span className="text-xs" style={{ color: "#6B7585" }}>Parcial</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded" style={{ background: "rgba(255,255,255,0.02)" }} />
-          <span className="text-xs" style={{ color: "#555E6E" }}>Sem registro</span>
+          <span className="text-xs" style={{ color: "#6B7585" }}>Sem registro</span>
         </div>
       </div>
     </div>

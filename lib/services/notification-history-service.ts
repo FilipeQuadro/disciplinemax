@@ -181,6 +181,10 @@ export class NotificationHistoryService {
     streak: number;
     rating: string;
     activeBooks: Array<{ title: string; progress: number }>;
+    xp?: number;
+    level?: number;
+    achievementsUnlocked?: number;
+    challengesCompleted?: number;
   }): string {
     let msg = `📊 *Relatório Semanal — DisciplinaMax*\n\n`;
     msg += `📅 Período: última semana\n\n`;
@@ -189,8 +193,18 @@ export class NotificationHistoryService {
     msg += `✝️ *Capítulos bíblicos:* ${data.totalChapters}\n`;
     msg += `🍅 *Pomodoros:* ${data.totalPomodoros} (${data.totalFocusMin} min de foco)\n`;
     msg += `✅ *Dias com metas cumpridas:* ${data.daysCompleted}/7\n\n`;
-    msg += `🔥 *Streak atual:* ${data.streak} dias\n\n`;
-    msg += `Avaliação da semana: ${data.rating}\n\n`;
+    msg += `🔥 *Streak atual:* ${data.streak} dias\n`;
+
+    if (data.xp !== undefined && data.level !== undefined) {
+      msg += `⭐ *XP:* +${data.xp} esta semana · Nível ${data.level}\n`;
+    }
+    if (data.achievementsUnlocked && data.achievementsUnlocked > 0) {
+      msg += `🏆 *Conquistas desbloqueadas:* ${data.achievementsUnlocked}\n`;
+    }
+    if (data.challengesCompleted && data.challengesCompleted > 0) {
+      msg += `🎯 *Desafios concluídos:* ${data.challengesCompleted}\n`;
+    }
+    msg += `\nAvaliação da semana: ${data.rating}\n\n`;
 
     if (data.activeBooks.length > 0) {
       msg += `📖 *Livros em progresso:*\n`;
@@ -211,10 +225,12 @@ export class NotificationHistoryService {
     daysCompleted: number;
     totalPages: number;
     streak: number;
+    level?: number;
   }): { title: string; body: string; tag: string } {
+    const levelPart = data.level ? ` · ⭐ Nv.${data.level}` : "";
     return {
       title: "📊 Relatório Semanal",
-      body: `${data.daysCompleted}/7 dias cumpridos · ${data.totalPages} págs · 🔥 ${data.streak} dias streak`,
+      body: `${data.daysCompleted}/7 dias cumpridos · ${data.totalPages} págs · 🔥 ${data.streak} dias streak${levelPart}`,
       tag: "disciplina-weekly",
     };
   }

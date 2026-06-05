@@ -21,6 +21,33 @@ vi.mock("@/lib/ai", () => ({
   callOllama: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("@/lib/repositories/xp-repository", () => ({
+  XpRepository: vi.fn().mockImplementation(() => ({
+    getXp: vi.fn().mockResolvedValue(null),
+    addXp: vi.fn().mockResolvedValue(null),
+    getXpHistory: vi.fn().mockResolvedValue([]),
+    batchGetXp: vi.fn().mockResolvedValue([]),
+  })),
+}));
+
+vi.mock("@/lib/repositories/achievement-repository", () => ({
+  AchievementRepository: vi.fn().mockImplementation(() => ({
+    getUnlocked: vi.fn().mockResolvedValue([]),
+    upsertAchievement: vi.fn().mockResolvedValue(null),
+    getProgress: vi.fn().mockResolvedValue(null),
+    batchGetUnlocked: vi.fn().mockResolvedValue([]),
+  })),
+}));
+
+vi.mock("@/lib/repositories/challenge-repository", () => ({
+  ChallengeRepository: vi.fn().mockImplementation(() => ({
+    getActive: vi.fn().mockResolvedValue([]),
+    upsertChallenge: vi.fn().mockResolvedValue(null),
+    updateProgress: vi.fn().mockResolvedValue(null),
+    getCompleted: vi.fn().mockResolvedValue([]),
+  })),
+}));
+
 import { NotificationOrchestrator } from "@/lib/services/notification-orchestrator";
 import { NotificationDedupService } from "@/lib/services/notification-dedup-service";
 import { NotificationDeliveryService } from "@/lib/services/notification-delivery-service";

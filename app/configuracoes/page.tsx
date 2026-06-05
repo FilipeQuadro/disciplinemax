@@ -5,7 +5,7 @@ import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  Settings, Bell, MessageSquare, Timer, Smartphone, Check, AlertCircle, ExternalLink, Shield, Sparkles
+  Settings, Bell, MessageSquare, Timer, Smartphone, Check, AlertCircle, ExternalLink, Shield, Sparkles, User, Gift, Copy
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
@@ -14,6 +14,7 @@ import {
   registerServiceWorker, requestNotificationPermission, subscribeToPush
 } from "@/lib/notifications";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { SkeletonList } from "@/components/Skeleton";
 
 export default function ConfiguracoesPage() {
   const { settings, setSettings, setNotificationsEnabled } = useStore();
@@ -37,11 +38,15 @@ export default function ConfiguracoesPage() {
   const [testingTg, setTestingTg] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [profileForm, setProfileForm] = useState({ username: "", displayName: "", bio: "", isPublic: false });
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (user) loadSettings();
+    if (user) { loadSettings(); loadProfile(); }
     else setForm({
       telegram_bot_token: "",
       telegram_chat_id: "",
@@ -69,6 +74,60 @@ export default function ConfiguracoesPage() {
       if (data) { setSettings(data as any); setForm({ ...form, ...(data as any) }); }
     } catch {
       toast.error("Erro ao carregar configurações");
+    }
+  }
+
+  async function loadProfile() {
+    if (!user) return;
+    try {
+      const [profileRes, referralRes] = await Promise.all([
+        fetch(`/api/profile?userId=${user.id}`).then((r) => r.json()).catch(() => null),
+        fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.id, action: "get_code" }) }).then((r) => r.json()).catch(() => null),
+      ]);
+      if (profileRes?.profile) {
+        const p = profileRes.profile;
+        setProfileForm({
+          username: p.username ?? "",
+          displayName: p.display_name ?? "",
+          bio: p.bio ?? "",
+          isPublic: p.is_public ?? false,
+        });
+      }
+      if (referralRes?.referralCode) {
+        setReferralCode(referralRes.referralCode);
+        setReferralCount(referralRes.referralCount ?? 0);
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function saveProfile() {
+    if (!user) return;
+    setProfileSaving(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          username: profileForm.username || undefined,
+          displayName: profileForm.displayName || undefined,
+          bio: profileForm.bio || undefined,
+          isPublic: profileForm.isPublic,
+        }),
+      });
+      const data = await res.json();
+      if (data.profile) {
+        toast.success("Perfil salvo!");
+        if (data.profile.referral_code && !referralCode) {
+          setReferralCode(data.profile.referral_code);
+        }
+      } else {
+        toast.error("Nome de usuário já existe ou é inválido");
+      }
+    } catch {
+      toast.error("Erro ao salvar perfil");
+    } finally {
+      setProfileSaving(false);
     }
   }
 
@@ -157,26 +216,100 @@ export default function ConfiguracoesPage() {
 
   // ─── Loading Skeleton ──────────────────────────────────────────
   if (!mounted) {
-    return (
-      <div className="space-y-6 max-w-2xl animate-pulse">
-        <div className="h-7 w-64 rounded bg-white/5" />
-        <div className="h-3 w-48 rounded bg-white/5" />
-        {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-40 rounded-2xl bg-white/[0.02]" />)}
-      </div>
-    );
+    return <SkeletonList count={5} className="max-w-2xl" />;
   }
 
   return (
     <div className="space-y-6 max-w-2xl page-enter">
       {/* Hero Header */}
       <div>
-        <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
+        <p className="text-xs mb-1" style={{ color: "#6B7585" }}>
           {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
         </p>
         <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
           <Settings size={24} style={{ color: "#8B95A5" }} /> Configurações
         </h1>
       </div>
+
+      {/* Perfil Público */}
+      <section className="rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(145deg, rgba(58,186,180,0.03) 0%, rgba(20,24,32,0.8) 100%)", border: "1px solid rgba(58,186,180,0.1)" }}>
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(58,186,180,0.1)" }}>
+              <User size={16} style={{ color: "#3ABAB4" }} />
+            </div>
+            <h2 className="font-semibold text-white">Perfil Público</h2>
+          </div>
+          <p className="text-sm mb-4" style={{ color: "#8B95A5" }}>Escolha um nome de usuário para compartilhar seu progresso</p>
+          <div className="space-y-3">
+            <div>
+              <label className="label">Nome de usuário</label>
+              <div className="flex items-center gap-1">
+                <span className="text-sm" style={{ color: "#8B95A5" }}>/u/</span>
+                <input className="input flex-1" placeholder="seu_nome" value={profileForm.username}
+                  onChange={(e) => setProfileForm((p) => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") }))} />
+              </div>
+              <p className="text-xs mt-1" style={{ color: "#6B7585" }}>3-20 caracteres, apenas letras minúsculas, números e _</p>
+            </div>
+            <div>
+              <label className="label">Nome de exibição</label>
+              <input className="input" placeholder="Seu Nome" value={profileForm.displayName}
+                onChange={(e) => setProfileForm((p) => ({ ...p, displayName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Bio</label>
+              <input className="input" placeholder="Uma frase sobre você..." maxLength={300} value={profileForm.bio}
+                onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              <div>
+                <p className="text-sm font-medium text-white">Perfil público</p>
+                <p className="text-xs" style={{ color: "#6B7585" }}>Outros podem ver seu progresso em /u/{profileForm.username || "..."}</p>
+              </div>
+              <button
+                onClick={() => setProfileForm((p) => ({ ...p, isPublic: !p.isPublic }))}
+                className="w-12 h-6 rounded-full transition-all duration-200 relative"
+                style={{ background: profileForm.isPublic ? "#3ABAB4" : "rgba(255,255,255,0.1)" }}
+              >
+                <div className="w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all duration-200"
+                  style={{ left: profileForm.isPublic ? "26px" : "2px" }} />
+              </button>
+            </div>
+          </div>
+          <button onClick={saveProfile} disabled={profileSaving} className="btn-ghost text-sm mt-4 w-full">
+            {profileSaving ? "Salvando..." : "Salvar Perfil"}
+          </button>
+        </div>
+      </section>
+
+      {/* Convites */}
+      {referralCode && (
+        <section className="rounded-2xl overflow-hidden"
+          style={{ background: "linear-gradient(145deg, rgba(212,175,55,0.03) 0%, rgba(20,24,32,0.8) 100%)", border: "1px solid rgba(212,175,55,0.1)" }}>
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)" }}>
+                <Gift size={16} style={{ color: "#D4AF37" }} />
+              </div>
+              <h2 className="font-semibold text-white">Convide Amigos</h2>
+            </div>
+            <p className="text-sm mb-4" style={{ color: "#8B95A5" }}>Compartilhe seu código e ganhe 100 XP por indicação!</p>
+            <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              <code className="text-lg font-bold tracking-widest flex-1" style={{ color: "#D4AF37" }}>{referralCode}</code>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(referralCode).then(() => toast.success("Código copiado! 📋")).catch(() => {}); }}
+                className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#8B95A5" }}
+              >
+                <Copy size={16} />
+              </button>
+            </div>
+            <p className="text-xs mt-2" style={{ color: "#6B7585" }}>
+              {referralCount} amigo{referralCount !== 1 ? "s" : ""} indicado{referralCount !== 1 ? "s" : ""} · +{referralCount * 100} XP bônus
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Notificações Push */}
       <section className="rounded-2xl overflow-hidden"
@@ -201,7 +334,7 @@ export default function ConfiguracoesPage() {
                 <p className="text-sm font-medium text-white">
                   {notifPerm === "granted" ? "Notificações ativas!" : "Notificações desativadas"}
                 </p>
-                <p className="text-xs" style={{ color: "#555E6E" }}>
+                <p className="text-xs" style={{ color: "#6B7585" }}>
                   {notifPerm === "granted" ? "Lembretes ativos o dia todo" : "Ative para receber lembretes automáticos"}
                 </p>
               </div>
@@ -253,7 +386,7 @@ export default function ConfiguracoesPage() {
               <label className="label">Telegram chat_id</label>
               <input className="input" placeholder="123456789" value={form.telegram_chat_id}
                 onChange={(e) => setForm((p) => ({ ...p, telegram_chat_id: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Seu ID numérico. Envie /start ao bot antes de testar. Use <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" style={{ color: "#D4AF37" }}>@userinfobot</a> para descobrir.</p>
+              <p className="text-xs mt-1" style={{ color: "#6B7585" }}>Seu ID numérico. Envie /start ao bot antes de testar. Use <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" style={{ color: "#D4AF37" }}>@userinfobot</a> para descobrir.</p>
             </div>
             <button onClick={testTelegram} disabled={testingTg} className="btn-ghost text-sm">
               {testingTg ? "Enviando..." : "📱 Testar envio Telegram"}
@@ -339,7 +472,7 @@ export default function ConfiguracoesPage() {
                 <p className="text-sm font-medium text-white">
                   {form.streak_freeze_used < 1 ? "Perdão disponível" : "Perdão já usado este mês"}
                 </p>
-                <p className="text-xs" style={{ color: "#555E6E" }}>
+                <p className="text-xs" style={{ color: "#6B7585" }}>
                   Se perder um dia, seu streak não será resetado
                 </p>
               </div>
@@ -365,7 +498,7 @@ export default function ConfiguracoesPage() {
           </a>
           <input className="input" placeholder="AIzaSy..." value={form.gemini_api_key}
             onChange={(e) => setForm((p) => ({ ...p, gemini_api_key: e.target.value }))} />
-          <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Sem chave, mensagens estáticas são usadas</p>
+          <p className="text-xs mt-1" style={{ color: "#6B7585" }}>Sem chave, mensagens estáticas são usadas</p>
         </div>
       </section>
 

@@ -115,3 +115,64 @@ export const adminUsersQuerySchema = z.object({
 export const adminStatsQuerySchema = z.object({
   period: z.enum(["7d", "30d", "90d", "all"]).default("30d"),
 });
+
+// ── /api/profile ───────────────────────────────────────────────────
+export const profileUpdateSchema = z.object({
+  userId: z.string().min(1),
+  username: z.string().min(3).max(20).regex(/^[a-z0-9_]+$/).optional(),
+  displayName: z.string().max(100).optional(),
+  bio: z.string().max(300).optional(),
+  isPublic: z.boolean().optional(),
+});
+
+// ── /api/friends ───────────────────────────────────────────────────
+export const friendActionSchema = z.enum(["send", "accept", "remove", "list", "list_pending"]);
+
+export const friendRequestSchema = z.object({
+  userId: z.string().min(1),
+  action: friendActionSchema,
+  targetUserId: z.string().min(1).optional(),
+});
+
+// ── /api/leaderboard ───────────────────────────────────────────────
+export const leaderboardCategorySchema = z.enum(["xp", "streak", "pomodoros", "pages"]);
+
+export const leaderboardQuerySchema = z.object({
+  category: leaderboardCategorySchema.default("xp"),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+// ── /api/referral ──────────────────────────────────────────────────
+export const referralActionSchema = z.enum(["get_code", "track"]);
+
+export const referralRequestSchema = z.object({
+  userId: z.string().min(1),
+  action: referralActionSchema,
+  code: z.string().optional(),
+});
+
+// ── /api/groups ────────────────────────────────────────────────────
+export const groupActionSchema = z.enum(["list", "join", "leave", "ranking"]);
+
+export const groupRequestSchema = z.object({
+  userId: z.string().min(1),
+  action: groupActionSchema,
+  groupId: z.string().optional(),
+});
+
+// ── /api/community-events ──────────────────────────────────────────
+export const communityEventActionSchema = z.enum(["list", "contribute"]);
+
+export const communityEventRequestSchema = z.object({
+  userId: z.string().min(1),
+  action: communityEventActionSchema,
+  challengeId: z.string().optional(),
+  contribution: z.number().int().min(0).optional(),
+});
+
+// ── /api/onboarding ─────────────────────────────────────────────────
+export const onboardingStepSchema = z.object({
+  userId: z.string().min(1),
+  step: z.number().int().min(0).max(4),
+  stepData: z.record(z.string(), z.unknown()).optional(),
+});

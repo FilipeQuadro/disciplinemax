@@ -53,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
       </head>
       <body className="bg-[#0B0E14] text-slate-100 antialiased overscroll-none">
+        <a href="#main-content" className="skip-to-content">Pular para o conteúdo</a>
         <ErrorBoundary>
         <AuthProvider>
         <SwRegistrar />

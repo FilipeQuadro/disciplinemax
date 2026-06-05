@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
-import { EVENT_TYPES } from "@/lib/repositories/event-tracking-repository";
+import { OnboardingService } from "@/lib/services/onboarding-service";
 import {
   BookOpen, BookMarked, Timer, Target, Sparkles, ChevronRight,
-  ChevronLeft, CheckCircle2, Clock, Calendar, Sun, Moon, Zap
+  ChevronLeft, CheckCircle2, Sun, Moon, Zap, ArrowRight
 } from "lucide-react";
 import { clsx } from "clsx";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────
 interface OnboardingData {
@@ -18,6 +19,7 @@ interface OnboardingData {
   objective: string;
   preferredTimes: string[];
   frequency: string;
+  firstAction: string;
 }
 
 const STUDY_AREAS = [
@@ -46,17 +48,25 @@ const FREQUENCIES = [
   { id: "3x", label: "3x por semana", desc: "Flexibilidade" },
 ];
 
+const FIRST_ACTIONS = [
+  { id: "book", label: "Adicionar meu primeiro livro", desc: "Comece a acompanhar sua leitura", href: "/livros", icon: BookOpen, color: "#7C6BBD" },
+  { id: "pomodoro", label: "Iniciar primeiro foco", desc: "25 minutos de concentração", href: "/pomodoro", icon: Timer, color: "#D94F4F" },
+  { id: "bible", label: "Ler primeiro capítulo", desc: "Comece seu hábito bíblico", href: "/biblia", icon: BookMarked, color: "#D4AF37" },
+];
+
 // ── Main Component ─────────────────────────────────────────────
 export default function OnboardingPage() {
   const { user } = useAuth();
   const { setSettings } = useStore();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(true);
   const [data, setData] = useState<OnboardingData>({
     studyArea: "",
     objective: "",
     preferredTimes: [],
     frequency: "daily",
+    firstAction: "",
   });
 
   const steps = [
@@ -64,7 +74,41 @@ export default function OnboardingPage() {
     { title: "Objetivo", desc: "O que você quer alcançar?" },
     { title: "Horários", desc: "Quando prefere estudar?" },
     { title: "Frequência", desc: "Com que frequência?" },
+    { title: "Primeira Ação", desc: "Vamos começar! Escolha por onde entrar" },
   ];
+
+  // ── Restore progress on mount ──────────────────────────────
+  useEffect(() => {
+    async function restore() {
+      if (!user) { setRestoring(false); return; }
+      try {
+        const onboardingService = new OnboardingService();
+        const progress = await onboardingService.getProgress(user.id);
+        if (progress && !progress.completed) {
+          setStep(progress.step);
+          if (progress.step_data && Object.keys(progress.step_data).length > 0) {
+            setData((prev) => ({ ...prev, ...(progress.step_data as Partial<OnboardingData>) }));
+          }
+        } else if (progress?.completed) {
+          // Already completed onboarding — redirect to dashboard
+          window.location.href = "/";
+          return;
+        }
+      } catch { /* best effort */ }
+      setRestoring(false);
+    }
+    restore();
+  }, [user]);
+
+  // ── Persist step on navigation ────────────────────────────
+  async function goToStep(newStep: number) {
+    if (!user) { setStep(newStep); return; }
+    setStep(newStep);
+    try {
+      const onboardingService = new OnboardingService();
+      await onboardingService.saveStep(user.id, newStep, data as unknown as Record<string, unknown>);
+    } catch { /* best effort — don't block navigation */ }
+  }
 
   async function handleComplete() {
     if (!user) return;
@@ -119,26 +163,21 @@ export default function OnboardingPage() {
         },
       });
 
-      // Track onboarding completion event
-      try {
-        const { getServiceClient } = await import("@/lib/db-client");
-        const client = getServiceClient();
-        await client.from("product_events").insert({
-          user_id: user.id,
-          event_type: EVENT_TYPES.ONBOARDING_COMPLETED,
-          event_data: {
-            study_area: data.studyArea,
-            objective: data.objective,
-            preferred_times: data.preferredTimes,
-            frequency: data.frequency,
-          },
-        });
-      } catch { /* best effort */ }
+      // Mark onboarding complete via service (also fires ONBOARDING_COMPLETED event)
+      const onboardingService = new OnboardingService();
+      await onboardingService.completeOnboarding(user.id, {
+        study_area: data.studyArea,
+        objective: data.objective,
+        preferred_times: data.preferredTimes,
+        frequency: data.frequency,
+        first_action: data.firstAction,
+      });
 
       toast.success("Configuração concluída! Bem-vindo ao DisciplinaMax 🎉");
 
-      // Redirect to dashboard
-      window.location.href = "/";
+      // Redirect to chosen first action
+      const chosenAction = FIRST_ACTIONS.find((a) => a.id === data.firstAction);
+      window.location.href = chosenAction?.href ?? "/";
     } catch (e) {
       toast.error("Erro ao salvar configuração. Tente novamente.");
     } finally {
@@ -150,8 +189,26 @@ export default function OnboardingPage() {
     if (step === 0) return data.studyArea !== "";
     if (step === 1) return data.objective !== "";
     if (step === 2) return data.preferredTimes.length > 0;
+    if (step === 4) return data.firstAction !== "";
     return true;
   };
+
+  // ── Loading while restoring progress ───────────────────────
+  if (restoring) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0B0E14" }}>
+        <div className="w-full max-w-md space-y-6">
+          <div className="flex items-center gap-2">
+            {steps.map((_, i) => (
+              <div key={i} className="flex-1 h-1 rounded-full bg-white/[0.04]" />
+            ))}
+          </div>
+          <div className="h-8 w-48 rounded bg-white/[0.04] animate-pulse mx-auto" />
+          <div className="h-4 w-64 rounded bg-white/[0.02] animate-pulse mx-auto" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#0B0E14" }}>
@@ -208,7 +265,7 @@ export default function OnboardingPage() {
                   }}>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-white">{obj.label}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "#555E6E" }}>{obj.desc}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{obj.desc}</p>
                   </div>
                   {data.objective === obj.id && <CheckCircle2 size={18} style={{ color: "#D4AF37" }} />}
                 </button>
@@ -219,7 +276,7 @@ export default function OnboardingPage() {
           {/* Step 2: Preferred Times */}
           {step === 2 && (
             <div className="space-y-2">
-              <p className="text-xs mb-2" style={{ color: "#555E6E" }}>Selecione um ou mais horários</p>
+              <p className="text-xs mb-2" style={{ color: "#6B7585" }}>Selecione um ou mais horários</p>
               {TIME_OPTIONS.map((time) => {
                 const isSelected = data.preferredTimes.includes(time.id);
                 return (
@@ -238,7 +295,7 @@ export default function OnboardingPage() {
                     <time.icon size={20} style={{ color: time.color }} />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">{time.label}</p>
-                      <p className="text-xs" style={{ color: "#555E6E" }}>Notificação às {time.time}</p>
+                      <p className="text-xs" style={{ color: "#6B7585" }}>Notificação às {time.time}</p>
                     </div>
                     {isSelected && <CheckCircle2 size={18} style={{ color: time.color }} />}
                   </button>
@@ -266,11 +323,40 @@ export default function OnboardingPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs mt-0.5" style={{ color: "#555E6E" }}>{freq.desc}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{freq.desc}</p>
                   </div>
                   {data.frequency === freq.id && <CheckCircle2 size={18} style={{ color: "#D4AF37" }} />}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Step 4: First Action (NEW) */}
+          {step === 4 && (
+            <div className="space-y-3">
+              <p className="text-xs mb-2" style={{ color: "#6B7585" }}>Escolha por onde começar sua jornada</p>
+              {FIRST_ACTIONS.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button key={action.id}
+                    onClick={() => setData({ ...data, firstAction: action.id })}
+                    className="w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3"
+                    style={{
+                      background: data.firstAction === action.id ? `${action.color}10` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${data.firstAction === action.id ? `${action.color}30` : "rgba(255,255,255,0.05)"}`,
+                    }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${action.color}15` }}>
+                      <Icon size={20} style={{ color: action.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-white">{action.label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{action.desc}</p>
+                    </div>
+                    {data.firstAction === action.id && <CheckCircle2 size={18} style={{ color: action.color }} />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -278,28 +364,29 @@ export default function OnboardingPage() {
         {/* Navigation */}
         <div className="flex items-center gap-3">
           {step > 0 && (
-            <button onClick={() => setStep(step - 1)}
+            <button onClick={() => goToStep(step - 1)}
               className="flex-1 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "#8B95A5" }}>
               <ChevronLeft size={14} /> Voltar
             </button>
           )}
           {step < steps.length - 1 ? (
-            <button onClick={() => setStep(step + 1)} disabled={!canProceed()}
+            <button onClick={() => goToStep(step + 1)} disabled={!canProceed()}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
               style={{
                 background: canProceed() ? "linear-gradient(135deg, #A8892B, #D4AF37)" : "rgba(255,255,255,0.03)",
-                color: canProceed() ? "#0B0E14" : "#555E6E",
+                color: canProceed() ? "#0B0E14" : "#6B7585",
                 opacity: canProceed() ? 1 : 0.5,
               }}>
               Próximo <ChevronRight size={14} />
             </button>
           ) : (
-            <button onClick={handleComplete} disabled={loading}
+            <button onClick={handleComplete} disabled={loading || !canProceed()}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
               style={{
-                background: "linear-gradient(135deg, #A8892B, #D4AF37)",
-                color: "#0B0E14",
+                background: canProceed() ? "linear-gradient(135deg, #A8892B, #D4AF37)" : "rgba(255,255,255,0.03)",
+                color: canProceed() ? "#0B0E14" : "#6B7585",
+                opacity: canProceed() ? 1 : 0.5,
               }}>
               {loading ? "Salvando..." : "Começar! 🚀"} <Sparkles size={14} />
             </button>
@@ -309,8 +396,8 @@ export default function OnboardingPage() {
         {/* Skip link */}
         <p className="text-center">
           <button onClick={() => window.location.href = "/"}
-            className="text-xs hover:underline" style={{ color: "#555E6E" }}>
-            Pagar configuração e ir direto ao app →
+            className="text-xs hover:underline" style={{ color: "#6B7585" }}>
+            Pular configuração e ir direto ao app →
           </button>
         </p>
       </div>

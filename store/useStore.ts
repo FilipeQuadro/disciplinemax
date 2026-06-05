@@ -40,6 +40,12 @@ interface AppState {
   streak: number;
   setStreak: (n: number) => void;
 
+  // Gamification
+  totalXp: number;
+  setTotalXp: (n: number) => void;
+  currentLevel: number;
+  setCurrentLevel: (n: number) => void;
+
   // Settings
   settings: UserSettings | null;
   setSettings: (s: UserSettings | null) => void;
@@ -65,6 +71,8 @@ export const useStore = create<AppState>()(
         todaySessions: [],
         todayStats: null,
         streak: 0,
+        totalXp: 0,
+        currentLevel: 1,
         settings: null,
         pomodoroCount: 0,
         pomodoroActive: false,
@@ -104,6 +112,11 @@ export const useStore = create<AppState>()(
       setTodayStats: (s) => set({ todayStats: s }),
       streak: 0,
       setStreak: (n) => set({ streak: n }),
+
+      totalXp: 0,
+      setTotalXp: (n) => set({ totalXp: n }),
+      currentLevel: 1,
+      setCurrentLevel: (n) => set({ currentLevel: n }),
 
       settings: null,
       setSettings: (s) => set({ settings: s }),

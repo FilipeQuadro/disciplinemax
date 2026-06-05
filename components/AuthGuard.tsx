@@ -6,23 +6,58 @@ import { useEffect, useState } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { ShieldOff, RefreshCw } from "lucide-react";
 
-const PUBLIC_PATHS = ["/login", "/onboarding"];
+const PUBLIC_PATHS = ["/login"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, timedOut, retry, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [blocked, setBlocked] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p);
+  const isOnboarding = pathname === "/onboarding" || pathname === "/progresso";
 
   useEffect(() => {
-    if (!loading && !timedOut && !user && !isPublic) {
+    if (!loading && !timedOut && !user && !isPublic && !isOnboarding) {
       router.replace("/login");
     }
     if (!loading && !timedOut && user && isPublic) {
       router.replace("/");
     }
-  }, [user, loading, timedOut, router, isPublic]);
+  }, [user, loading, timedOut, router, isPublic, isOnboarding]);
+
+  // Check onboarding status for authenticated users
+  useEffect(() => {
+    async function checkOnboarding() {
+      if (!user || onboardingChecked) return;
+      try {
+        const { data, error } = await dataFetch({
+          action: "select",
+          table: "user_settings",
+          filters: { eq: { user_id: user.id }, select: "user_id", maybeSingle: true },
+        });
+        if (error) return;
+        if (!data) {
+          // No user_settings → onboarding not completed
+          setOnboardingChecked(true);
+          if (!isOnboarding) {
+            router.replace("/onboarding");
+          }
+          return;
+        }
+        // Has settings → onboarding done
+        setOnboardingChecked(true);
+        if (isOnboarding) {
+          router.replace("/");
+        }
+      } catch {
+        setOnboardingChecked(true);
+      }
+    }
+    if (!loading && !timedOut && user) {
+      checkOnboarding();
+    }
+  }, [user, loading, timedOut, onboardingChecked, isOnboarding, router]);
 
   useEffect(() => {
     async function checkBlocked() {
@@ -76,6 +111,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  // Onboarding page is accessible to authenticated users
+  // (redirect logic handled in the effect above)
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
 
   if (blocked) {
     return (

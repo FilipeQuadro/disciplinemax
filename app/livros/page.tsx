@@ -18,6 +18,8 @@ import { clsx } from "clsx";
 import { trackPagesRead } from "@/lib/stats";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
+import { processGamification } from "@/lib/gamification";
+import { SkeletonList } from "@/components/Skeleton";
 
 const BOOK_COLORS = ["#7C6BBD", "#3ABAB4", "#D4AF37", "#E8844A", "#D94F4F", "#7C6BBD"];
 
@@ -134,7 +136,15 @@ export default function LivrosPage() {
       const allBooks = useStore.getState().books.map((b) => b.id === book.id ? { ...b, current_page: newPage, pages_read_today: newToday } : b);
       const totalGoal = allBooks.reduce((s: number, b: any) => s + b.daily_goal, 0);
       const totalRead = allBooks.reduce((s: number, b: any) => s + b.pages_read_today, 0);
-      if (user) trackPagesRead(user.id, pages, totalGoal, totalRead, useStore.getState().todayBibleChapters, useStore.getState().bibleGoal?.daily_chapters || 0).catch(() => {});
+      if (user) {
+        trackPagesRead(user.id, pages, totalGoal, totalRead, useStore.getState().todayBibleChapters, useStore.getState().bibleGoal?.daily_chapters || 0).catch(() => {});
+        const wasIncomplete = book.current_page < book.total_pages;
+        const isNowComplete = newPage >= book.total_pages;
+        processGamification("page_read", { pages }).catch(() => {});
+        if (wasIncomplete && isNowComplete) {
+          processGamification("book_finished", { bookId: book.id }).catch(() => {});
+        }
+      }
       checkAndNotifyGoalCompletion({ pagesReadToday: totalRead, pagesGoal: totalGoal, bibleChaptersToday: useStore.getState().todayBibleChapters, bibleChaptersGoal: useStore.getState().bibleGoal?.daily_chapters || 0 });
       toast.success(`+${pages} páginas registradas! 📖`);
       setReadingInput((p) => ({ ...p, [book.id]: 0 }));
@@ -155,17 +165,7 @@ export default function LivrosPage() {
 
   // ─── Loading Skeleton ──────────────────────────────────────────
   if (!mounted) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-7 w-64 rounded bg-white/5" />
-        <div className="h-3 w-48 rounded bg-white/5" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="h-44 rounded-2xl bg-white/[0.02]" />
-          <div className="md:col-span-2 h-44 rounded-2xl bg-white/[0.02]" />
-        </div>
-        {[0, 1, 2].map((i) => <div key={i} className="h-32 rounded-2xl bg-white/[0.02]" />)}
-      </div>
-    );
+    return <SkeletonList count={4} />;
   }
 
   return (
@@ -173,7 +173,7 @@ export default function LivrosPage() {
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
+          <p className="text-xs mb-1" style={{ color: "#6B7585" }}>
             {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
           <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
@@ -225,7 +225,7 @@ export default function LivrosPage() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-white">{overallProgress}%</span>
-                <span className="text-[9px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Total</span>
+                <span className="text-[9px] uppercase tracking-wider" style={{ color: "#6B7585" }}>Total</span>
               </div>
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function LivrosPage() {
             <div className="rounded-2xl p-4 text-center glow-border"
               style={{ background: "rgba(124,107,189,0.04)", border: "1px solid rgba(124,107,189,0.1)" }}>
               <p className="text-2xl font-bold count-up" style={{ color: "#7C6BBD" }}>{pagesReadToday}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Páginas hoje</p>
+              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Páginas hoje</p>
               <div className="progress-bar mt-2">
                 <div className="progress-fill" style={{ width: `${Math.min(100, todayPct)}%`, background: "#7C6BBD" }} />
               </div>
@@ -243,12 +243,12 @@ export default function LivrosPage() {
             <div className="rounded-2xl p-4 text-center glow-border"
               style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.1)" }}>
               <p className="text-2xl font-bold count-up" style={{ color: "#3ABAB4" }}>{booksCompleted}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Concluídos</p>
+              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Concluídos</p>
             </div>
             <div className="rounded-2xl p-4 text-center glow-border"
               style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.1)" }}>
               <p className="text-2xl font-bold count-up" style={{ color: "#E8844A" }}>{streak}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Streak</p>
+              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Streak</p>
               {streak >= 7 && <span className="text-[9px]" style={{ color: "#E8844A" }}>🔥</span>}
             </div>
 
@@ -268,7 +268,7 @@ export default function LivrosPage() {
                 <p className="text-sm font-semibold text-white">
                   {todayGoalMet ? "Meta diária atingida! 🎉" : `${pagesReadToday}/${totalPagesGoal} páginas hoje`}
                 </p>
-                <p className="text-xs" style={{ color: "#555E6E" }}>
+                <p className="text-xs" style={{ color: "#6B7585" }}>
                   {todayGoalMet ? "Continue lendo para aumentar seu streak!" : `Faltam ${totalPagesGoal - pagesReadToday} páginas para completar`}
                 </p>
               </div>
@@ -287,7 +287,7 @@ export default function LivrosPage() {
         <div className="card animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#6B7585" }}>
               <X size={18} />
             </button>
           </div>
@@ -332,7 +332,7 @@ export default function LivrosPage() {
               <div className="flex gap-2 mt-1">
                 {BOOK_COLORS.map((c) => (
                   <button key={c} onClick={() => setForm((p) => ({ ...p, color: c }))}
-                    className={clsx("w-8 h-8 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2 ring-offset-[#141820]")}
+                    className={clsx("w-11 h-11 rounded-lg transition-all duration-200 hover:scale-110", form.color === c && "ring-2 ring-offset-2 ring-offset-[#141820]")}
                     style={{ background: c }}
                     aria-label={`Cor ${c}`}
                     aria-pressed={form.color === c} />
@@ -360,7 +360,7 @@ export default function LivrosPage() {
             <BookOpen size={36} style={{ color: "#7C6BBD" }} />
           </div>
           <h3 className="text-lg font-serif font-semibold text-white mb-2">Nenhum livro ainda</h3>
-          <p className="text-sm mb-5" style={{ color: "#555E6E" }}>Adicione seu primeiro livro para começar a acompanhar sua leitura</p>
+          <p className="text-sm mb-5" style={{ color: "#6B7585" }}>Adicione seu primeiro livro para começar a acompanhar sua leitura</p>
           <button onClick={() => { setShowForm(true); setForm({ ...emptyBook }); }}
             className="btn-primary inline-flex items-center gap-2">
             <Plus size={16} /> Adicionar Livro
@@ -447,13 +447,13 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-bold text-white">{book.title}</h3>
-              {book.author && <p className="text-xs" style={{ color: "#555E6E" }}>{book.author}</p>}
+              {book.author && <p className="text-xs" style={{ color: "#6B7585" }}>{book.author}</p>}
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#6B7585" }}>
                 <Edit2 size={13} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "#555E6E" }}>
+              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "#6B7585" }}>
                 <Trash2 size={13} />
               </button>
             </div>
@@ -481,13 +481,13 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
             <div className="flex items-center gap-0.5 rounded-xl overflow-hidden"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <button onClick={() => onReadingChange(Math.max(0, readingValue - 5))}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#555E6E" }}>−</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#6B7585" }}>−</button>
               <input type="number" value={readingValue} onChange={(e) => onReadingChange(+e.target.value)}
                 className="w-14 text-center bg-transparent text-white text-sm py-2 focus:outline-none" placeholder="0" />
               <button onClick={() => onReadingChange(readingValue + 5)}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#555E6E" }}>+</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#6B7585" }}>+</button>
             </div>
-            <span className="text-xs" style={{ color: "#555E6E" }}>págs</span>
+            <span className="text-xs" style={{ color: "#6B7585" }}>págs</span>
             <button onClick={onLog} disabled={!readingValue}
               className="btn-primary text-xs py-2 px-4 disabled:opacity-30">
               + Registrar
@@ -509,7 +509,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)" }}>
-      <p className="text-[10px] mb-0.5" style={{ color: "#555E6E" }}>{label}</p>
+      <p className="text-[10px] mb-0.5" style={{ color: "#6B7585" }}>{label}</p>
       <p className="text-sm font-semibold" style={{ color }}>{value}</p>
     </div>
   );

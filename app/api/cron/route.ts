@@ -9,6 +9,7 @@ import { SubscriptionRepository } from "@/lib/repositories/subscription-reposito
 import { NotificationOrchestrator } from "@/lib/services/notification-orchestrator";
 import { NotificationSchedulerService } from "@/lib/services/notification-scheduler-service";
 import { NotificationDeliveryService } from "@/lib/services/notification-delivery-service";
+import { StreakService } from "@/lib/services/streak-service";
 import { MetricsService, METRICS } from "@/lib/metrics";
 import { AlertService } from "@/lib/alert";
 
@@ -118,6 +119,19 @@ export async function GET(req: Request) {
       await queueRepo.cleanupOld();
     } catch (e: unknown) {
       logger.error("Retry processing failed", { error: String(e) });
+    }
+
+    // Validate streaks at midnight BRT (check for broken streaks)
+    if (NotificationSchedulerService.isMidnightBrt()) {
+      try {
+        const streakService = new StreakService();
+        for (const settings of allSettings) {
+          await streakService.validateStreak(settings.user_id, today);
+        }
+        logger.info("Streak validation completed", { userCount: allSettings.length });
+      } catch (e: unknown) {
+        logger.error("Streak validation error", { error: String(e) });
+      }
     }
 
     return NextResponse.json({

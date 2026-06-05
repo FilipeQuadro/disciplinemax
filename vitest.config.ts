@@ -17,10 +17,10 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       include: ["lib/**/*.ts", "app/api/**/*.ts", "middleware.ts"],
       thresholds: {
-        statements: 55,
-        branches: 40,
+        statements: 60,
+        branches: 45,
         functions: 60,
-        lines: 60,
+        lines: 62,
       },
     },
   },

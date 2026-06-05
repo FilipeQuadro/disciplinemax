@@ -11,6 +11,7 @@ import { clsx } from "clsx";
 import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
 import { useAuth } from "@/components/AuthProvider";
 import { trackPomodoroCompleted } from "@/lib/stats";
+import { processGamification } from "@/lib/gamification";
 
 const COLORS = {
   focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
@@ -89,6 +90,7 @@ export default function PomodoroPage() {
       try {
         await dataFetch({ action: "insert", table: "pomodoro_sessions", payload: session });
         trackPomodoroCompleted(user.id, customFocus).catch(() => {});
+        processGamification("pomodoro_completed").catch(() => {});
       } catch {
         toast.error("Erro ao salvar sessão — o pomodoro pode não ter sido registrado");
       }

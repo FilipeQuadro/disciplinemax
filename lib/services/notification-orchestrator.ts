@@ -6,6 +6,9 @@ import { NotificationRepository } from "@/lib/repositories/notification-reposito
 import { NotificationQueueRepository, RetryService } from "@/lib/repositories/notification-queue-repository";
 import { EventTrackingService, EVENT_TYPES } from "@/lib/repositories/event-tracking-repository";
 import { SubscriptionRepository } from "@/lib/repositories/subscription-repository";
+import { XpRepository } from "@/lib/repositories/xp-repository";
+import { AchievementRepository } from "@/lib/repositories/achievement-repository";
+import { ChallengeRepository } from "@/lib/repositories/challenge-repository";
 import { logger } from "@/lib/logger";
 import { MetricsService } from "@/lib/metrics";
 import type { Book, BibleGoal, DailyStats, UserSettings } from "@/lib/supabase";
@@ -221,6 +224,29 @@ export class NotificationOrchestrator {
       .filter((b) => b.current_page < b.total_pages)
       .map((b) => ({ title: b.title, progress: Math.round((b.current_page / b.total_pages) * 100) }));
 
+    // Fetch gamification data (XP, level, achievements, challenges)
+    let xpData: { xp: number; level: number } | null = null;
+    let achievementsUnlocked = 0;
+    let challengesCompleted = 0;
+    try {
+      const [xpRes, achRes, chalRes] = await Promise.all([
+        new XpRepository().getXp(userId),
+        new AchievementRepository().getUnlocked(userId),
+        new ChallengeRepository().getCompleted(userId, 30),
+      ]);
+      if (xpRes) {
+        xpData = { xp: xpRes.total_xp, level: xpRes.current_level };
+      }
+      // Count achievements unlocked in the last 7 days
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      achievementsUnlocked = achRes.filter((a) => a.unlocked_at && a.unlocked_at >= weekAgo).length;
+      // Count challenges completed this week
+      const weekKey = `${new Date().getFullYear()}-W${String(Math.ceil(((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / 86400000 + new Date(new Date().getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, "0")}`;
+      challengesCompleted = chalRes.filter((c) => c.week_key === weekKey && c.completed).length;
+    } catch (e) {
+      logger.error("Failed to fetch gamification data for weekly notification", { error: String(e), userId });
+    }
+
     // Build messages
     const telegramMessage = NotificationHistoryService.buildWeeklyTelegramMessage({
       totalPages,
@@ -232,12 +258,17 @@ export class NotificationOrchestrator {
       streak,
       rating,
       activeBooks,
+      xp: xpData?.xp,
+      level: xpData?.level,
+      achievementsUnlocked: achievementsUnlocked > 0 ? achievementsUnlocked : undefined,
+      challengesCompleted: challengesCompleted > 0 ? challengesCompleted : undefined,
     });
 
     const pushPayload = NotificationHistoryService.buildWeeklyPushPayload({
       daysCompleted,
       totalPages,
       streak,
+      level: xpData?.level,
     });
 
     // Deliver

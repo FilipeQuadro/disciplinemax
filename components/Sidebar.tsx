@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Timer, Settings,
-  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, Shield, Crown
+  Menu, X, Flame, FlameKindling, ChevronRight, BookMarked, LogOut, Shield, Crown, Users, BarChart3, Rss
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
@@ -19,6 +19,9 @@ const navItems = [
   { href: "/livros", icon: BookOpen, label: "Livros", color: "text-[#7C6BBD]" },
   { href: "/biblia", icon: BookMarked, label: "Bíblia", color: "text-[#D4AF37]" },
   { href: "/pomodoro", icon: Timer, label: "Pomodoro", color: "text-[#D94F4F]" },
+  { href: "/feed", icon: Rss, label: "Feed", color: "text-[#3ABAB4]" },
+  { href: "/ranking", icon: BarChart3, label: "Ranking", color: "text-[#D4AF37]" },
+  { href: "/grupos", icon: Users, label: "Grupos", color: "text-[#3ABAB4]" },
   { href: "/planos", icon: Crown, label: "Planos", color: "text-[#D4AF37]" },
   { href: "/configuracoes", icon: Settings, label: "Configurações", color: "text-[#8B95A5]" },
 ];
@@ -51,6 +54,8 @@ export function Sidebar() {
           left: "max(16px, env(safe-area-inset-left, 16px))",
         }}
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+        aria-expanded={mobileOpen}
       >
         {mobileOpen ? <X size={18} className="text-slate-300" /> : <Menu size={18} className="text-slate-400" />}
       </button>
@@ -95,14 +100,15 @@ export function Sidebar() {
               </div>
               <div>
                 <span className="font-serif font-bold text-white text-sm tracking-tight">DisciplinaMax</span>
-                <p className="text-[9px] tracking-[0.2em] uppercase" style={{ color: "#555E6E" }}>Mentor de Disciplina</p>
+                <p className="text-[9px] tracking-[0.2em] uppercase" style={{ color: "#6B7585" }}>Mentor de Disciplina</p>
               </div>
             </div>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="hidden md:flex glass p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-auto"
-            style={{ color: "#555E6E" }}
+            style={{ color: "#6B7585" }}
+            aria-label={sidebarOpen ? "Recolher sidebar" : "Expandir sidebar"}
           >
             <ChevronRight size={14} className={clsx("transition-transform duration-300", !sidebarOpen && "rotate-180")} />
           </button>
@@ -142,8 +148,9 @@ export function Sidebar() {
                     !sidebarOpen && "justify-center px-2"
                   )}
                   title={!sidebarOpen ? item.label : undefined}
+                  aria-label={!sidebarOpen ? item.label : undefined}
                 >
-                  <item.icon size={18} className={clsx("transition-colors duration-300", active ? item.color : "text-[#555E6E]")} />
+                  <item.icon size={18} className={clsx("transition-colors duration-300", active ? item.color : "text-[#6B7585]")} />
                   {sidebarOpen && <span className={clsx(active && "text-white font-medium")}>{item.label}</span>}
                   {sidebarOpen && active && (
                     <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
@@ -160,8 +167,9 @@ export function Sidebar() {
                 onClick={closeMobile}
                 className={clsx("nav-item", pathname === "/admin" && "active", !sidebarOpen && "justify-center px-2")}
                 title={!sidebarOpen ? "Admin" : undefined}
+                aria-label={!sidebarOpen ? "Admin" : undefined}
               >
-                <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#555E6E]")} />
+                <Shield size={18} className={clsx("transition-colors duration-300", pathname === "/admin" ? "text-[#D4AF37]" : "text-[#6B7585]")} />
                 {sidebarOpen && <span className={clsx(pathname === "/admin" && "text-white font-medium")}>Admin</span>}
                 {sidebarOpen && pathname === "/admin" && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#D4AF37", boxShadow: "0 0 8px rgba(212,175,55,0.4)" }} />
@@ -183,7 +191,7 @@ export function Sidebar() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-white truncate">{user.user_metadata?.name || "Usuário"}</p>
-                    <p className="text-[10px] truncate" style={{ color: "#555E6E" }}>{user.email}</p>
+                    <p className="text-[10px] truncate" style={{ color: "#6B7585" }}>{user.email}</p>
                   </div>
                 </div>
               </div>
