@@ -53,7 +53,7 @@ export default function PomodoroPage() {
     return customLong * 60;
   }, [mode, customFocus, customShort, customLong]);
 
-  useEffect(() => { if (!pomodoroActive) setPomodoroTimeLeft(getModeTime()); }, [mode, getModeTime]);
+  useEffect(() => { if (!pomodoroActive) setPomodoroTimeLeft(getModeTime()); }, [mode, getModeTime, pomodoroActive, setPomodoroTimeLeft]);
 
   useEffect(() => {
     if (pomodoroActive) {
@@ -62,16 +62,19 @@ export default function PomodoroPage() {
       }, 1000);
     } else { clearInterval(intervalRef.current); }
     return () => clearInterval(intervalRef.current);
-  }, [pomodoroActive]);
+  }, [pomodoroActive, setPomodoroTimeLeft]);
 
   const [timerEnded, setTimerEnded] = useState(false);
+  const handleTimerEndRef = useRef(handleTimerEnd);
+  handleTimerEndRef.current = handleTimerEnd;
+
   useEffect(() => {
     if (pomodoroTimeLeft === 0 && pomodoroActive && !timerEnded) {
       setTimerEnded(true);
-      handleTimerEnd();
+      handleTimerEndRef.current();
     }
     if (pomodoroTimeLeft > 0) setTimerEnded(false);
-  }, [pomodoroTimeLeft]);
+  }, [pomodoroTimeLeft, pomodoroActive, timerEnded]);
 
   async function handleTimerEnd() {
     setPomodoroActive(false);

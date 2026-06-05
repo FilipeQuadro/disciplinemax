@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import type { User } from "@supabase/supabase-js";
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [timedOut, setTimedOut] = useState(false);
   const { setUserId, clearUserData } = useStore();
 
-  function initSession() {
+  const initSession = useCallback(() => {
     if (!supabase) { setLoading(false); return; }
 
     setLoading(true);
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return safetyTimeout;
-  }
+  }, [setUserId]);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (safetyTimeout) clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
-  }, [setUserId, clearUserData]);
+  }, [setUserId, clearUserData, initSession]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: "Supabase not configured" };

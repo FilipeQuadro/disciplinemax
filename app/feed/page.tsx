@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Trophy, Target, Flame, BookOpen, Users
@@ -37,12 +37,7 @@ export default function FeedPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    loadFeed();
-  }, [user]);
-
-  function loadFeed() {
+  const loadFeed = useCallback(() => {
     setLoading(true);
     setError(false);
     fetch(`/api/feed?userId=${user!.id}&limit=50`)
@@ -50,7 +45,12 @@ export default function FeedPage() {
       .then((data) => { if (data.events) setEvents(data.events); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    loadFeed();
+  }, [loadFeed, user]);
 
   if (!mounted || loading) {
     return (

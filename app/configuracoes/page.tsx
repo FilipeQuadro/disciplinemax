@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
@@ -45,39 +45,17 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (user) { loadSettings(); loadProfile(); }
-    else setForm({
-      telegram_bot_token: "",
-      telegram_chat_id: "",
-      notification_times: ["07:00", "12:00", "19:00"],
-      pomodoro_duration: 25,
-      short_break: 5,
-      long_break: 15,
-      pomodoros_until_long: 4,
-      daily_books_goal: 20,
-      daily_bible_chapters: 3,
-      gemini_api_key: "",
-      timezone: "America/Sao_Paulo",
-      streak_freeze_available: 1,
-      streak_freeze_used: 0,
-    });
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotifPerm(Notification.permission);
-    }
-  }, [user]);
-
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user.id }, maybeSingle: true } });
-      if (data) { setSettings(data as any); setForm({ ...form, ...(data as any) }); }
+      if (data) { setSettings(data as any); setForm((prev) => ({ ...prev, ...(data as any) })); }
     } catch {
       toast.error("Erro ao carregar configurações");
     }
-  }
+  }, [user, setSettings]);
 
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
     try {
       const [profileRes, referralRes] = await Promise.all([
@@ -98,7 +76,29 @@ export default function ConfiguracoesPage() {
         setReferralCount(referralRes.referralCount ?? 0);
       }
     } catch { /* ignore */ }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) { loadSettings(); loadProfile(); }
+    else setForm({
+      telegram_bot_token: "",
+      telegram_chat_id: "",
+      notification_times: ["07:00", "12:00", "19:00"],
+      pomodoro_duration: 25,
+      short_break: 5,
+      long_break: 15,
+      pomodoros_until_long: 4,
+      daily_books_goal: 20,
+      daily_bible_chapters: 3,
+      gemini_api_key: "",
+      timezone: "America/Sao_Paulo",
+      streak_freeze_available: 1,
+      streak_freeze_used: 0,
+    });
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotifPerm(Notification.permission);
+    }
+  }, [user, loadSettings, loadProfile]);
 
   async function saveProfile() {
     if (!user) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { getBibleVerseOfDay, getMotivationalMessage } from "@/lib/ai";
@@ -42,11 +42,6 @@ function useDashboardData() {
   const [serverAchievements, setServerAchievements] = useState<AchievementData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    loadAll();
-  }, [user]);
 
   async function loadAll() {
     const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -184,6 +179,14 @@ function useDashboardData() {
     }
   }
 
+  const loadAllRef = useRef(loadAll);
+  loadAllRef.current = loadAll;
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    loadAllRef.current();
+  }, [user]);
+
   return { books, streak, todayStats, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, totalXp, currentLevel, activeChallenges, insights, serverAchievements, loading, error, user };
 }
 
@@ -231,6 +234,8 @@ export default function DashboardPage() {
   const { books, streak, bibleGoal, todayBibleChapters, pomodoroCount, settings, verse, motivation, weekStats, calendarData, totalXp, currentLevel, activeChallenges, insights, serverAchievements, loading, error, user } = data;
   const [mounted, setMounted] = useState(false);
   const achievements = useAchievements();
+  const checkAndUnlockRef = useRef(achievements.checkAndUnlock);
+  checkAndUnlockRef.current = achievements.checkAndUnlock;
   const today = new Date();
 
   useEffect(() => { setMounted(true); }, []);
@@ -239,7 +244,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading) {
       const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
-      achievements.checkAndUnlock({
+      checkAndUnlockRef.current({
         streak,
         booksCompleted,
         bibleChaptersTotal: todayBibleChapters,

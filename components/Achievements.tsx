@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
@@ -63,15 +63,15 @@ export function useAchievements() {
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [newBadge, setNewBadge] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUnlocked();
-  }, [user]);
-
-  async function loadUnlocked() {
+  const loadUnlocked = useCallback(async () => {
     if (!user) return;
     const { data } = await dataFetch({ action: "select", table: "achievements", filters: { eq: { user_id: user.id }, select: "badge_key" } });
     if (data) setUnlocked((data as any[]).map((d: any) => d.badge_key));
-  }
+  }, [user]);
+
+  useEffect(() => {
+    loadUnlocked();
+  }, [loadUnlocked]);
 
   async function checkAndUnlock(state: BadgeState) {
     if (!user) return;

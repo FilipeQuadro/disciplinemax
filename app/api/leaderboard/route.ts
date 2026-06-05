@@ -3,6 +3,8 @@ import { LeaderboardService, type LeaderboardCategory } from "@/lib/services/lea
 import { leaderboardQuerySchema } from "@/lib/schemas";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);

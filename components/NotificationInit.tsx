@@ -9,6 +9,8 @@ import { useAuth } from "@/components/AuthProvider";
 export function NotificationInit() {
   const { notificationsEnabled, setNotificationsEnabled, books, bibleGoal, todayBibleChapters, settings } = useStore();
   const { user } = useAuth();
+  const userRef = useRef(user);
+  userRef.current = user;
   const notifTimes = useMemo(() =>
     settings?.notification_times?.length ? settings.notification_times : ["07:00", "12:00", "19:00"],
     [settings?.notification_times]
@@ -55,7 +57,7 @@ export function NotificationInit() {
         }
       }
     }
-  }, [user]); // Re-run when user changes to ensure subscription is tied to correct user
+  }, [user, notificationsEnabled, setNotificationsEnabled]);
 
   // Capacitor Push (iOS/Android)
   useEffect(() => {
@@ -72,7 +74,7 @@ export function NotificationInit() {
         await PushNotifications.register();
 
         PushNotifications.addListener("registration", async (token) => {
-          if (!user?.id) return;
+          if (!userRef.current?.id) return;
           const { supabase: sb } = await import("@/lib/supabase");
           const { data: { session } } = await sb!.auth.getSession();
           const authToken = session?.access_token || "";
@@ -80,7 +82,7 @@ export function NotificationInit() {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
             body: JSON.stringify({
-              user_id: user.id,
+              user_id: userRef.current.id,
               platform: "apns",
               device_token: token.value,
               bundle_id: process.env.NEXT_PUBLIC_APNS_BUNDLE_ID || "br.com.disciplina.app",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
@@ -64,11 +64,8 @@ export default function ProgressoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (user) loadAll();
-  }, [user]);
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     setError(false);
     try {
@@ -89,7 +86,11 @@ export default function ProgressoPage() {
       setError(true);
     }
     setLoading(false);
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) loadAll();
+  }, [loadAll, user]);
 
   const totalXp = xpData?.total_xp ?? 0;
   const currentLevel = xpData?.current_level ?? 1;

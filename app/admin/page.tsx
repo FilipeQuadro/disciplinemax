@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
@@ -109,20 +109,22 @@ export default function AdminPage() {
   const [systemHealth, setSystemHealth] = useState<"healthy" | "warning" | "error" | "loading">("loading");
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-  useEffect(() => { checkAdmin(); }, [user]);
+  const loadDataRef = useRef<() => void>(() => {});
+
+  const checkAdmin = useCallback(async () => {
+    if (!user) { setLoading(false); return; }
+    const { data } = await dataFetch({ action: "select", table: "admin_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "role" } });
+    if (data) { setIsAdmin(true); loadDataRef.current(); }
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { checkAdmin(); }, [checkAdmin]);
 
   async function getAuthHeaders(): Promise<Record<string, string>> {
     if (!supabase) return {};
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || "";
     return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
-  }
-
-  async function checkAdmin() {
-    if (!user) { setLoading(false); return; }
-    const { data } = await dataFetch({ action: "select", table: "admin_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "role" } });
-    if (data) { setIsAdmin(true); loadData(); }
-    setLoading(false);
   }
 
   async function loadData() {
@@ -152,6 +154,7 @@ export default function AdminPage() {
     } catch { /* silently fail */ }
     setRefreshing(false);
   }
+  loadDataRef.current = loadData;
 
   async function loadDiagnostics() {
     try {

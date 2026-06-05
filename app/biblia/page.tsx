@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
@@ -48,23 +48,17 @@ export default function BibliaPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    getBibleVerseOfDay().then(setVerse);
-    loadHistory(); loadGoal(); loadWeekly();
-  }, [user]);
-
-  async function loadGoal() {
+  const loadGoal = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } });
-      if (data) { setBibleGoal(data as any); setGoalForm({ daily_chapters: (data as any).daily_chapters, plan_name: (data as any).plan_name || "custom" }); }
+      if (data) { setBibleGoal(data as any); setGoalForm((prev) => ({ ...prev, ...(data as any) })); }
     } catch {
       toast.error("Erro ao carregar meta bíblica");
     }
-  }
+  }, [user, setBibleGoal]);
 
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     if (!user) return;
     try {
       const today = format(new Date(), "yyyy-MM-dd");
@@ -76,9 +70,9 @@ export default function BibliaPage() {
     } catch {
       toast.error("Erro ao carregar histórico");
     }
-  }
+  }, [user, setTodayBibleChapters]);
 
-  async function loadWeekly() {
+  const loadWeekly = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 7, select: "date, bible_chapters_read" } });
@@ -86,7 +80,13 @@ export default function BibliaPage() {
     } catch {
       toast.error("Erro ao carregar estatísticas semanais");
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    getBibleVerseOfDay().then(setVerse);
+    loadHistory(); loadGoal(); loadWeekly();
+  }, [user, loadHistory, loadGoal, loadWeekly]);
 
   async function logReading() {
     if (!user) return;

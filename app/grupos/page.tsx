@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Users, LogIn, LogOut, Trophy
@@ -37,12 +37,7 @@ export default function GruposPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    loadData();
-  }, [user]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
@@ -56,7 +51,12 @@ export default function GruposPage() {
       if (data.userGroups) setUserGroups(data.userGroups);
     } catch { setError(true); }
     finally { setLoading(false); }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    loadData();
+  }, [loadData, user]);
 
   async function joinGroup(groupId: string) {
     try {

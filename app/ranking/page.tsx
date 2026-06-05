@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Star, Flame, Timer, BookOpen, Trophy
 } from "lucide-react";
@@ -36,7 +36,7 @@ export default function RankingPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  function loadRanking() {
+  const loadRanking = useCallback(() => {
     setLoading(true);
     setError(false);
     fetch(`/api/leaderboard?category=${activeCategory}&limit=25`)
@@ -44,9 +44,9 @@ export default function RankingPage() {
       .then((data) => { if (data.entries) setEntries(data.entries); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }
+  }, [activeCategory]);
 
-  useEffect(() => { loadRanking(); }, [activeCategory]);
+  useEffect(() => { loadRanking(); }, [loadRanking]);
 
   if (!mounted) return null;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Book } from "@/lib/supabase";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
@@ -47,7 +47,17 @@ export default function LivrosPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { loadBooks(); }, [user]);
+  const loadBooks = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
+      if (error) { errorToast(error, loadBooks); return; }
+      if (data) setBooks(data as Book[]);
+    } catch {
+      toast.error("Erro ao carregar livros");
+    }
+  }, [user, setBooks]);
+  useEffect(() => { loadBooks(); }, [loadBooks]);
 
   // ─── Computed ────────────────────────────────────────────────
   const totalPagesGoal = books.reduce((sum, b) => sum + b.daily_goal, 0);
@@ -58,17 +68,6 @@ export default function LivrosPage() {
   const todayPct = totalPagesGoal > 0 ? Math.round((pagesReadToday / totalPagesGoal) * 100) : 0;
   const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
   const todayGoalMet = pagesReadToday >= totalPagesGoal && totalPagesGoal > 0;
-
-  async function loadBooks() {
-    if (!user) return;
-    try {
-      const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
-      if (error) { errorToast(error, loadBooks); return; }
-      if (data) setBooks(data as Book[]);
-    } catch {
-      toast.error("Erro ao carregar livros");
-    }
-  }
 
   async function saveBook() {
     if (!user) { toast.error("Serviço indisponível"); return; }
