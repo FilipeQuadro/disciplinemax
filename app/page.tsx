@@ -44,43 +44,52 @@ function useDashboardData() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadAll() {
-    const todayStr = format(new Date(), "yyyy-MM-dd");
+    if (!user) return;
     try {
-      // Phase 1: Parallel independent fetches
-      const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
-        dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user!.id }, order: { column: "created_at", ascending: true } } }),
-        dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user!.id }, maybeSingle: true } }),
-        dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user!.id }, maybeSingle: true } }),
-        dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id, date: todayStr }, maybeSingle: true } }),
-        dataFetch({ action: "select", table: "bible_readings", filters: { eq: { user_id: user!.id }, gte: { read_at: todayStr }, select: "id" } }),
-      ]);
-
-      // Phase 2: Process books
-      if (booksRes.data) {
-        const needsReset = !statsRes.data && (booksRes.data as any[]).some((b: any) => b.pages_read_today > 0);
-        if (needsReset) {
-          const resetBooks = (booksRes.data as any[]).map((b: any) => ({ ...b, pages_read_today: 0 }));
-          setBooks(resetBooks as any);
-          for (const b of booksRes.data as any[]) {
-            if (b.pages_read_today > 0) {
-              await dataFetch({ action: "update", table: "books", id: b.id, payload: { pages_read_today: 0 } });
-            }
-          }
-        } else {
-          setBooks(booksRes.data as any[]);
-        }
+      // Try single RPC call first (1 request instead of 10+)
+      const rpcOk = await loadViaRpc();
+      if (!rpcOk) {
+        // Fallback to original multi-fetch approach
+        await loadViaDataFetch();
       }
 
-      // Phase 2b: Auto-heal
-      if (bibleGoalRes.data) {
-        setBibleGoal(bibleGoalRes.data as any);
-      } else {
+      // Verse + motivation are independent of DB aggregation
+      const [v, m] = await Promise.all([
+        getBibleVerseOfDay(),
+        getMotivationalMessage({
+          streak: useStore.getState().streak,
+          booksRead: useStore.getState().books.length,
+          bibleChapters: useStore.getState().todayBibleChapters,
+          completedToday: useStore.getState().todayStats?.goals_completed ?? false,
+        }),
+      ]);
+      setVerse(v);
+      setMotivation(m);
+    } catch (e) {
+      console.error("Dashboard load error:", e);
+      setError("Não foi possível carregar os dados do dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** Attempt to load all dashboard data via single RPC call */
+  async function loadViaRpc(): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/dashboard?userId=${user!.id}`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data || data.error) return false;
+
+      // Apply RPC data to store
+      if (data.books) setBooks(data.books as any);
+      if (data.bibleGoal) setBibleGoal(data.bibleGoal as any);
+      else {
         const { data: newGoal } = await dataFetch({ action: "upsert", table: "bible_goals", payload: { user_id: user!.id, daily_chapters: 3, plan_name: "custom" } });
         if (newGoal) setBibleGoal(newGoal as any);
       }
-      if (settingsRes.data) {
-        setSettings(settingsRes.data as any);
-      } else {
+      if (data.settings) setSettings(data.settings as any);
+      else {
         const defaultSettings = {
           user_id: user!.id,
           notification_times: ["07:00", "12:00", "19:00"],
@@ -90,44 +99,115 @@ function useDashboardData() {
         const { data: newSettings } = await dataFetch({ action: "upsert", table: "user_settings", payload: defaultSettings });
         if (newSettings) setSettings(newSettings as any);
       }
-      if (statsRes.data) setTodayStats(statsRes.data as any);
-      setTodayBibleChapters((bibleReadingsRes.data as any[])?.length ?? 0);
-
-      // Phase 3: Streak + verse + motivation (depends on prior data)
-      const recentStatsRes = await dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id }, order: { column: "date", ascending: false }, limit: 30, select: "date, goals_completed" } });
-      let newStreak = 0;
-      if (recentStatsRes.data) {
-        for (const stat of recentStatsRes.data as any[]) {
-          if (stat.goals_completed) newStreak++;
-          else break;
-        }
+      if (data.todayStats) setTodayStats(data.todayStats as any);
+      if (data.bibleTodayCount !== undefined) setTodayBibleChapters(data.bibleTodayCount as number);
+      if (data.streak !== undefined) setStreak(data.streak as number);
+      if (data.xp) {
+        setTotalXp((data.xp as any).total_xp ?? 0);
+        setCurrentLevel((data.xp as any).current_level ?? 1);
       }
-      setStreak(newStreak);
+      if (data.weekStats) {
+        const start = startOfWeek(new Date(), { weekStartsOn: 0 });
+        setWeekStats((data.weekStats as any[]).map((w: any, i: number) => ({
+          day: w.day || format(addDays(start, i), "EEE", { locale: ptBR }),
+          date: w.date || format(addDays(start, i), "yyyy-MM-dd"),
+          isToday: w.is_today ?? w.isToday ?? false,
+          pages: w.pages ?? 0,
+          chapters: w.chapters ?? 0,
+          pomodoros: w.pomodoros ?? 0,
+        })));
+      }
+      if (data.calendarData) {
+        setCalendarData((data.calendarData as any[]).map((c: any) => ({
+          date: c.date,
+          done: c.done ?? false,
+          partial: c.partial ?? false,
+        })));
+      }
+      if (data.challenges) setActiveChallenges(data.challenges as ChallengeData[]);
+      if (data.insights) setInsights(data.insights as InsightData[]);
+      if (data.achievements) setServerAchievements(data.achievements as AchievementData[]);
 
-      const [v, m] = await Promise.all([
-        getBibleVerseOfDay(),
-        getMotivationalMessage({
-          streak: newStreak,
-          booksRead: (booksRes.data as Book[] | null)?.length ?? books.length,
-          bibleChapters: (bibleReadingsRes.data as BibleReading[] | null)?.length ?? todayBibleChapters,
-          completedToday: (statsRes.data as DailyStats | null)?.goals_completed ?? false,
-        }),
-      ]);
-      setVerse(v);
-      setMotivation(m);
+      // Auto-heal: reset books pages_read_today if no today stats
+      if (!data.todayStats && (data.books as any[])?.some((b: any) => b.pages_read_today > 0)) {
+        const resetBooks = (data.books as any[]).map((b: any) => ({ ...b, pages_read_today: 0 }));
+        setBooks(resetBooks as any);
+      }
 
-      // Phase 4: Week stats + calendar (parallel — both need daily_stats range)
-      const start = startOfWeek(new Date(), { weekStartsOn: 0 });
-      const startStr = format(start, "yyyy-MM-dd");
-      const calendarStart = format(addDays(new Date(), -34), "yyyy-MM-dd");
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
-      const [weekDataRes, calendarRes] = await Promise.all([
-        dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id }, gte: { date: startStr }, order: { column: "date", ascending: true } } }),
-        dataFetch<{ date: string; goals_completed: boolean; books_pages_read: number; bible_chapters_read: number; pomodoros_completed: number }[]>({
-          action: "select", table: "daily_stats",
-          filters: { eq: { user_id: user!.id }, gte: { date: calendarStart }, select: "date, goals_completed, books_pages_read, bible_chapters_read, pomodoros_completed" }
-        }),
-      ]);
+  /** Original multi-fetch approach as fallback */
+  async function loadViaDataFetch() {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    // Phase 1: Parallel independent fetches
+    const [booksRes, bibleGoalRes, settingsRes, statsRes, bibleReadingsRes] = await Promise.all([
+      dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user!.id }, order: { column: "created_at", ascending: true } } }),
+      dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user!.id }, maybeSingle: true } }),
+      dataFetch({ action: "select", table: "user_settings", filters: { eq: { user_id: user!.id }, maybeSingle: true } }),
+      dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id, date: todayStr }, maybeSingle: true } }),
+      dataFetch({ action: "select", table: "bible_readings", filters: { eq: { user_id: user!.id }, gte: { read_at: todayStr }, select: "id" } }),
+    ]);
+
+    // Phase 2: Process books
+    if (booksRes.data) {
+      const needsReset = !statsRes.data && (booksRes.data as any[]).some((b: any) => b.pages_read_today > 0);
+      if (needsReset) {
+        const resetBooks = (booksRes.data as any[]).map((b: any) => ({ ...b, pages_read_today: 0 }));
+        setBooks(resetBooks as any);
+      } else {
+        setBooks(booksRes.data as any[]);
+      }
+    }
+
+    if (bibleGoalRes.data) {
+      setBibleGoal(bibleGoalRes.data as any);
+    } else {
+      const { data: newGoal } = await dataFetch({ action: "upsert", table: "bible_goals", payload: { user_id: user!.id, daily_chapters: 3, plan_name: "custom" } });
+      if (newGoal) setBibleGoal(newGoal as any);
+    }
+    if (settingsRes.data) {
+      setSettings(settingsRes.data as any);
+    } else {
+      const defaultSettings = {
+        user_id: user!.id,
+        notification_times: ["07:00", "12:00", "19:00"],
+        pomodoro_duration: 25, short_break: 5, long_break: 15, pomodoros_until_long: 4,
+        daily_books_goal: 20, daily_bible_chapters: 3, timezone: "America/Sao_Paulo",
+      };
+      const { data: newSettings } = await dataFetch({ action: "upsert", table: "user_settings", payload: defaultSettings });
+      if (newSettings) setSettings(newSettings as any);
+    }
+    if (statsRes.data) setTodayStats(statsRes.data as any);
+    setTodayBibleChapters((bibleReadingsRes.data as any[])?.length ?? 0);
+
+    // Phase 3: Streak
+    const recentStatsRes = await dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id }, order: { column: "date", ascending: false }, limit: 30, select: "date, goals_completed" } });
+    let newStreak = 0;
+    if (recentStatsRes.data) {
+      for (const stat of recentStatsRes.data as any[]) {
+        if (stat.goals_completed) newStreak++;
+        else break;
+      }
+    }
+    setStreak(newStreak);
+
+    // Phase 4: Week stats + calendar
+    const start = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const startStr = format(start, "yyyy-MM-dd");
+    const calendarStart = format(addDays(new Date(), -34), "yyyy-MM-dd");
+
+    const [weekDataRes, calendarRes] = await Promise.all([
+      dataFetch<any[]>({ action: "select", table: "daily_stats", filters: { eq: { user_id: user!.id }, gte: { date: startStr }, order: { column: "date", ascending: true } } }),
+      dataFetch<{ date: string; goals_completed: boolean; books_pages_read: number; bible_chapters_read: number; pomodoros_completed: number }[]>({
+        action: "select", table: "daily_stats",
+        filters: { eq: { user_id: user!.id }, gte: { date: calendarStart }, select: "date, goals_completed, books_pages_read, bible_chapters_read, pomodoros_completed" }
+      }),
+    ]);
 
       if (weekDataRes.data) {
         setWeekStats(Array.from({ length: 7 }, (_, i) => {
@@ -171,12 +251,6 @@ function useDashboardData() {
       if (chalRes.data) setActiveChallenges((chalRes.data as ChallengeData[]).filter((c) => !c.completed));
       if (insRes.data) setInsights(insRes.data as InsightData[]);
       if (achRes.data) setServerAchievements(achRes.data as AchievementData[]);
-    } catch (e) {
-      console.error("Dashboard load error:", e);
-      setError("Não foi possível carregar os dados do dashboard.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   const loadAllRef = useRef(loadAll);

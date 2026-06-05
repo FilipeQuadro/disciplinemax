@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { LeaderboardService, type LeaderboardCategory } from "@/lib/services/leaderboard-service";
 import { leaderboardQuerySchema } from "@/lib/schemas";
 import { logger } from "@/lib/logger";
+import { ApplicationCacheService } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,17 @@ export async function GET(req: Request) {
     }
 
     const { category, limit } = parsed.data;
-    const service = new LeaderboardService();
-    const entries = await service.getLeaderboard(category as LeaderboardCategory, limit);
+    const cacheKey = `${category}:${limit}`;
+
+    const entries = await ApplicationCacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const service = new LeaderboardService();
+        return service.getLeaderboard(category as LeaderboardCategory, limit);
+      },
+      "leaderboard",
+    );
+
     return NextResponse.json({ category, entries });
   } catch (e) {
     logger.error("Leaderboard API error", { error: String(e) });

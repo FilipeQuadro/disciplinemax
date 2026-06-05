@@ -5,6 +5,33 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const FETCH_TIMEOUT = 10_000;
 
+// Session cache — avoid calling getSession() on every dataFetch call
+let cachedToken: string | null = null;
+let tokenExpiresAt = 0;
+const TOKEN_CACHE_MS = 4 * 60 * 1000; // 4 minutes (Supabase tokens last 60 min)
+
+async function getCachedToken(): Promise<string | null> {
+  const now = Date.now();
+  if (cachedToken && now < tokenExpiresAt) return cachedToken;
+
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    cachedToken = null;
+    return null;
+  }
+
+  cachedToken = session.access_token;
+  tokenExpiresAt = now + TOKEN_CACHE_MS;
+  return cachedToken;
+}
+
+/** Invalidate the session cache (call on sign-out) */
+export function invalidateSessionCache(): void {
+  cachedToken = null;
+  tokenExpiresAt = 0;
+}
+
 function restUrl(table: string) {
   return `${supabaseUrl}/rest/v1/${table}`;
 }
@@ -41,10 +68,8 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
   try {
     if (!supabase) return { data: null, error: "Supabase not configured" };
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return { data: null, error: "Not authenticated" };
-
-    const token = session.access_token;
+    const token = await getCachedToken();
+    if (!token) return { data: null, error: "Not authenticated" };
     const { action, table, filters, payload, id } = body;
 
     // ── SELECT ──────────────────────────────────────────────────────

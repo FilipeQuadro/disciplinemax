@@ -96,11 +96,15 @@ export async function GET(req: Request) {
   }
 
   const allOk = Object.values(checks).every((c) => c.ok);
+  const totalMs = Date.now() - Number(new Date(url.searchParams.get("_t") || Date.now()));
 
   return NextResponse.json({
     ok: allOk,
     timestamp: new Date().toISOString(),
     service: "DisciplinaMax",
     checks,
-  }, { status: allOk ? 200 : 503 });
+  }, {
+    status: allOk ? 200 : 503,
+    headers: { "Server-Timing": `health;dur=${totalMs}` },
+  });
 }

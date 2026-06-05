@@ -29,7 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [timedOut, setTimedOut] = useState(false);
-  const { setUserId, clearUserData } = useStore();
+  const setUserId = useStore((s) => s.setUserId);
+  const clearUserData = useStore((s) => s.clearUserData);
 
   const initSession = useCallback(() => {
     if (!supabase) { setLoading(false); return; }

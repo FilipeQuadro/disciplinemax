@@ -20,12 +20,12 @@ export class FeedRepository {
     this.client = client ?? getServiceClient();
   }
 
-  /** Get feed events for a user's friends */
-  async getFriendsFeed(friendIds: string[], limit = 30): Promise<FeedEvent[]> {
+  /** Get feed events for a user's friends, with optional cursor */
+  async getFriendsFeed(friendIds: string[], limit = 30, cursor?: string): Promise<FeedEvent[]> {
     if (friendIds.length === 0) return [];
 
     return MetricsService.measure("feed_getFriends", async () => {
-      const { data } = await this.client
+      let query = this.client
         .from("product_events")
         .select(`
           id, user_id, event_type, event_data, created_at,
@@ -35,6 +35,12 @@ export class FeedRepository {
         .in("event_type", ["achievement_unlocked", "challenge_completed", "streak_record", "book_finished"])
         .order("created_at", { ascending: false })
         .limit(limit);
+
+      if (cursor) {
+        query = query.lt("created_at", cursor);
+      }
+
+      const { data } = await query;
 
       return (data as any[])?.map((d) => ({
         id: d.id,
@@ -48,10 +54,10 @@ export class FeedRepository {
     }, { table: "product_events" });
   }
 
-  /** Get a user's own recent events */
-  async getUserFeed(userId: string, limit = 20): Promise<FeedEvent[]> {
+  /** Get a user's own recent events, with optional cursor */
+  async getUserFeed(userId: string, limit = 20, cursor?: string): Promise<FeedEvent[]> {
     return MetricsService.measure("feed_getUser", async () => {
-      const { data } = await this.client
+      let query = this.client
         .from("product_events")
         .select(`
           id, user_id, event_type, event_data, created_at,
@@ -61,6 +67,12 @@ export class FeedRepository {
         .in("event_type", ["achievement_unlocked", "challenge_completed", "streak_record", "book_finished"])
         .order("created_at", { ascending: false })
         .limit(limit);
+
+      if (cursor) {
+        query = query.lt("created_at", cursor);
+      }
+
+      const { data } = await query;
 
       return (data as any[])?.map((d) => ({
         id: d.id,

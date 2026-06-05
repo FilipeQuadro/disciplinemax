@@ -19,3 +19,4 @@ export { ReferralRepository, type Referral } from "./referral-repository";
 export { GroupRepository, type Group, type GroupMember } from "./group-repository";
 export { CommunityEventRepository, type CommunityChallenge, type CommunityChallengeProgress } from "./community-event-repository";
 export { OnboardingRepository, type OnboardingProgress } from "./onboarding-repository";
+export { DashboardRepository, type DashboardData } from "./dashboard-repository";

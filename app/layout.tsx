@@ -1,15 +1,19 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { NotificationInit } from "@/components/NotificationInit";
 import { IntroScreen } from "@/components/IntroScreen";
-import { BackgroundParticles } from "@/components/BackgroundParticles";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppShell } from "@/components/AppShell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PwaInstallListener } from "@/components/PwaInstallListener";
 import { SwRegistrar } from "@/components/SwRegistrar";
+
+const BackgroundParticles = dynamic(() => import("@/components/BackgroundParticles").then((mod) => ({ default: mod.BackgroundParticles })), {
+  ssr: false,
+});
 
 export const metadata: Metadata = {
   title: "DisciplinaMax – Mentor de Disciplina",

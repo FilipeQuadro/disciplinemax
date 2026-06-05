@@ -21,6 +21,10 @@ const DEFAULT_CONFIGS: Record<string, CacheConfig> = {
   user_books: { ttlMs: 2 * 60_000, maxSize: 500, namespace: "user_books" },
   user_bible_goals: { ttlMs: 5 * 60_000, maxSize: 500, namespace: "user_bible_goals" },
   user_stats: { ttlMs: 60_000, maxSize: 1000, namespace: "user_stats" },
+  leaderboard: { ttlMs: 60_000, maxSize: 100, namespace: "leaderboard" },
+  feed: { ttlMs: 30_000, maxSize: 200, namespace: "feed" },
+  public_profile: { ttlMs: 2 * 60_000, maxSize: 200, namespace: "public_profile" },
+  dashboard: { ttlMs: 30_000, maxSize: 200, namespace: "dashboard" },
 };
 
 /**

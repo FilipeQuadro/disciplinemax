@@ -16,3 +16,4 @@ export { ReferralService } from "./referral-service";
 export { GroupService } from "./group-service";
 export { CommunityEventService } from "./community-event-service";
 export { OnboardingService } from "./onboarding-service";
+export { DashboardService } from "./dashboard-service";

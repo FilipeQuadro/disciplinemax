@@ -22,17 +22,17 @@ export class FeedService {
     this.eventService = eventService ?? new EventTrackingService();
   }
 
-  /** Get feed for a user (friends' events + own) */
-  async getFeed(userId: string, limit = 30): Promise<FeedEvent[]> {
+  /** Get feed for a user (friends' events + own), with optional cursor for pagination */
+  async getFeed(userId: string, limit = 30, cursor?: string): Promise<FeedEvent[]> {
     const friendIds = await this.friendshipService.getFriendIds(userId);
 
     if (friendIds.length === 0) {
-      return this.repo.getUserFeed(userId, limit);
+      return this.repo.getUserFeed(userId, limit, cursor);
     }
 
     const [friendsFeed, ownFeed] = await Promise.all([
-      this.repo.getFriendsFeed(friendIds, limit),
-      this.repo.getUserFeed(userId, Math.min(5, limit)),
+      this.repo.getFriendsFeed(friendIds, limit, cursor),
+      this.repo.getUserFeed(userId, Math.min(5, limit), cursor),
     ]);
 
     const all = [...friendsFeed, ...ownFeed];

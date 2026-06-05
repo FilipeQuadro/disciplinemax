@@ -55,7 +55,7 @@ interface InsightData {
 // ── Main Component ─────────────────────────────────────────────
 export default function ProgressoPage() {
   const { user } = useAuth();
-  const { streak } = useStore();
+  const streak = useStore((s) => s.streak);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
   const [xpData, setXpData] = useState<XpData | null>(null);
   const [achievements, setAchievements] = useState<AchievementData[]>([]);

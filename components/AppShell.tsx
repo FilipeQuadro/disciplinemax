@@ -1,7 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Sidebar } from "@/components/Sidebar";
+import dynamic from "next/dynamic";
+
+const Sidebar = dynamic(() => import("@/components/Sidebar").then((mod) => ({ default: mod.Sidebar })), {
+  ssr: false,
+});
 
 const HIDE_SIDEBAR_PATHS = ["/login"];
 

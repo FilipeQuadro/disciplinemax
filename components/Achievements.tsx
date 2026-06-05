@@ -58,7 +58,7 @@ export const BADGES: Badge[] = [
 ];
 
 export function useAchievements() {
-  const { streak } = useStore();
+  const streak = useStore((s) => s.streak);
   const { user } = useAuth();
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [newBadge, setNewBadge] = useState<string | null>(null);

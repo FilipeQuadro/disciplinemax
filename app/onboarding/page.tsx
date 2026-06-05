@@ -57,7 +57,7 @@ const FIRST_ACTIONS = [
 // ── Main Component ─────────────────────────────────────────────
 export default function OnboardingPage() {
   const { user } = useAuth();
-  const { setSettings } = useStore();
+  const setSettings = useStore((s) => s.setSettings);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(true);

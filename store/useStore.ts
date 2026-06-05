@@ -79,6 +79,8 @@ export const useStore = create<AppState>()(
         pomodoroTimeLeft: 25 * 60,
         pomodoroIsBreak: false,
         pomodoroTask: "",
+        sidebarOpen: true,
+        notificationsEnabled: false,
       }),
 
       books: [],

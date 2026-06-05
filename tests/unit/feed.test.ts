@@ -73,8 +73,8 @@ describe("FeedService", () => {
       mockRepo.getUserFeed.mockResolvedValueOnce([]);
 
       await service.getFeed("user-1", 10);
-      expect(mockRepo.getFriendsFeed).toHaveBeenCalledWith(["user-2"], 10);
-      expect(mockRepo.getUserFeed).toHaveBeenCalledWith("user-1", 5);
+      expect(mockRepo.getFriendsFeed).toHaveBeenCalledWith(["user-2"], 10, undefined);
+      expect(mockRepo.getUserFeed).toHaveBeenCalledWith("user-1", 5, undefined);
     });
   });
 

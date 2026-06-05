@@ -12,6 +12,16 @@ vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
+vi.mock("@/lib/cache", () => ({
+  ApplicationCacheService: {
+    getOrSet: (_key: string, factory: () => Promise<any>) => factory(),
+    get: vi.fn().mockReturnValue(null),
+    set: vi.fn(),
+    invalidate: vi.fn(),
+    invalidateNamespace: vi.fn(),
+  },
+}));
+
 import { GET } from "@/app/api/leaderboard/route";
 
 describe("GET /api/leaderboard", () => {
