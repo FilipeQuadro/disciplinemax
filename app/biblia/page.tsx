@@ -149,7 +149,7 @@ export default function BibliaPage() {
   }
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <HeroHeader
@@ -200,7 +200,7 @@ export default function BibliaPage() {
             trackColor="rgba(255,255,255,0.03)"
           >
             <div className="flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-white">{todayBibleChapters}</span>
+              <span className="text-3xl font-semibold tracking-tight text-white">{todayBibleChapters}</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 de {bibleGoal?.daily_chapters ?? 0}
               </span>
@@ -239,19 +239,19 @@ export default function BibliaPage() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold gradient-text-gold">{pct}%</p>
+              <p className="text-3xl font-semibold tracking-tight gradient-text-gold">{pct}%</p>
               <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>do dia</p>
             </div>
           </GradientCard>
 
           {/* Mini stats */}
           <GradientCard variant="gold" className="p-4 text-center">
-            <p className="text-2xl font-bold count-up" style={{ color: "var(--gold)" }}>{history.length}</p>
-            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Total registradas</p>
+            <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: "var(--gold)" }}>{history.length}</p>
+            <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Total registradas</p>
           </GradientCard>
           <GradientCard variant="orange" className="p-4 text-center">
-            <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-orange, #E8844A)" }}>{streak}</p>
-            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
+            <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: "var(--accent-orange, #E8844A)" }}>{streak}</p>
+            <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
           </GradientCard>
         </div>
       </div>
@@ -287,7 +287,7 @@ export default function BibliaPage() {
       {/* Config meta */}
       {showGoalForm && (
         <div className="card animate-slide-up">
-          <h3 className="font-semibold text-white mb-4">Plano de Leitura</h3>
+          <h3 className="font-semibold tracking-tight text-white mb-4">Plano de Leitura</h3>
           <div className="space-y-4">
             <div>
               <label className="label">Plano</label>
@@ -310,10 +310,10 @@ export default function BibliaPage() {
               <label className="label">Capítulos por dia</label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: Math.max(1, p.daily_chapters - 1) }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>−</button>
-                <span className="text-2xl font-bold text-white w-12 text-center">{goalForm.daily_chapters}</span>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>−</button>
+                <span className="text-2xl font-semibold tracking-tight text-white w-12 text-center">{goalForm.daily_chapters}</span>
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: p.daily_chapters + 1 }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>+</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>+</button>
               </div>
             </div>
             <button onClick={saveGoal} className="btn-primary">Salvar Plano</button>
@@ -323,7 +323,7 @@ export default function BibliaPage() {
 
       {/* Registrar Leitura */}
       <div className="card shimmer">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+        <h3 className="font-semibold tracking-tight text-white mb-4 flex items-center gap-2">
           <Plus size={16} style={{ color: "var(--gold)" }} /> Registrar Leitura
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -351,7 +351,7 @@ export default function BibliaPage() {
 
       {/* Histórico */}
       <div>
-        <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+        <h3 className="font-semibold tracking-tight text-white mb-3 flex items-center gap-2">
           <Calendar size={16} style={{ color: "var(--gold)" }} /> Leituras Recentes
         </h3>
         <div className="space-y-2 stagger-children">
@@ -397,7 +397,7 @@ export default function BibliaPage() {
       {/* Stats semanais */}
       {weeklyStats.length > 0 && (
         <div className="card shimmer">
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="font-semibold tracking-tight text-white mb-4 flex items-center gap-2">
             <TrendingUp size={16} style={{ color: "var(--gold)" }} /> Capítulos por Dia
           </h3>
           <div className="flex items-end gap-2 h-28">
@@ -407,7 +407,7 @@ export default function BibliaPage() {
               const isToday = i === weeklyStats.length - 1;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-bold" style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
+                  <span className="text-[11px] font-semibold" style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
                     {s.bible_chapters_read || 0}
                   </span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
@@ -421,7 +421,7 @@ export default function BibliaPage() {
                         boxShadow: isToday ? "0 0 12px rgba(212,175,55,0.2)" : "none",
                       }} />
                   </div>
-                  <p className={clsx("text-[10px]", isToday && "font-bold")} style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
+                  <p className={clsx("text-[11px]", isToday && "font-semibold")} style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
                     {format(new Date(s.date), "EEE", { locale: ptBR })}
                   </p>
                 </div>

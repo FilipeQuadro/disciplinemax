@@ -237,7 +237,7 @@ export default function OnboardingPage() {
           <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: "var(--gold)" }}>
             Passo {step + 1} de {steps.length}
           </p>
-          <h2 className="text-2xl font-serif font-bold text-white">{steps[step].title}</h2>
+          <h2 className="text-2xl font-serif font-semibold tracking-tight text-white">{steps[step].title}</h2>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{steps[step].desc}</p>
         </div>
 

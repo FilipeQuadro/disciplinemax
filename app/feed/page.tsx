@@ -72,7 +72,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="page-enter space-y-8">
       <HeroHeader title="Feed Social" icon={Users} iconColor="var(--accent-teal)" />
 
       {events.length === 0 ? (

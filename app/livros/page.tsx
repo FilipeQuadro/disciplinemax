@@ -188,7 +188,7 @@ export default function LivrosPage() {
   }
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <HeroHeader
@@ -229,8 +229,8 @@ export default function LivrosPage() {
           <GradientCard variant="purple" className="flex flex-col items-center justify-center py-6 shimmer">
             <ProgressRing value={overallProgress} max={100} color="var(--accent-purple)">
               <div className="flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-white">{overallProgress}%</span>
-                <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Total</span>
+                <span className="text-2xl font-semibold tracking-tight text-white">{overallProgress}%</span>
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Total</span>
               </div>
             </ProgressRing>
           </GradientCard>
@@ -238,19 +238,19 @@ export default function LivrosPage() {
           {/* Stats Cards */}
           <div className="md:col-span-2 grid grid-cols-3 gap-3">
             <GradientCard variant="purple" className="text-center p-4 glow-border">
-              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-purple)" }}>{pagesReadToday}</p>
-              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Páginas hoje</p>
+              <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: "var(--accent-purple)" }}>{pagesReadToday}</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Páginas hoje</p>
               <div className="progress-bar mt-2">
                 <div className="progress-fill" style={{ width: `${Math.min(100, todayPct)}%`, background: "var(--accent-purple)" }} />
               </div>
             </GradientCard>
             <GradientCard variant="teal" className="text-center p-4 glow-border">
-              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-teal)" }}>{booksCompleted}</p>
-              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Concluídos</p>
+              <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: "var(--accent-teal)" }}>{booksCompleted}</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Concluídos</p>
             </GradientCard>
             <GradientCard variant="orange" className="text-center p-4 glow-border">
-              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-orange)" }}>{streak}</p>
-              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
+              <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: "var(--accent-orange)" }}>{streak}</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
               {streak >= 7 && <span className="text-[9px]" style={{ color: "var(--accent-orange)" }}>🔥</span>}
             </GradientCard>
 
@@ -296,7 +296,7 @@ export default function LivrosPage() {
       {showForm && (
         <div className="card animate-slide-up">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
+            <h2 className="font-semibold tracking-tight text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
             <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
               <X size={18} />
             </button>
@@ -434,7 +434,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
             style={{ background: "var(--surface)", border: `2px solid ${book.color}30` }}>
             <ProgressRing value={progress} max={100} size={28} strokeWidth={2.5} color={book.color} trackColor="rgba(255,255,255,0.04)">
-              <span className="text-[7px] font-bold" style={{ color: book.color }}>{progress}%</span>
+              <span className="text-[9px] font-semibold" style={{ color: book.color }}>{progress}%</span>
             </ProgressRing>
           </div>
         </div>
@@ -442,7 +442,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-bold text-white">{book.title}</h3>
+              <h3 className="font-semibold tracking-tight text-white">{book.title}</h3>
               {book.author && <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{book.author}</p>}
             </div>
             <div className="flex items-center gap-1">

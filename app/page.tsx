@@ -405,7 +405,7 @@ export default function DashboardPage() {
 
   // ─── Main Render ────────────────────────────────────────────────
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <HeroHeader
@@ -413,7 +413,7 @@ export default function DashboardPage() {
           showDate
         />
         <div className="flex items-center gap-2">
-          <button onClick={shareProgress} className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-105 glass"
+          <button onClick={shareProgress} className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors duration-200 hover:bg-white/5 glass"
             aria-label="Compartilhar progresso">
             <Share2 size={14} style={{ color: "var(--text-secondary)" }} />
           </button>
@@ -435,7 +435,7 @@ export default function DashboardPage() {
         <div className="md:col-span-1 card flex flex-col items-center justify-center py-6">
           <ProgressRing value={overallProgress} max={100} size={140} strokeWidth={8} color="var(--gold)" trackColor="rgba(255,255,255,0.03)">
             <div className="flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-white">{Math.round(overallProgress)}%</span>
+              <span className="text-3xl font-semibold tracking-tight text-white">{Math.round(overallProgress)}%</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Hoje</span>
             </div>
           </ProgressRing>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
               <Flame size={28} style={{ color: "var(--warning)" }} className={streak > 0 ? "animate-pulse" : ""} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-2xl font-bold text-white">{streak}<span className="text-sm font-normal ml-1" style={{ color: "var(--text-muted)" }}>dias</span></p>
+              <p className="text-2xl font-semibold tracking-tight text-white">{streak}<span className="text-sm font-normal ml-1" style={{ color: "var(--text-muted)" }}>dias</span></p>
               <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{streak === 0 ? "Comece sua streak hoje!" : streak < 7 ? "Continue firme! A consistência constrói hábitos." : streak < 30 ? "Uma semana+ de dedicação! 🔥" : "Você é imparável! 💪"}</p>
             </div>
             {streak >= 7 && (
@@ -496,7 +496,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-bold text-white">Nível {currentLevel}</p>
+              <p className="text-sm font-semibold tracking-tight text-white">Nível {currentLevel}</p>
               <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{totalXp.toLocaleString()} XP</p>
             </div>
             <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -546,7 +546,7 @@ export default function DashboardPage() {
       {activeChallenges.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold tracking-tight text-white flex items-center gap-2">
               <Target size={16} style={{ color: "var(--accent-teal)" }} />
               Desafios da Semana
             </h2>
@@ -578,7 +578,7 @@ export default function DashboardPage() {
       {/* Livros em andamento */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">
+          <h2 className="font-semibold tracking-tight text-white flex items-center gap-2">
             <BookOpen size={16} style={{ color: "var(--accent-purple)" }} />
             Livros em Leitura
           </h2>
@@ -606,7 +606,7 @@ export default function DashboardPage() {
       {/* Gráfico da semana */}
       {weekStats.length > 0 && (
         <div className="card shimmer">
-          <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
+          <h2 className="font-semibold tracking-tight text-white mb-4 flex items-center gap-2">
             <TrendingUp size={16} style={{ color: "var(--gold)" }} />
             Progresso da Semana
           </h2>
@@ -672,7 +672,7 @@ export default function DashboardPage() {
       {/* Conquistas */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
+          <h2 className="font-semibold tracking-tight text-white flex items-center gap-2">
             <Trophy size={16} style={{ color: "var(--gold)" }} />
             Conquistas
           </h2>
@@ -713,7 +713,7 @@ export default function DashboardPage() {
       {/* Insights */}
       {insights.length > 0 && (
         <div className="card">
-          <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
+          <h2 className="font-semibold tracking-tight text-white mb-3 flex items-center gap-2">
             <Lightbulb size={16} style={{ color: "var(--accent-purple)" }} />
             Insights
           </h2>
@@ -778,9 +778,9 @@ function MiniProgress({ label, pct, color }: { label: string; pct: number; color
     <div className="text-center">
       <div className="w-8 h-8 rounded-lg mx-auto flex items-center justify-center mb-1"
         style={{ background: `${color}12` }}>
-        <span className="text-[10px] font-bold" style={{ color }}>{Math.round(pct)}%</span>
+        <span className="text-[11px] font-semibold" style={{ color }}>{Math.round(pct)}%</span>
       </div>
-      <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</span>
     </div>
   );
 }
@@ -853,7 +853,7 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
 
   return (
     <div className="card">
-      <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
+      <h2 className="font-semibold tracking-tight text-white mb-4 flex items-center gap-2">
         <Calendar size={16} style={{ color: "var(--gold)" }} />
         Calendário de Consistência
       </h2>

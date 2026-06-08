@@ -221,7 +221,7 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl page-enter stagger-children">
+    <div className="space-y-8 max-w-2xl page-enter stagger-children">
       <HeroHeader title="Configurações" icon={Settings} iconColor="var(--text-muted)" showDate />
 
       {/* Perfil Público */}
@@ -230,7 +230,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(58,186,180,0.1)" }}>
             <User size={16} style={{ color: "#3ABAB4" }} />
           </div>
-          <h2 className="font-semibold text-white">Perfil Público</h2>
+          <h2 className="font-semibold tracking-tight text-white">Perfil Público</h2>
         </div>
         <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Escolha um nome de usuário para compartilhar seu progresso</p>
         <div className="space-y-3">
@@ -280,11 +280,11 @@ export default function ConfiguracoesPage() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)" }}>
               <Gift size={16} style={{ color: "var(--gold)" }} />
             </div>
-            <h2 className="font-semibold text-white">Convide Amigos</h2>
+            <h2 className="font-semibold tracking-tight text-white">Convide Amigos</h2>
           </div>
           <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Compartilhe seu código e ganhe 100 XP por indicação!</p>
           <div className="flex items-center gap-2 p-3 rounded-xl card">
-            <code className="text-lg font-bold tracking-widest flex-1" style={{ color: "var(--gold)" }}>{referralCode}</code>
+            <code className="text-lg font-semibold tracking-widest flex-1" style={{ color: "var(--gold)" }}>{referralCode}</code>
             <button
               onClick={() => { navigator.clipboard?.writeText(referralCode).then(() => toast.success("Código copiado! 📋")).catch(() => {}); }}
               className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}
@@ -304,7 +304,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)" }}>
             <Bell size={16} style={{ color: "var(--gold)" }} />
           </div>
-          <h2 className="font-semibold text-white">Notificações Push</h2>
+          <h2 className="font-semibold tracking-tight text-white">Notificações Push</h2>
         </div>
         <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Receba alertas enquanto as metas não forem cumpridas</p>
 
@@ -355,7 +355,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(124,107,189,0.1)" }}>
             <MessageSquare size={16} style={{ color: "#7C6BBD" }} />
           </div>
-          <h2 className="font-semibold text-white">Telegram</h2>
+          <h2 className="font-semibold tracking-tight text-white">Telegram</h2>
         </div>
         <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Receba lembretes gratuitos pelo Telegram</p>
         <div className="space-y-3">
@@ -382,7 +382,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(217,79,79,0.1)" }}>
             <Timer size={16} style={{ color: "#D94F4F" }} />
           </div>
-          <h2 className="font-semibold text-white">Pomodoro</h2>
+          <h2 className="font-semibold tracking-tight text-white">Pomodoro</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -407,7 +407,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(124,107,189,0.1)" }}>
             <Smartphone size={16} style={{ color: "#7C6BBD" }} />
           </div>
-          <h2 className="font-semibold text-white">Metas Padrão</h2>
+          <h2 className="font-semibold tracking-tight text-white">Metas Padrão</h2>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -429,7 +429,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(232,132,74,0.1)" }}>
             <Shield size={16} style={{ color: "#E8844A" }} />
           </div>
-          <h2 className="font-semibold text-white">Perdão de Streak</h2>
+          <h2 className="font-semibold tracking-tight text-white">Perdão de Streak</h2>
         </div>
         <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Proteja seu streak se perder um dia — 1 uso por mês</p>
         <div className="flex items-center justify-between p-4 rounded-xl"
@@ -459,7 +459,7 @@ export default function ConfiguracoesPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)" }}>
             <Sparkles size={16} style={{ color: "var(--gold)" }} />
           </div>
-          <h2 className="font-semibold text-white">Google Gemini (IA Motivacional)</h2>
+          <h2 className="font-semibold tracking-tight text-white">Google Gemini (IA Motivacional)</h2>
         </div>
         <p className="text-sm mb-1" style={{ color: "var(--text-muted)" }}>Chave gratuita para mensagens personalizadas da IA</p>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"

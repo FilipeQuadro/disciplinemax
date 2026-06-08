@@ -148,7 +148,7 @@ export default function GruposPage() {
       {/* My Groups */}
       {userGroups.length > 0 ? (
         <div>
-          <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
+          <h2 className="font-semibold tracking-tight text-white mb-3 flex items-center gap-2">
             <Users size={16} className="text-[var(--accent-teal)]" />
             Meus Grupos
           </h2>
@@ -218,7 +218,7 @@ export default function GruposPage() {
 
       {/* All Groups */}
       <div id="all-groups">
-        <h2 className="font-semibold text-white mb-3">Todos os Grupos</h2>
+        <h2 className="font-semibold tracking-tight text-white mb-3">Todos os Grupos</h2>
         {groups.length === 0 ? (
           <EmptyState
             icon={Users}

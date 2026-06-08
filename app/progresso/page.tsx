@@ -115,7 +115,7 @@ export default function ProgressoPage() {
   }
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="page-enter space-y-8">
       <HeroHeader title="Progresso" icon={Trophy} iconColor="var(--gold)" />
 
       <div className="stagger-children space-y-4">
@@ -127,13 +127,13 @@ export default function ProgressoPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-white">Nível {currentLevel}</p>
-                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{totalXp.toLocaleString()} XP</p>
+                <p className="text-sm font-semibold tracking-tight text-white">Nível {currentLevel}</p>
+                <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{totalXp.toLocaleString()} XP</p>
               </div>
               <div className="mt-2 progress-bar">
                 <div className="progress-fill" style={{ width: `${levelProgress}%`, background: "linear-gradient(90deg, var(--gold-dark), var(--gold))" }} />
               </div>
-              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{xpToNext} XP para o próximo nível</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>{xpToNext} XP para o próximo nível</p>
             </div>
           </div>
         </GradientCard>
@@ -142,7 +142,7 @@ export default function ProgressoPage() {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Flame size={20} style={{ color: currentStreak > 0 ? "var(--warning)" : "var(--text-secondary)" }} />
-            <p className="text-sm font-bold text-white">Streak</p>
+            <p className="text-sm font-semibold tracking-tight text-white">Streak</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <StatBox label="Atual" value={currentStreak} color="var(--accent-orange)" />
@@ -150,7 +150,7 @@ export default function ProgressoPage() {
             <StatBox label="Semana" value={streakData?.weekly_streak ?? 0} color="var(--accent-teal)" />
           </div>
           {streakData && streakData.consistency_rate > 0 && (
-            <p className="text-[10px] mt-3 text-center" style={{ color: "var(--text-secondary)" }}>
+            <p className="text-[11px] mt-3 text-center" style={{ color: "var(--text-secondary)" }}>
               Consistência: {Math.round(streakData.consistency_rate * 100)}% • Congelamentos: {streakData.streak_freeze_count}
             </p>
           )}
@@ -160,7 +160,7 @@ export default function ProgressoPage() {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Target size={20} style={{ color: "var(--accent-teal)" }} />
-            <p className="text-sm font-bold text-white">Desafios da Semana</p>
+            <p className="text-sm font-semibold tracking-tight text-white">Desafios da Semana</p>
           </div>
           {challenges.filter((c) => !c.completed).length === 0 ? (
             <EmptyState
@@ -196,7 +196,7 @@ export default function ProgressoPage() {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Trophy size={20} style={{ color: "var(--gold)" }} />
-            <p className="text-sm font-bold text-white">Conquistas</p>
+            <p className="text-sm font-semibold tracking-tight text-white">Conquistas</p>
             <span className="text-[10px] ml-auto" style={{ color: "var(--text-muted)" }}>
               {achievements.filter((a) => a.completed).length}/{ACHIEVEMENTS.length}
             </span>
@@ -235,7 +235,7 @@ export default function ProgressoPage() {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Lightbulb size={20} style={{ color: "var(--accent-purple)" }} />
-            <p className="text-sm font-bold text-white">Insights</p>
+            <p className="text-sm font-semibold tracking-tight text-white">Insights</p>
           </div>
           {insights.length === 0 ? (
             <EmptyState
@@ -277,8 +277,8 @@ export default function ProgressoPage() {
 function StatBox({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="text-center p-2 rounded-xl" style={{ background: `${color}08` }}>
-      <p className="text-lg font-bold" style={{ color }}>{value}</p>
-      <p className="text-[9px]" style={{ color: "var(--text-secondary)" }}>{label}</p>
+      <p className="text-lg font-semibold tracking-tight" style={{ color }}>{value}</p>
+      <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{label}</p>
     </div>
   );
 }

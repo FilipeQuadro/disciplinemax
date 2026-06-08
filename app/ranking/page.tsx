@@ -69,7 +69,7 @@ export default function RankingPage() {
   const activeConfig = CATEGORIES.find((c) => c.id === activeCategory)!;
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       <HeroHeader
         icon={Trophy}
         iconColor="var(--gold)"
@@ -159,10 +159,10 @@ export default function RankingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold" style={{ color: activeConfig.color }}>
+                      <p className="text-lg font-semibold tracking-tight" style={{ color: activeConfig.color }}>
                         {entry.value.toLocaleString()}
                       </p>
-                      <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
+                      <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
                         {activeConfig.label}
                       </p>
                     </div>
@@ -193,10 +193,10 @@ export default function RankingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold" style={{ color: activeConfig.color }}>
+                      <p className="text-lg font-semibold tracking-tight" style={{ color: activeConfig.color }}>
                         {entry.value.toLocaleString()}
                       </p>
-                      <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
+                      <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
                         {activeConfig.label}
                       </p>
                     </div>

@@ -52,7 +52,7 @@ export default function PlanosPage() {
   }
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Hero Header */}
       <HeroHeader title="Planos" icon={Crown} iconColor="var(--gold)" />
 
@@ -86,7 +86,7 @@ export default function PlanosPage() {
           </p>
         </div>
         {currentPlan !== "premium" && (
-          <Badge variant="premium" className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold">
+          <Badge variant="premium" className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold">
             Upgrade disponível
           </Badge>
         )}
@@ -117,7 +117,7 @@ export default function PlanosPage() {
               )}
             >
               {isCurrent && (
-                <Badge variant="premium" className="absolute -top-2.5 right-4 px-3 py-0.5 rounded-full text-[10px] font-bold">
+                <Badge variant="premium" className="absolute -top-2.5 right-4 px-3 py-0.5 rounded-full text-[10px] font-semibold">
                   Atual
                 </Badge>
               )}
@@ -129,10 +129,10 @@ export default function PlanosPage() {
                 >
                   <Crown size={20} style={{ color: planCssVar[plan] }} />
                 </div>
-                <h3 className="font-serif font-bold text-lg text-white">{limits.label}</h3>
+                <h3 className="font-serif font-semibold tracking-tight text-lg text-white">{limits.label}</h3>
               </div>
 
-              <p className="text-2xl font-bold mb-5" style={{ color: planCssVar[plan] }}>
+              <p className="text-2xl font-semibold tracking-tight mb-5" style={{ color: planCssVar[plan] }}>
                 {limits.price}
               </p>
 
@@ -169,7 +169,7 @@ export default function PlanosPage() {
 
       {/* Feature Comparison */}
       <GradientCard variant="gold" className="shimmer">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+        <h3 className="font-semibold tracking-tight text-white mb-4 flex items-center gap-2">
           <Zap size={16} style={{ color: "var(--gold)" }} /> Por que fazer upgrade?
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

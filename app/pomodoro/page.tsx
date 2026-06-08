@@ -190,7 +190,7 @@ export default function PomodoroPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto page-enter">
+    <div className="space-y-8 max-w-2xl mx-auto page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
         <HeroHeader title="Pomodoro" icon={Timer} iconColor="var(--danger)" />
@@ -210,7 +210,7 @@ export default function PomodoroPage() {
 
       {showSettings && (
         <div className="card animate-slide-up">
-          <h3 className="font-semibold text-white mb-4">Personalizar Tempos</h3>
+          <h3 className="font-semibold tracking-tight text-white mb-4">Personalizar Tempos</h3>
           <div className="grid grid-cols-3 gap-4">
             <div><label className="label">Foco (min)</label><input type="number" className="input" value={customFocus} onChange={(e) => setCustomFocus(+e.target.value)} min={1} max={120} /></div>
             <div><label className="label">Pausa curta</label><input type="number" className="input" value={customShort} onChange={(e) => setCustomShort(+e.target.value)} min={1} max={30} /></div>
@@ -251,7 +251,7 @@ export default function PomodoroPage() {
           trackColor="rgba(255,255,255,0.03)"
         >
           <div className="flex flex-col items-center justify-center">
-            <div className="text-6xl font-bold text-white font-mono tracking-tight">
+            <div className="text-6xl font-semibold text-white font-mono tracking-tight">
               {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
             </div>
             <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
@@ -275,7 +275,7 @@ export default function PomodoroPage() {
             <RotateCcw size={18} />
           </button>
           <button onClick={toggleTimer}
-            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold transition-all duration-300 active:scale-95"
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-semibold transition-all duration-300 active:scale-95"
             style={!pomodoroActive ? {
               background: colors.primary,
               boxShadow: `0 8px 40px ${colors.ring}`,
@@ -300,8 +300,8 @@ export default function PomodoroPage() {
               style={{ background: `${stat.color}12`, color: stat.color }}>
               {stat.icon}
             </div>
-            <p className="text-2xl font-bold count-up" style={{ color: stat.color }}>{stat.value}</p>
-            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{stat.label}</p>
+            <p className="text-2xl font-semibold tracking-tight count-up" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>{stat.label}</p>
           </div>
         ))}
       </div>
@@ -309,7 +309,7 @@ export default function PomodoroPage() {
       {/* Sessions */}
       {todaySessions.length > 0 && (
         <div>
-          <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="font-semibold tracking-tight text-white mb-3 flex items-center gap-2">
             <BarChart3 size={16} style={{ color: "var(--danger)" }} /> Sessões de Hoje
           </h3>
           <div className="space-y-2 stagger-children">

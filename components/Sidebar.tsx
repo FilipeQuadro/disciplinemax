@@ -99,7 +99,7 @@ export function Sidebar() {
                 <FlameKindling size={18} style={{ color: "var(--bg-primary)" }} />
               </div>
               <div>
-                <span className="font-serif font-bold text-white text-sm tracking-tight">DisciplinaMax</span>
+                <span className="font-serif font-semibold text-white text-sm tracking-tight">DisciplinaMax</span>
                 <p className="text-[9px] tracking-[0.2em] uppercase" style={{ color: "var(--text-secondary)" }}>Mentor de Disciplina</p>
               </div>
             </div>
@@ -120,7 +120,7 @@ export function Sidebar() {
             <div className="flex items-center gap-2.5">
               <Flame size={18} style={{ color: "var(--warning)" }} />
               <div>
-                <p className="text-xs font-bold" style={{ color: "var(--warning)" }}>{streak} dias seguidos!</p>
+                <p className="text-xs font-semibold" style={{ color: "var(--warning)" }}>{streak} dias seguidos!</p>
                 <p className="text-[10px]" style={{ color: "rgba(232,132,74,0.4)" }}>Continue assim 🔥</p>
               </div>
             </div>
@@ -180,7 +180,7 @@ export function Sidebar() {
             {user && (
               <div className="glass rounded-xl p-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold"
                     style={{ background: "linear-gradient(135deg, var(--gold), var(--gold-light))", color: "var(--bg-primary)" }}>
                     {(user.user_metadata?.name || user.email || "U").charAt(0).toUpperCase()}
                   </div>
