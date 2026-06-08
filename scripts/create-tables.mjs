@@ -1,12 +1,12 @@
 // Create missing tables via Supabase Management API
-const SUPABASE_URL = "https://sigpkpgibybgnszpxyzq.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://sigpkpgibybgnszpxyzq.supabase.co";
 
 // We'll use the service role key to create tables via direct SQL
 // The Supabase JS client with service role can bypass RLS but can't create tables
 // We need to use the Supabase Management API or the SQL editor
 
 // Alternative: Use the REST API to check what we have and create the minimum needed
-const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM3MTkzNSwiZXhwIjoyMDk0OTQ3OTM1fQ.g5tS-3iavhOGq3JCorPzfRBfGx4rYS4zPzgYDUNnDts";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const { createClient } = await import("@supabase/supabase-js");
 const sb = createClient(SUPABASE_URL, SERVICE_KEY);

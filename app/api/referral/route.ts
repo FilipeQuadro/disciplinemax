@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { ReferralService } from "@/lib/services/referral-service";
 import { referralRequestSchema } from "@/lib/schemas";
 import { logger } from "@/lib/logger";
+import { getAuthUserId } from "@/lib/auth-helpers";
 
 export async function POST(req: Request) {
   try {
+    // Authenticate the caller
+    const callerId = await getAuthUserId(req);
+    if (!callerId) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = referralRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -12,6 +19,12 @@ export async function POST(req: Request) {
     }
 
     const { userId, action, code } = parsed.data;
+
+    // Ownership check: caller can only access their own referral info
+    if (userId !== callerId) {
+      return NextResponse.json({ error: "Can only access your own referrals" }, { status: 403 });
+    }
+
     const service = new ReferralService();
 
     switch (action) {

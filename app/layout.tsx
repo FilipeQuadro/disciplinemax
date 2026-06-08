@@ -8,10 +8,14 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppShell } from "@/components/AppShell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PwaInstallListener } from "@/components/PwaInstallListener";
-import { SwRegistrar } from "@/components/SwRegistrar";
 
 const BackgroundParticles = dynamic(() => import("@/components/BackgroundParticles").then((mod) => ({ default: mod.BackgroundParticles })), {
+  ssr: false,
+});
+const PwaInstallListener = dynamic(() => import("@/components/PwaInstallListener").then((mod) => ({ default: mod.PwaInstallListener })), {
+  ssr: false,
+});
+const SwRegistrar = dynamic(() => import("@/components/SwRegistrar").then((mod) => ({ default: mod.SwRegistrar })), {
   ssr: false,
 });
 
@@ -39,8 +43,6 @@ export const viewport: Viewport = {
   themeColor: "#0B0E14",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 

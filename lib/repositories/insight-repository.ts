@@ -49,4 +49,40 @@ export class InsightRepository {
       .delete()
       .lt("created_at", cutoff);
   }
+
+  /**
+   * Get completed pomodoro sessions for a user in the last N days.
+   */
+  async getCompletedPomodoros(userId: string, days = 30, limit = 100): Promise<Array<{ started_at: string }>> {
+    return MetricsService.measure("insights_getPomodoros", async () => {
+      const { data } = await this.client
+        .from("pomodoro_sessions")
+        .select("started_at")
+        .eq("user_id", userId)
+        .eq("completed", true)
+        .gte("started_at", new Date(Date.now() - days * 86400000).toISOString())
+        .limit(limit);
+      return (data as Array<{ started_at: string }>) ?? [];
+    }, { table: "pomodoro_sessions" });
+  }
+
+  /**
+   * Get daily stats for a user in a date range.
+   */
+  async getDailyStatsInRange(userId: string, sinceDate: string, untilDate?: string): Promise<Array<{ goals_completed: number | boolean }>> {
+    return MetricsService.measure("insights_getDailyStats", async () => {
+      let query = this.client
+        .from("daily_stats")
+        .select("goals_completed")
+        .eq("user_id", userId)
+        .gte("date", sinceDate);
+
+      if (untilDate) {
+        query = query.lt("date", untilDate);
+      }
+
+      const { data } = await query;
+      return (data as Array<{ goals_completed: number | boolean }>) ?? [];
+    }, { table: "daily_stats" });
+  }
 }

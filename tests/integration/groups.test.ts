@@ -18,6 +18,10 @@ vi.mock("@/lib/services/group-service", () => ({
   },
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -29,7 +33,7 @@ describe("POST /api/groups", () => {
 
   it("returns 400 on invalid input", async () => {
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({}),
     }));
     expect(res.status).toBe(400);
@@ -39,7 +43,7 @@ describe("POST /api/groups", () => {
     mocks.mockListGroups.mockResolvedValueOnce([{ id: "g1", name: "A" }, { id: "g2", name: "B" }]);
     mocks.mockGetUserGroups.mockResolvedValueOnce([{ id: "g1", name: "A" }]);
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(200);
@@ -50,7 +54,7 @@ describe("POST /api/groups", () => {
 
   it("join — 400 when groupId missing", async () => {
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "join" }),
     }));
     expect(res.status).toBe(400);
@@ -59,7 +63,7 @@ describe("POST /api/groups", () => {
   it("join — 200 on success", async () => {
     mocks.mockJoinGroup.mockResolvedValueOnce(true);
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "join", groupId: "g1" }),
     }));
     expect(res.status).toBe(200);
@@ -68,7 +72,7 @@ describe("POST /api/groups", () => {
 
   it("leave — 400 when groupId missing", async () => {
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "leave" }),
     }));
     expect(res.status).toBe(400);
@@ -77,7 +81,7 @@ describe("POST /api/groups", () => {
   it("leave — 200 on success", async () => {
     mocks.mockLeaveGroup.mockResolvedValueOnce(true);
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "leave", groupId: "g1" }),
     }));
     expect(res.status).toBe(200);
@@ -85,7 +89,7 @@ describe("POST /api/groups", () => {
 
   it("ranking — 400 when groupId missing", async () => {
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "ranking" }),
     }));
     expect(res.status).toBe(400);
@@ -94,7 +98,7 @@ describe("POST /api/groups", () => {
   it("ranking — returns data", async () => {
     mocks.mockGetGroupRanking.mockResolvedValueOnce([{ user_id: "u1", xp: 500 }]);
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "ranking", groupId: "g1" }),
     }));
     expect(res.status).toBe(200);
@@ -103,7 +107,7 @@ describe("POST /api/groups", () => {
 
   it("returns 400 on invalid action", async () => {
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "hack" }),
     }));
     expect(res.status).toBe(400);
@@ -112,7 +116,7 @@ describe("POST /api/groups", () => {
   it("returns 500 on error", async () => {
     mocks.mockListGroups.mockRejectedValueOnce(new Error("fail"));
     const res = await POST(new Request("https://test.com/api/groups", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(500);

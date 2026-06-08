@@ -17,6 +17,15 @@ vi.mock("@/lib/metrics", () => ({
   },
 }));
 
+vi.mock("@/lib/repositories/settings-repository", () => ({
+  SettingsRepository: vi.fn().mockImplementation(() => ({
+    getSettingsByUserId: vi.fn().mockResolvedValue({
+      streak_freeze_available: 0,
+      streak_freeze_used: 0,
+    }),
+  })),
+}));
+
 vi.mock("@/lib/repositories/event-tracking-repository", () => ({
   EventTrackingService: vi.fn().mockImplementation(() => ({
     track: vi.fn().mockResolvedValue(undefined),
@@ -49,6 +58,7 @@ describe("StreakService", () => {
   let service: StreakService;
   let mockStreakRepo: any;
   let mockEventService: any;
+  let mockSettingsRepo: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,7 +75,14 @@ describe("StreakService", () => {
       track: vi.fn().mockResolvedValue(undefined),
     };
 
-    service = new StreakService(mockStreakRepo, mockEventService);
+    mockSettingsRepo = {
+      getSettingsByUserId: vi.fn().mockResolvedValue({
+        streak_freeze_available: 0,
+        streak_freeze_used: 0,
+      }),
+    };
+
+    service = new StreakService(mockStreakRepo, mockEventService, mockSettingsRepo);
   });
 
   describe("recordActivity", () => {

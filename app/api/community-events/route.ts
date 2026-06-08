@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { CommunityEventService } from "@/lib/services/community-event-service";
 import { communityEventRequestSchema } from "@/lib/schemas";
 import { logger } from "@/lib/logger";
+import { getAuthUserId } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
+    // GET is public — listing active challenges requires no auth
     const service = new CommunityEventService();
     const challenges = await service.getActiveChallenges();
 
@@ -24,6 +26,12 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    // Authenticate the caller
+    const callerId = await getAuthUserId(req);
+    if (!callerId) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = communityEventRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -31,6 +39,12 @@ export async function POST(req: Request) {
     }
 
     const { userId, action, challengeId, contribution } = parsed.data;
+
+    // Ownership check: caller can only contribute as themselves
+    if (userId !== callerId) {
+      return NextResponse.json({ error: "Can only contribute as yourself" }, { status: 403 });
+    }
+
     const service = new CommunityEventService();
 
     switch (action) {

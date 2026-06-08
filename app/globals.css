@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,24 +6,69 @@
 
 @layer base {
   :root {
+    /* === BACKGROUNDS === */
     --bg-primary: #0B0E14;
     --bg-secondary: #111520;
     --bg-sidebar: #0D1018;
     --bg-card: #141820;
+    --surface: #141820;
+
+    /* === BORDERS === */
     --border: rgba(255,255,255,0.05);
     --border-light: rgba(255,255,255,0.08);
+
+    /* === TEXT === */
     --text-primary: #F0F0F0;
+    --text-secondary: #6B7585;
     --text-muted: #8B95A5;
-    --text-dim: #6B7585;
+    --text-dim: #8B95A5;
+
+    /* === BRAND === */
     --gold: #D4AF37;
     --gold-light: #F5D060;
     --gold-dark: #A8892B;
     --gold-glow: rgba(212,175,55,0.15);
     --gold-border: rgba(212,175,55,0.2);
+
+    /* === SEMANTIC === */
     --accent-purple: #7C6BBD;
     --accent-teal: #3ABAB4;
     --accent-orange: #E8844A;
     --accent-red: #D94F4F;
+    --success: #3ABAB4;
+    --warning: #E8844A;
+    --danger: #D94F4F;
+
+    /* === RADIUS === */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+
+    /* === SHADOWS === */
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.25);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+    --shadow-xl: 0 12px 40px rgba(0,0,0,0.4);
+
+    /* === SPACING === */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* === MOTION === */
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -86,9 +131,8 @@
   /* Skip-to-content link for keyboard users */
   .skip-to-content {
     position: absolute;
-    top: -100%;
-    left: 50%;
-    transform: translateX(-50%);
+    left: -9999px;
+    top: auto;
     z-index: 9999;
     padding: 8px 16px;
     border-radius: 8px;
@@ -97,10 +141,21 @@
     font-weight: 600;
     font-size: 14px;
     text-decoration: none;
-    transition: top 0.2s;
   }
   .skip-to-content:focus {
+    left: 50%;
     top: 8px;
+    transform: translateX(-50%);
+  }
+
+  /* Reduced motion — respect user preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

@@ -4,11 +4,11 @@
 // Testa funcionalidade real, não só HTTP status
 // ============================================
 
-const APP = "https://disciplinemax.onrender.com";
-const SB_URL = "https://sigpkpgibybgnszpxyzq.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM3MTkzNSwiZXhwIjoyMDk0OTQ3OTM1fQ.g5tS-3iavhOGq3JCorPzfRBfGx4rYS4zPzgYDUNnDts";
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzE5MzUsImV4cCI6MjA5NDk0NzkzNX0.kG-vsXaeb9Jlzp9DuC9aAkXf32jElxuhTsniyF1OIh8";
-const CRON_SECRET = "040623ls";
+const APP = process.env.APP_URL || "https://disciplinemax.onrender.com";
+const SB_URL = process.env.SUPABASE_URL || "";
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const CRON_SECRET = process.env.CRON_SECRET || "";
 
 let passed = 0, failed = 0, total = 0;
 const failures = [];
@@ -414,12 +414,12 @@ async function testCronJobs() {
     doctorJobs.length === 1 ? ok("1 auto-diagnóstico") : fail("Auto-diagnóstico", `${doctorJobs.length} (esperado 1)`);
 
     // Verificar URL correta (notificação jobs apontam para /api/cron)
-    const cronUrl = "https://disciplinemax.onrender.com/api/cron?secret=040623ls";
+    const cronUrl = `${APP}/api/cron?secret=${CRON_SECRET}`;
     const correctUrl = notifJobs.filter(j => j.url === cronUrl);
     correctUrl.length === 6 ? ok("URLs corretas") : fail("URLs", `${correctUrl.length}/6 com URL correta`);
 
     // Verificar doctor URL
-    const doctorUrl = "https://disciplinemax.onrender.com/api/doctor?secret=040623ls";
+    const doctorUrl = `${APP}/api/doctor?secret=${CRON_SECRET}`;
     const correctDoctorUrl = doctorJobs.filter(j => j.url === doctorUrl);
     correctDoctorUrl.length === 1 ? ok("Doctor URL correta") : fail("Doctor URL", `${correctDoctorUrl.length}/1`);
 

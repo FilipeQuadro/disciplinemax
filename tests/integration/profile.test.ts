@@ -14,6 +14,10 @@ vi.mock("@/lib/services/profile-service", () => ({
   },
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -26,21 +30,27 @@ describe("GET /api/profile", () => {
   });
 
   it("returns 400 when userId is missing", async () => {
-    const req = new Request("https://test.com/api/profile");
+    const req = new Request("https://test.com/api/profile", {
+      headers: { Authorization: "Bearer test-token" },
+    });
     const res = await GET(req);
     expect(res.status).toBe(400);
   });
 
   it("returns 404 when profile not found", async () => {
     mockGetProfile.mockResolvedValueOnce(null);
-    const req = new Request("https://test.com/api/profile?userId=u1");
+    const req = new Request("https://test.com/api/profile?userId=u1", {
+      headers: { Authorization: "Bearer test-token" },
+    });
     const res = await GET(req);
     expect(res.status).toBe(404);
   });
 
   it("returns profile when found", async () => {
     mockGetProfile.mockResolvedValueOnce({ user_id: "u1", username: "filipe" });
-    const req = new Request("https://test.com/api/profile?userId=u1");
+    const req = new Request("https://test.com/api/profile?userId=u1", {
+      headers: { Authorization: "Bearer test-token" },
+    });
     const res = await GET(req);
     expect(res.status).toBe(200);
   });
@@ -54,7 +64,7 @@ describe("PUT /api/profile", () => {
   it("returns 400 on invalid input", async () => {
     const req = new Request("https://test.com/api/profile", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "" }),
     });
     const res = await PUT(req);
@@ -65,7 +75,7 @@ describe("PUT /api/profile", () => {
     mockUpsertProfile.mockResolvedValueOnce(null);
     const req = new Request("https://test.com/api/profile", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", username: "taken" }),
     });
     const res = await PUT(req);
@@ -76,7 +86,7 @@ describe("PUT /api/profile", () => {
     mockUpsertProfile.mockResolvedValueOnce({ user_id: "u1" });
     const req = new Request("https://test.com/api/profile", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", username: "filipe" }),
     });
     const res = await PUT(req);
@@ -92,7 +102,7 @@ describe("POST /api/profile", () => {
   it("returns 400 when userId is missing", async () => {
     const req = new Request("https://test.com/api/profile", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({}),
     });
     const res = await POST(req);
@@ -103,7 +113,7 @@ describe("POST /api/profile", () => {
     mockEnsureProfile.mockResolvedValueOnce(null);
     const req = new Request("https://test.com/api/profile", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1" }),
     });
     const res = await POST(req);
@@ -114,7 +124,7 @@ describe("POST /api/profile", () => {
     mockEnsureProfile.mockResolvedValueOnce({ user_id: "u1", referral_code: "ABC" });
     const req = new Request("https://test.com/api/profile", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", displayName: "Filipe" }),
     });
     const res = await POST(req);

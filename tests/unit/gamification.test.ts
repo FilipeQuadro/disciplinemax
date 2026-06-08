@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+// Mock authFetch
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+}));
+
+vi.mock("@/lib/auth-fetch", () => ({
+  authFetch: mockAuthFetch,
+}));
 
 // Mock useStore
 vi.mock("@/store/useStore", () => ({
@@ -35,7 +40,7 @@ describe("processGamification", () => {
   });
 
   it("calls /api/gamification with correct payload", async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         xp: { total: 100, level: 2, xpGained: 10, xpToNext: 300, levelProgress: 33 },
@@ -46,12 +51,12 @@ describe("processGamification", () => {
     });
 
     const result = await processGamification("pomodoro_completed");
-    expect(mockFetch).toHaveBeenCalledWith("/api/gamification", expect.objectContaining({
+    expect(mockAuthFetch).toHaveBeenCalledWith("/api/gamification", expect.objectContaining({
       method: "POST",
       headers: { "Content-Type": "application/json" },
     }));
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockAuthFetch.mock.calls[0][1].body);
     expect(body.action).toBe("pomodoro_completed");
     expect(body.userId).toBe("test-user-1");
   });
@@ -66,7 +71,7 @@ describe("processGamification", () => {
       setCurrentLevel: mockSetCurrentLevel,
     });
 
-    mockFetch.mockResolvedValueOnce({
+    mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         xp: { total: 150, level: 2, xpGained: 10, xpToNext: 250, levelProgress: 50 },
@@ -83,19 +88,19 @@ describe("processGamification", () => {
   });
 
   it("returns null on fetch failure", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    mockAuthFetch.mockRejectedValueOnce(new Error("Network error"));
     const result = await processGamification("bible_chapter");
     expect(result).toBeNull();
   });
 
   it("returns null on non-ok response", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    mockAuthFetch.mockResolvedValueOnce({ ok: false, status: 500 });
     const result = await processGamification("book_finished");
     expect(result).toBeNull();
   });
 
   it("passes page count in data for page_read action", async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         xp: { total: 20, level: 1, xpGained: 20, xpToNext: 80, levelProgress: 20 },
@@ -106,12 +111,12 @@ describe("processGamification", () => {
     });
 
     await processGamification("page_read", { pages: 10 });
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockAuthFetch.mock.calls[0][1].body);
     expect(body.data.pages).toBe(10);
   });
 
   it("passes bookId in data for book_finished action", async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         xp: { total: 100, level: 2, xpGained: 100, xpToNext: 300, levelProgress: 0 },
@@ -122,7 +127,7 @@ describe("processGamification", () => {
     });
 
     await processGamification("book_finished", { bookId: "book-1" });
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockAuthFetch.mock.calls[0][1].body);
     expect(body.data.bookId).toBe("book-1");
   });
 });

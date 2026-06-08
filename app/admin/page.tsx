@@ -219,8 +219,8 @@ export default function AdminPage() {
     change_plan: { title: "Alterar plano?", message: "O plano do usuário será alterado imediatamente." },
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><p style={{ color: "#555E6E" }}>Verificando permissões...</p></div>;
-  if (!isAdmin) return <div className="flex items-center justify-center h-64"><p style={{ color: "#D94F4F" }}>Acesso restrito a administradores</p></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><p style={{ color: "var(--text-secondary)" }}>Verificando permissões...</p></div>;
+  if (!isAdmin) return <div className="flex items-center justify-center h-64"><p style={{ color: "var(--danger)" }}>Acesso restrito a administradores</p></div>;
 
   const tabs = [
     { key: "overview" as const, label: "Visão Geral", icon: TrendingUp },
@@ -238,9 +238,9 @@ export default function AdminPage() {
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-              <Shield size={24} style={{ color: "#D4AF37" }} /> Painel Admin
+              <Shield size={24} style={{ color: "var(--gold)" }} /> Painel Admin
             </h1>
-            <p className="text-sm mt-1" style={{ color: "#555E6E" }}>Gerenciamento e monitoramento do sistema</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Gerenciamento e monitoramento do sistema</p>
           </div>
           <HealthBadge status={systemHealth} />
         </div>
@@ -250,11 +250,11 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-2xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex gap-1 p-1 rounded-2xl overflow-x-auto glass">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => { setTab(t.key); if (t.key === "diagnostics") loadDiagnostics(); if (t.key === "analytics") loadAnalytics(); }}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 min-w-0 whitespace-nowrap px-2")}
-            style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "#F0F0F0" : "#555E6E" }}>
+            style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "var(--text-primary)" : "var(--text-secondary)" }}>
             <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
@@ -265,36 +265,36 @@ export default function AdminPage() {
         <div className="space-y-4 stagger-children">
           {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <AdminStat icon={<Users size={18} style={{ color: "#D4AF37" }} />} label="Total Usuários" value={stats.users.total} sub={`+${stats.users.newThisWeek} esta semana`} cardClass="card-gold" />
-            <AdminStat icon={<UserCheck size={18} style={{ color: "#3ABAB4" }} />} label="Ativos Hoje" value={stats.users.activeToday} sub={`${stats.users.engagementRate}% engajamento`} cardClass="card-teal" />
-            <AdminStat icon={<TrendingUp size={18} style={{ color: "#7C6BBD" }} />} label="Novos Semana" value={stats.users.newThisWeek} sub={`${stats.users.weeklyRetention}% retenção`} cardClass="card-purple" />
-            <AdminStat icon={<AlertTriangle size={18} style={{ color: "#E8844A" }} />} label="Bloqueados" value={stats.users.blocked} sub={stats.users.newThisMonth > 0 ? `+${stats.users.newThisMonth} este mês` : ""} cardClass="card-orange" />
+            <AdminStat icon={<Users size={18} style={{ color: "var(--gold)" }} />} label="Total Usuários" value={stats.users.total} sub={`+${stats.users.newThisWeek} esta semana`} cardClass="card-gold" />
+            <AdminStat icon={<UserCheck size={18} style={{ color: "var(--success)" }} />} label="Ativos Hoje" value={stats.users.activeToday} sub={`${stats.users.engagementRate}% engajamento`} cardClass="card-teal" />
+            <AdminStat icon={<TrendingUp size={18} style={{ color: "var(--accent-purple)" }} />} label="Novos Semana" value={stats.users.newThisWeek} sub={`${stats.users.weeklyRetention}% retenção`} cardClass="card-purple" />
+            <AdminStat icon={<AlertTriangle size={18} style={{ color: "var(--warning)" }} />} label="Bloqueados" value={stats.users.blocked} sub={stats.users.newThisMonth > 0 ? `+${stats.users.newThisMonth} este mês` : ""} cardClass="card-orange" />
           </div>
 
           {/* Today vs Week */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <AdminStat icon={<BookOpen size={18} style={{ color: "#D4AF37" }} />} label="Páginas Hoje" value={stats.metrics.today.pages} sub={`${stats.metrics.week.pages} na semana`} cardClass="card-gold" />
-            <AdminStat icon={<BookMarked size={18} style={{ color: "#7C6BBD" }} />} label="Capítulos Hoje" value={stats.metrics.today.chapters} sub={`${stats.metrics.week.chapters} na semana`} cardClass="card-purple" />
-            <AdminStat icon={<Timer size={18} style={{ color: "#D94F4F" }} />} label="Pomodoros Hoje" value={stats.metrics.today.pomodoros} sub={`${stats.metrics.week.pomodoros} na semana`} cardClass="card-red" />
-            <AdminStat icon={<Clock size={18} style={{ color: "#3ABAB4" }} />} label="Min Foco Hoje" value={stats.metrics.today.focusMin} sub={`${stats.metrics.week.focusMin} na semana`} cardClass="card-teal" />
+            <AdminStat icon={<BookOpen size={18} style={{ color: "var(--gold)" }} />} label="Páginas Hoje" value={stats.metrics.today.pages} sub={`${stats.metrics.week.pages} na semana`} cardClass="card-gold" />
+            <AdminStat icon={<BookMarked size={18} style={{ color: "var(--accent-purple)" }} />} label="Capítulos Hoje" value={stats.metrics.today.chapters} sub={`${stats.metrics.week.chapters} na semana`} cardClass="card-purple" />
+            <AdminStat icon={<Timer size={18} style={{ color: "var(--danger)" }} />} label="Pomodoros Hoje" value={stats.metrics.today.pomodoros} sub={`${stats.metrics.week.pomodoros} na semana`} cardClass="card-red" />
+            <AdminStat icon={<Clock size={18} style={{ color: "var(--success)" }} />} label="Min Foco Hoje" value={stats.metrics.today.focusMin} sub={`${stats.metrics.week.focusMin} na semana`} cardClass="card-teal" />
           </div>
 
           {/* Weekly Trend */}
           {stats.trend && stats.trend.length > 0 && (
             <div className="card">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <BarChart3 size={16} style={{ color: "#D4AF37" }} /> Tendência Semanal
+                <BarChart3 size={16} style={{ color: "var(--gold)" }} /> Tendência Semanal
               </h3>
               <div className="space-y-2">
                 {stats.trend.map((d) => (
                   <div key={d.date} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ background: "rgba(255,255,255,0.01)" }}>
-                    <span className="text-xs font-mono w-20" style={{ color: "#8B95A5" }}>
+                    <span className="text-xs font-mono w-20" style={{ color: "var(--text-muted)" }}>
                       {format(new Date(d.date + "T12:00:00"), "dd/MM", { locale: ptBR })}
                     </span>
                     <div className="flex-1 flex items-center gap-4">
-                      <MetricBar label="Pág" value={d.pages} max={Math.max(...stats.trend.map((t) => t.pages), 1)} color="#D4AF37" />
-                      <MetricBar label="Cap" value={d.chapters} max={Math.max(...stats.trend.map((t) => t.chapters), 1)} color="#7C6BBD" />
-                      <MetricBar label="Pom" value={d.pomodoros} max={Math.max(...stats.trend.map((t) => t.pomodoros), 1)} color="#D94F4F" />
+                      <MetricBar label="Pág" value={d.pages} max={Math.max(...stats.trend.map((t) => t.pages), 1)} color="var(--gold)" />
+                      <MetricBar label="Cap" value={d.chapters} max={Math.max(...stats.trend.map((t) => t.chapters), 1)} color="var(--accent-purple)" />
+                      <MetricBar label="Pom" value={d.pomodoros} max={Math.max(...stats.trend.map((t) => t.pomodoros), 1)} color="var(--danger)" />
                     </div>
                   </div>
                 ))}
@@ -306,15 +306,15 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="card">
               <div className="flex items-center gap-2 mb-2">
-                <BookOpen size={14} style={{ color: "#D4AF37" }} />
-                <span className="text-xs uppercase tracking-wider" style={{ color: "#555E6E" }}>Livros Cadastrados</span>
+                <BookOpen size={14} style={{ color: "var(--gold)" }} />
+                <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Livros Cadastrados</span>
               </div>
               <p className="text-2xl font-bold text-white">{stats.metrics.totalBooks}</p>
             </div>
             <div className="card">
               <div className="flex items-center gap-2 mb-2">
-                <Timer size={14} style={{ color: "#D94F4F" }} />
-                <span className="text-xs uppercase tracking-wider" style={{ color: "#555E6E" }}>Sessões Pomodoro</span>
+                <Timer size={14} style={{ color: "var(--danger)" }} />
+                <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Sessões Pomodoro</span>
               </div>
               <p className="text-2xl font-bold text-white">{stats.metrics.totalPomodoroSessions}</p>
             </div>
@@ -323,7 +323,7 @@ export default function AdminPage() {
           {/* Quick Actions */}
           <div className="card">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-              <Zap size={16} style={{ color: "#D4AF37" }} /> Ações Rápidas
+              <Zap size={16} style={{ color: "var(--gold)" }} /> Ações Rápidas
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <QuickAction icon={<Activity size={16} />} label="Diagnóstico Completo" onClick={() => { setTab("diagnostics"); loadDiagnostics(); }} />
@@ -354,7 +354,7 @@ export default function AdminPage() {
           {/* Search */}
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#555E6E" }} />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-secondary)" }} />
               <input
                 className="input pl-10"
                 placeholder="Buscar por email, nome, ID ou plano..."
@@ -364,7 +364,7 @@ export default function AdminPage() {
               />
             </div>
             <button onClick={() => loadUsersPage(1)} className="btn-ghost text-xs">Buscar</button>
-            <span className="text-xs whitespace-nowrap" style={{ color: "#555E6E" }}>
+            <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
               {pagination.total} usuário(s)
             </span>
           </div>
@@ -373,37 +373,37 @@ export default function AdminPage() {
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white flex items-center gap-2">
-                <Users size={16} style={{ color: "#D4AF37" }} /> Usuários
+                <Users size={16} style={{ color: "var(--gold)" }} /> Usuários
               </h3>
-              <span className="text-xs" style={{ color: "#555E6E" }}>
+              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
                 Página {pagination.page} de {pagination.totalPages}
               </span>
             </div>
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-sm min-w-[900px]">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Usuário</th>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Cadastro</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Streak</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Livros</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Pomodoros</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Plano</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Status</th>
-                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Ações</th>
+                  <tr style={{ borderBottom: "1px solid var(--border-light)" }}>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Usuário</th>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Cadastro</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Streak</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Livros</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Pomodoros</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Plano</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Status</th>
+                    <th className="text-center p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-sm" style={{ color: "#555E6E" }}>
+                      <td colSpan={8} className="p-8 text-center text-sm" style={{ color: "var(--text-secondary)" }}>
                         {searchQuery ? "Nenhum usuário encontrado para esta busca." : "Nenhum usuário cadastrado."}
                       </td>
                     </tr>
                   ) : (
                     users.map((u) => (
                       <tr key={u.id} className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                        style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
+                        style={{ borderBottom: "1px solid var(--border)" }}
                         onClick={() => setSelectedUser(u)}>
                         <td className="p-3">
                           <div className="flex flex-col gap-0.5">
@@ -414,58 +414,58 @@ export default function AdminPage() {
                                 <span className="text-sm text-white truncate max-w-[150px]">{u.email || u.id.substring(0, 8) + "..."}</span>
                               )}
                               {u.isAdmin && (
-                                <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "#D4AF37" }}>
+                                <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
                                   <Shield size={8} /> {u.adminRole || "admin"}
                                 </span>
                               )}
                             </div>
                             {u.email && u.name && (
-                              <span className="text-[11px] truncate max-w-[180px]" style={{ color: "#555E6E" }}>{u.email}</span>
+                              <span className="text-[11px] truncate max-w-[180px]" style={{ color: "var(--text-secondary)" }}>{u.email}</span>
                             )}
                           </div>
                         </td>
-                        <td className="p-3 text-xs" style={{ color: "#8B95A5" }}>
+                        <td className="p-3 text-xs" style={{ color: "var(--text-muted)" }}>
                           {u.joinedAt ? format(new Date(u.joinedAt), "dd/MM/yyyy") : "—"}
                         </td>
                         <td className="p-3 text-center">
                           {u.streak > 0 ? (
-                            <span className="text-xs font-semibold flex items-center justify-center gap-1" style={{ color: "#E8844A" }}>
+                            <span className="text-xs font-semibold flex items-center justify-center gap-1" style={{ color: "var(--warning)" }}>
                               <Flame size={12} /> {u.streak}
                             </span>
                           ) : (
-                            <span className="text-xs" style={{ color: "#555E6E" }}>0</span>
+                            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>0</span>
                           )}
                         </td>
-                        <td className="p-3 text-center text-xs" style={{ color: "#7C6BBD" }}>{u.books}</td>
-                        <td className="p-3 text-center text-xs" style={{ color: "#D94F4F" }}>{u.pomodoros}</td>
+                        <td className="p-3 text-center text-xs" style={{ color: "var(--accent-purple)" }}>{u.books}</td>
+                        <td className="p-3 text-center text-xs" style={{ color: "var(--danger)" }}>{u.pomodoros}</td>
                         <td className="p-3 text-center">
                           <button onClick={(e) => { e.stopPropagation(); setPlanModal({ userId: u.id, currentPlan: u.plan }); }}
                             className="badge text-[10px] hover:opacity-80 transition-opacity" style={{
                               background: u.plan === "premium" ? "rgba(212,175,55,0.12)" : u.plan === "pro" ? "rgba(124,107,189,0.12)" : "rgba(255,255,255,0.04)",
-                              color: u.plan === "premium" ? "#D4AF37" : u.plan === "pro" ? "#7C6BBD" : "#8B95A5",
+                              color: u.plan === "premium" ? "var(--gold)" : u.plan === "pro" ? "var(--accent-purple)" : "var(--text-muted)",
                             }}>{u.plan}</button>
                         </td>
                         <td className="p-3 text-center">
                           {u.blocked ? (
-                            <span className="badge text-[10px]" style={{ background: "rgba(217,79,79,0.15)", color: "#D94F4F" }}>BLOQUEADO</span>
+                            <span className="badge text-[10px]" style={{ background: "rgba(217,79,79,0.15)", color: "var(--danger)" }}>BLOQUEADO</span>
                           ) : (
-                            <span className="badge text-[10px]" style={{ background: "rgba(58,186,180,0.1)", color: "#3ABAB4" }}>Ativo</span>
+                            <span className="badge text-[10px]" style={{ background: "rgba(58,186,180,0.1)", color: "var(--success)" }}>Ativo</span>
                           )}
                         </td>
                         <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             {u.blocked ? (
-                              <ActionButton icon={<Unlock size={13} />} color="#3ABAB4" title="Desbloquear" onClick={() => setConfirmAction({ userId: u.id, action: "unblock" })} />
+                              <ActionButton icon={<Unlock size={13} />} color="var(--success)" title="Desbloquear" onClick={() => setConfirmAction({ userId: u.id, action: "unblock" })} />
                             ) : (
-                              <ActionButton icon={<Ban size={13} />} color="#E8844A" title="Bloquear" onClick={() => setConfirmAction({ userId: u.id, action: "block" })} />
+                              <ActionButton icon={<Ban size={13} />} color="var(--warning)" title="Bloquear" onClick={() => setConfirmAction({ userId: u.id, action: "block" })} />
                             )}
                             {!u.isAdmin ? (
-                              <ActionButton icon={<Shield size={13} />} color="#D4AF37" title="Tornar Admin" onClick={() => setConfirmAction({ userId: u.id, action: "add_admin" })} />
+                              <ActionButton icon={<Shield size={13} />} color="var(--gold)" title="Tornar Admin" onClick={() => setConfirmAction({ userId: u.id, action: "add_admin" })} />
                             ) : (
-                              <ActionButton icon={<Shield size={13} className="opacity-40" />} color="#555E6E" title="Remover Admin" onClick={() => setConfirmAction({ userId: u.id, action: "remove_admin" })} />
+                              <ActionButton icon={<Shield size={13} className="opacity-40" />} color="var(--text-secondary)" title="Remover Admin" onClick={() => setConfirmAction({ userId: u.id, action: "remove_admin" })} />
                             )}
-                            <ActionButton icon={<RotateCcw size={13} />} color="#7C6BBD" title="Resetar dados" onClick={() => setConfirmAction({ userId: u.id, action: "reset_data" })} />
-                            <ActionButton icon={<Trash2 size={13} />} color="#D94F4F" title="Deletar" onClick={() => setConfirmAction({ userId: u.id, action: "delete" })} />
+                            <ActionButton icon={<RotateCcw size={13} />} color="var(--accent-purple)" title="Resetar dados" onClick={() => setConfirmAction({ userId: u.id, action: "reset_data" })} />
+                            <ActionButton icon={<Trash2 size={13} />} color="var(--danger)" title="Deletar" onClick={() => setConfirmAction({ userId: u.id, action: "delete" })} />
                           </div>
                         </td>
                       </tr>
@@ -477,7 +477,7 @@ export default function AdminPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center justify-center gap-2 pt-4" style={{ borderTop: "1px solid var(--border-light)" }}>
                 <button
                   onClick={() => loadUsersPage(pagination.page - 1)}
                   disabled={pagination.page <= 1}
@@ -486,7 +486,7 @@ export default function AdminPage() {
                 >
                   <ChevronLeft size={14} /> Anterior
                 </button>
-                <span className="text-xs px-3" style={{ color: "#8B95A5" }}>
+                <span className="text-xs px-3" style={{ color: "var(--text-muted)" }}>
                   {pagination.page} / {pagination.totalPages}
                 </span>
                 <button
@@ -512,24 +512,24 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {diagnostics.status === "healthy" ? (
-                    <CheckCircle size={24} style={{ color: "#3ABAB4" }} />
+                    <CheckCircle size={24} style={{ color: "var(--success)" }} />
                   ) : diagnostics.status === "warning" ? (
-                    <AlertTriangle size={24} style={{ color: "#E8844A" }} />
+                    <AlertTriangle size={24} style={{ color: "var(--warning)" }} />
                   ) : (
-                    <XCircle size={24} style={{ color: "#D94F4F" }} />
+                    <XCircle size={24} style={{ color: "var(--danger)" }} />
                   )}
                   <div>
                     <h3 className="font-semibold text-white">
                       {diagnostics.status === "healthy" ? "Sistema Saudável" : diagnostics.status === "warning" ? "Atenção Necessária" : "Problemas Críticos"}
                     </h3>
-                    <p className="text-xs mt-0.5" style={{ color: "#8B95A5" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
                       {diagnostics.summary.healthy} saudáveis · {diagnostics.summary.warnings} avisos · {diagnostics.summary.errors} erros · {diagnostics.summary.disabled} desativados
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px]" style={{ color: "#555E6E" }}>Última verificação</p>
-                  <p className="text-xs" style={{ color: "#8B95A5" }}>
+                  <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Última verificação</p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                     {format(new Date(diagnostics.timestamp), "dd/MM/yyyy HH:mm:ss")}
                   </p>
                 </div>
@@ -541,13 +541,13 @@ export default function AdminPage() {
           {diagnostics && diagnostics.issues.length > 0 && (
             <div className="card" style={{ borderColor: "rgba(217,79,79,0.2)" }}>
               <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                <AlertCircle size={16} style={{ color: "#D94F4F" }} /> Problemas Detectados ({diagnostics.issues.length})
+                <AlertCircle size={16} style={{ color: "var(--danger)" }} /> Problemas Detectados ({diagnostics.issues.length})
               </h3>
               <div className="space-y-2">
                 {diagnostics.issues.map((issue, i) => (
                   <div key={i} className="flex items-start gap-2 p-2 rounded-lg" style={{ background: "rgba(217,79,79,0.05)" }}>
-                    <XCircle size={14} className="mt-0.5 flex-shrink-0" style={{ color: "#D94F4F" }} />
-                    <span className="text-sm" style={{ color: "#D94F4F" }}>{issue}</span>
+                    <XCircle size={14} className="mt-0.5 flex-shrink-0" style={{ color: "var(--danger)" }} />
+                    <span className="text-sm" style={{ color: "var(--danger)" }}>{issue}</span>
                   </div>
                 ))}
               </div>
@@ -568,8 +568,8 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="card text-center py-8">
-              <Activity size={32} className="mx-auto mb-3" style={{ color: "#555E6E" }} />
-              <p style={{ color: "#555E6E" }}>Clique em &quot;Diagnóstico Completo&quot; ou aguarde o carregamento</p>
+              <Activity size={32} className="mx-auto mb-3" style={{ color: "var(--text-secondary)" }} />
+              <p style={{ color: "var(--text-secondary)" }}>Clique em &quot;Diagnóstico Completo&quot; ou aguarde o carregamento</p>
               <button onClick={loadDiagnostics} className="btn-primary mt-4 text-sm">Executar Diagnóstico</button>
             </div>
           )}
@@ -582,7 +582,7 @@ export default function AdminPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white flex items-center gap-2">
-                <FileText size={16} style={{ color: "#D4AF37" }} /> Logs de Auditoria ({auditLogs.length})
+                <FileText size={16} style={{ color: "var(--gold)" }} /> Logs de Auditoria ({auditLogs.length})
               </h3>
               <select
                 className="input text-xs w-auto"
@@ -603,36 +603,36 @@ export default function AdminPage() {
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Data</th>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Ator</th>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Ação</th>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Alvo</th>
-                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>Detalhes</th>
+                  <tr style={{ borderBottom: "1px solid var(--border-light)" }}>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Data</th>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ator</th>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ação</th>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Alvo</th>
+                    <th className="text-left p-3 text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Detalhes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {auditLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-sm" style={{ color: "#555E6E" }}>
+                      <td colSpan={5} className="p-6 text-center text-sm" style={{ color: "var(--text-secondary)" }}>
                         Nenhum log de auditoria encontrado.
                       </td>
                     </tr>
                   ) : (
                     auditLogs.map((log) => (
-                      <tr key={log.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                        <td className="p-3 text-xs" style={{ color: "#8B95A5" }}>{format(new Date(log.created_at), "dd/MM HH:mm")}</td>
-                        <td className="p-3 font-mono text-[11px]" style={{ color: "#8B95A5" }}>{log.actor_id?.substring(0, 8) || "system"}</td>
+                      <tr key={log.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td className="p-3 text-xs" style={{ color: "var(--text-muted)" }}>{format(new Date(log.created_at), "dd/MM HH:mm")}</td>
+                        <td className="p-3 font-mono text-[11px]" style={{ color: "var(--text-muted)" }}>{log.actor_id?.substring(0, 8) || "system"}</td>
                         <td className="p-3">
                           <span className="badge text-[10px]" style={{
                             background: log.action.includes("block") || log.action.includes("delete") ? "rgba(217,79,79,0.1)" : log.action.includes("admin") ? "rgba(212,175,55,0.1)" : "rgba(58,186,180,0.1)",
-                            color: log.action.includes("block") || log.action.includes("delete") ? "#D94F4F" : log.action.includes("admin") ? "#D4AF37" : "#3ABAB4",
+                            color: log.action.includes("block") || log.action.includes("delete") ? "var(--danger)" : log.action.includes("admin") ? "var(--gold)" : "var(--success)",
                           }}>{log.action}</span>
                         </td>
-                        <td className="p-3 text-xs" style={{ color: "#8B95A5" }}>
+                        <td className="p-3 text-xs" style={{ color: "var(--text-muted)" }}>
                           {log.target_type || "—"}{log.target_id ? ` ${log.target_id.substring(0, 8)}...` : ""}
                         </td>
-                        <td className="p-3 text-xs max-w-[200px] truncate" style={{ color: "#555E6E" }}>
+                        <td className="p-3 text-xs max-w-[200px] truncate" style={{ color: "var(--text-secondary)" }}>
                           {log.details ? JSON.stringify(log.details).substring(0, 80) : "—"}
                         </td>
                       </tr>
@@ -650,9 +650,9 @@ export default function AdminPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { plan: "free", label: "Free", color: "#8B95A5", count: stats.plans.free, features: ["5 livros", "8 pomodoros/dia", "3 mensagens IA/dia", "1 som pomodoro"] },
-              { plan: "pro", label: "Pro", color: "#7C6BBD", count: stats.plans.pro, features: ["20 livros", "Pomodoros ilimitados", "IA ilimitada", "3 sons pomodoro"] },
-              { plan: "premium", label: "Premium", color: "#D4AF37", count: stats.plans.premium, features: ["Livros ilimitados", "Tudo ilimitado", "Suporte prioritário", "Todos os sons"] },
+              { plan: "free", label: "Free", color: "var(--text-muted)", count: stats.plans.free, features: ["5 livros", "8 pomodoros/dia", "3 mensagens IA/dia", "1 som pomodoro"] },
+              { plan: "pro", label: "Pro", color: "var(--accent-purple)", count: stats.plans.pro, features: ["20 livros", "Pomodoros ilimitados", "IA ilimitada", "3 sons pomodoro"] },
+              { plan: "premium", label: "Premium", color: "var(--gold)", count: stats.plans.premium, features: ["Livros ilimitados", "Tudo ilimitado", "Suporte prioritário", "Todos os sons"] },
             ].map((p) => (
               <div key={p.plan} className="card text-center relative overflow-hidden">
                 {p.plan === "premium" && (
@@ -661,10 +661,10 @@ export default function AdminPage() {
                 <Crown size={24} className="mx-auto mb-2" style={{ color: p.color }} />
                 <h3 className="font-semibold text-white text-lg">{p.label}</h3>
                 <p className="text-3xl font-bold mt-2" style={{ color: p.color }}>{p.count}</p>
-                <p className="text-xs mt-1" style={{ color: "#555E6E" }}>usuários ativos</p>
+                <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>usuários ativos</p>
                 <div className="mt-3 space-y-1">
                   {p.features.map((f) => (
-                    <p key={f} className="text-[11px] flex items-center justify-center gap-1" style={{ color: "#8B95A5" }}>
+                    <p key={f} className="text-[11px] flex items-center justify-center gap-1" style={{ color: "var(--text-muted)" }}>
                       <CheckCircle2 size={10} style={{ color: p.color }} /> {f}
                     </p>
                   ))}
@@ -676,23 +676,23 @@ export default function AdminPage() {
           {/* Plan distribution bar */}
           <div className="card">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-              <BarChart3 size={16} style={{ color: "#D4AF37" }} /> Distribuição de Planos
+              <BarChart3 size={16} style={{ color: "var(--gold)" }} /> Distribuição de Planos
             </h3>
-            <div className="h-3 rounded-full overflow-hidden flex" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="h-3 rounded-full overflow-hidden flex" style={{ background: "var(--border)" }}>
               {stats.plans.free > 0 && (
-                <div style={{ width: `${(stats.plans.free / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "#8B95A5" }} className="transition-all duration-700" />
+                <div style={{ width: `${(stats.plans.free / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "var(--text-muted)" }} className="transition-all duration-700" />
               )}
               {stats.plans.pro > 0 && (
-                <div style={{ width: `${(stats.plans.pro / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "#7C6BBD" }} className="transition-all duration-700" />
+                <div style={{ width: `${(stats.plans.pro / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "var(--accent-purple)" }} className="transition-all duration-700" />
               )}
               {stats.plans.premium > 0 && (
-                <div style={{ width: `${(stats.plans.premium / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "#D4AF37" }} className="transition-all duration-700" />
+                <div style={{ width: `${(stats.plans.premium / (stats.plans.free + stats.plans.pro + stats.plans.premium)) * 100}%`, background: "var(--gold)" }} className="transition-all duration-700" />
               )}
             </div>
             <div className="flex items-center justify-center gap-6 mt-3">
-              <span className="text-xs flex items-center gap-1" style={{ color: "#8B95A5" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#8B95A5" }} /> Free</span>
-              <span className="text-xs flex items-center gap-1" style={{ color: "#7C6BBD" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#7C6BBD" }} /> Pro</span>
-              <span className="text-xs flex items-center gap-1" style={{ color: "#D4AF37" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#D4AF37" }} /> Premium</span>
+              <span className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--text-muted)" }} /> Free</span>
+              <span className="text-xs flex items-center gap-1" style={{ color: "var(--accent-purple)" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--accent-purple)" }} /> Pro</span>
+              <span className="text-xs flex items-center gap-1" style={{ color: "var(--gold)" }}><span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--gold)" }} /> Premium</span>
             </div>
           </div>
         </div>
@@ -703,7 +703,7 @@ export default function AdminPage() {
         <div className="space-y-4 stagger-children">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-white flex items-center gap-2">
-              <PieChart size={16} style={{ color: "#D4AF37" }} /> Analytics de Produto
+              <PieChart size={16} style={{ color: "var(--gold)" }} /> Analytics de Produto
             </h3>
             <button onClick={loadAnalytics} className="btn-ghost text-xs flex items-center gap-2">
               <RefreshCw size={12} /> Atualizar
@@ -714,21 +714,21 @@ export default function AdminPage() {
             <>
               {/* Active Users */}
               <div className="card">
-                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                   <Users size={12} /> Usuários Ativos
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <AnalyticsMetric icon={<Users size={14} style={{ color: "#D4AF37" }} />} label="DAU" value={analyticsData.daily_active_users} sub="hoje" />
-                  <AnalyticsMetric icon={<CalendarDays size={14} style={{ color: "#7C6BBD" }} />} label="WAU" value={analyticsData.weekly_active_users} sub="semana" />
-                  <AnalyticsMetric icon={<Layers size={14} style={{ color: "#3ABAB4" }} />} label="MAU" value={analyticsData.monthly_active_users} sub="mês" />
-                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "#E8844A" }} />} label="Streak Ativos" value={analyticsData.active_streak_users} sub="streak ≥3" />
+                  <AnalyticsMetric icon={<Users size={14} style={{ color: "var(--gold)" }} />} label="DAU" value={analyticsData.daily_active_users} sub="hoje" />
+                  <AnalyticsMetric icon={<CalendarDays size={14} style={{ color: "var(--accent-purple)" }} />} label="WAU" value={analyticsData.weekly_active_users} sub="semana" />
+                  <AnalyticsMetric icon={<Layers size={14} style={{ color: "var(--success)" }} />} label="MAU" value={analyticsData.monthly_active_users} sub="mês" />
+                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "var(--warning)" }} />} label="Streak Ativos" value={analyticsData.active_streak_users} sub="streak ≥3" />
                 </div>
               </div>
 
               {/* Retention & Growth */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="card">
-                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                     <Percent size={12} /> Retenção
                   </h4>
                   <div className="space-y-3">
@@ -737,24 +737,24 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="card">
-                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                  <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                     <UserPlus size={12} /> Crescimento
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <AnalyticsMetric icon={<ArrowUpRight size={14} style={{ color: "#3ABAB4" }} />} label="Novos Hoje" value={analyticsData.new_users_today} />
-                    <AnalyticsMetric icon={<TrendingUp size={14} style={{ color: "#7C6BBD" }} />} label="Novos Semana" value={analyticsData.new_users_this_week} />
+                    <AnalyticsMetric icon={<ArrowUpRight size={14} style={{ color: "var(--success)" }} />} label="Novos Hoje" value={analyticsData.new_users_today} />
+                    <AnalyticsMetric icon={<TrendingUp size={14} style={{ color: "var(--accent-purple)" }} />} label="Novos Semana" value={analyticsData.new_users_this_week} />
                   </div>
-                  <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="mt-3 p-3 rounded-xl glass">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs" style={{ color: "#555E6E" }}>Total de Usuários</span>
+                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Total de Usuários</span>
                       <span className="text-lg font-bold text-white">{analyticsData.total_users}</span>
                     </div>
-                    <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (analyticsData.weekly_active_users / Math.max(analyticsData.total_users, 1)) * 100)}%`, background: "linear-gradient(90deg, #7C6BBD, #D4AF37)" }} />
+                    <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (analyticsData.weekly_active_users / Math.max(analyticsData.total_users, 1)) * 100)}%`, background: "linear-gradient(90deg, var(--accent-purple), var(--gold))" }} />
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px]" style={{ color: "#555E6E" }}>Engajamento semanal</span>
-                      <span className="text-[10px]" style={{ color: "#8B95A5" }}>{analyticsData.total_users > 0 ? Math.round((analyticsData.weekly_active_users / analyticsData.total_users) * 100) : 0}%</span>
+                      <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Engajamento semanal</span>
+                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{analyticsData.total_users > 0 ? Math.round((analyticsData.weekly_active_users / analyticsData.total_users) * 100) : 0}%</span>
                     </div>
                   </div>
                 </div>
@@ -762,36 +762,36 @@ export default function AdminPage() {
 
               {/* Averages */}
               <div className="card">
-                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                   <BarChart3 size={12} /> Médias Diárias
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
-                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "#E8844A" }} />} label="Streak Médio" value={analyticsData.average_streak} sub="dias" />
-                  <AnalyticsMetric icon={<BookOpen size={14} style={{ color: "#7C6BBD" }} />} label="Páginas/Dia" value={analyticsData.average_daily_pages} />
-                  <AnalyticsMetric icon={<Timer size={14} style={{ color: "#D94F4F" }} />} label="Pomodoros/Dia" value={analyticsData.average_daily_pomodoros} />
+                  <AnalyticsMetric icon={<Flame size={14} style={{ color: "var(--warning)" }} />} label="Streak Médio" value={analyticsData.average_streak} sub="dias" />
+                  <AnalyticsMetric icon={<BookOpen size={14} style={{ color: "var(--accent-purple)" }} />} label="Páginas/Dia" value={analyticsData.average_daily_pages} />
+                  <AnalyticsMetric icon={<Timer size={14} style={{ color: "var(--danger)" }} />} label="Pomodoros/Dia" value={analyticsData.average_daily_pomodoros} />
                 </div>
               </div>
 
               {/* Notifications */}
               <div className="card">
-                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "#555E6E" }}>
+                <h4 className="text-xs uppercase tracking-wider font-medium mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                   <Bell size={12} /> Notificações
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
-                  <AnalyticsMetric icon={<Bell size={14} style={{ color: "#3ABAB4" }} />} label="Enviadas" value={analyticsData.notifications_sent} />
-                  <AnalyticsMetric icon={<CheckCircle size={14} style={{ color: "#D4AF37" }} />} label="Entregues" value={analyticsData.notifications_delivered} />
-                  <AnalyticsMetric icon={<AlertTriangle size={14} style={{ color: "#D94F4F" }} />} label="Falharam" value={analyticsData.notifications_failed} />
+                  <AnalyticsMetric icon={<Bell size={14} style={{ color: "var(--success)" }} />} label="Enviadas" value={analyticsData.notifications_sent} />
+                  <AnalyticsMetric icon={<CheckCircle size={14} style={{ color: "var(--gold)" }} />} label="Entregues" value={analyticsData.notifications_delivered} />
+                  <AnalyticsMetric icon={<AlertTriangle size={14} style={{ color: "var(--danger)" }} />} label="Falharam" value={analyticsData.notifications_failed} />
                 </div>
                 {analyticsData.notifications_sent > 0 && (
-                  <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="mt-3 p-3 rounded-xl glass">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs" style={{ color: "#555E6E" }}>Taxa de entrega</span>
-                      <span className="text-sm font-semibold" style={{ color: "#3ABAB4" }}>
+                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Taxa de entrega</span>
+                      <span className="text-sm font-semibold" style={{ color: "var(--success)" }}>
                         {Math.round((analyticsData.notifications_delivered / analyticsData.notifications_sent) * 100)}%
                       </span>
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${(analyticsData.notifications_delivered / analyticsData.notifications_sent) * 100}%`, background: "#3ABAB4" }} />
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${(analyticsData.notifications_delivered / analyticsData.notifications_sent) * 100}%`, background: "var(--success)" }} />
                     </div>
                   </div>
                 )}
@@ -799,15 +799,15 @@ export default function AdminPage() {
 
               {/* Last updated */}
               <div className="text-center">
-                <p className="text-[10px]" style={{ color: "#555E6E" }}>
+                <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
                   Última atualização: {analyticsData.captured_at ? format(new Date(analyticsData.captured_at), "dd/MM/yyyy HH:mm:ss") : "—"}
                 </p>
               </div>
             </>
           ) : (
             <div className="card text-center py-12">
-              <PieChart size={40} className="mx-auto mb-4" style={{ color: "#555E6E" }} />
-              <p className="text-sm mb-2" style={{ color: "#8B95A5" }}>Carregando analytics de produto...</p>
+              <PieChart size={40} className="mx-auto mb-4" style={{ color: "var(--text-secondary)" }} />
+              <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>Carregando analytics de produto...</p>
               <button onClick={loadAnalytics} className="btn-primary text-sm mt-2">Carregar Analytics</button>
             </div>
           )}
@@ -819,21 +819,21 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
-            style={{ background: "#141820", border: "1px solid rgba(255,255,255,0.08)" }}>
+            style={{ background: "var(--surface)", border: "1px solid var(--border-light)" }}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-white flex items-center gap-2">
-                <Eye size={16} style={{ color: "#D4AF37" }} /> Detalhes do Usuário
+                <Eye size={16} style={{ color: "var(--gold)" }} /> Detalhes do Usuário
               </h3>
-              <button onClick={() => setSelectedUser(null)} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: "#555E6E" }}>✕</button>
+              <button onClick={() => setSelectedUser(null)} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: "var(--text-secondary)" }}>✕</button>
             </div>
 
             {/* User Identity */}
-            <div className="p-4 rounded-xl space-y-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="p-4 rounded-xl space-y-2 glass">
               {selectedUser.name && (
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg font-semibold text-white">{selectedUser.name}</span>
                   {selectedUser.isAdmin && (
-                    <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "#D4AF37" }}>
+                    <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
                       <Shield size={8} /> Admin
                     </span>
                   )}
@@ -841,71 +841,71 @@ export default function AdminPage() {
               )}
               {selectedUser.email && (
                 <div className="flex items-center gap-2">
-                  <Mail size={12} style={{ color: "#555E6E" }} />
-                  <span className="text-sm" style={{ color: "#8B95A5" }}>{selectedUser.email}</span>
+                  <Mail size={12} style={{ color: "var(--text-secondary)" }} />
+                  <span className="text-sm" style={{ color: "var(--text-muted)" }}>{selectedUser.email}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.03)", color: "#555E6E" }}>
+                <span className="text-[10px] font-mono px-2 py-1 rounded" style={{ background: "var(--border)", color: "var(--text-secondary)" }}>
                   {selectedUser.id}
                 </span>
                 <button onClick={() => { navigator.clipboard.writeText(selectedUser.id); toast.success("ID copiado!"); }}
-                  className="p-1 rounded hover:bg-white/5" style={{ color: "#555E6E" }}><Copy size={12} /></button>
+                  className="p-1 rounded hover:bg-white/5" style={{ color: "var(--text-secondary)" }}><Copy size={12} /></button>
               </div>
             </div>
 
             {/* User Stats Grid */}
             <div className="grid grid-cols-2 gap-2">
-              <MiniStat icon={<CalendarDays size={12} style={{ color: "#8B95A5" }} />} label="Cadastro" value={selectedUser.joinedAt ? format(new Date(selectedUser.joinedAt), "dd/MM/yyyy") : "—"} />
-              <MiniStat icon={<Clock size={12} style={{ color: "#3ABAB4" }} />} label="Último acesso" value={selectedUser.lastActive || "—"} />
-              <MiniStat icon={<Crown size={12} style={{ color: "#D4AF37" }} />} label="Plano" value={selectedUser.plan} />
-              <MiniStat icon={<Flame size={12} style={{ color: "#E8844A" }} />} label="Streak" value={`${selectedUser.streak} dias`} />
-              <MiniStat icon={<BookOpen size={12} style={{ color: "#7C6BBD" }} />} label="Livros" value={`${selectedUser.books}`} />
-              <MiniStat icon={<Timer size={12} style={{ color: "#D94F4F" }} />} label="Pomodoros" value={`${selectedUser.pomodoros}`} />
-              <MiniStat icon={<BookOpen size={12} style={{ color: "#D4AF37" }} />} label="Páginas lidas" value={`${selectedUser.totalPages}`} />
-              <MiniStat icon={<BookMarked size={12} style={{ color: "#7C6BBD" }} />} label="Cap. bíblia" value={`${selectedUser.totalChapters}`} />
-              <MiniStat icon={<Clock size={12} style={{ color: "#3ABAB4" }} />} label="Min. foco" value={`${selectedUser.totalFocusMin}`} />
-              <MiniStat icon={selectedUser.blocked ? <UserX size={12} style={{ color: "#D94F4F" }} /> : <UserCheck size={12} style={{ color: "#3ABAB4" }} />} label="Status" value={selectedUser.blocked ? "Bloqueado" : "Ativo"} />
+              <MiniStat icon={<CalendarDays size={12} style={{ color: "var(--text-muted)" }} />} label="Cadastro" value={selectedUser.joinedAt ? format(new Date(selectedUser.joinedAt), "dd/MM/yyyy") : "—"} />
+              <MiniStat icon={<Clock size={12} style={{ color: "var(--success)" }} />} label="Último acesso" value={selectedUser.lastActive || "—"} />
+              <MiniStat icon={<Crown size={12} style={{ color: "var(--gold)" }} />} label="Plano" value={selectedUser.plan} />
+              <MiniStat icon={<Flame size={12} style={{ color: "var(--warning)" }} />} label="Streak" value={`${selectedUser.streak} dias`} />
+              <MiniStat icon={<BookOpen size={12} style={{ color: "var(--accent-purple)" }} />} label="Livros" value={`${selectedUser.books}`} />
+              <MiniStat icon={<Timer size={12} style={{ color: "var(--danger)" }} />} label="Pomodoros" value={`${selectedUser.pomodoros}`} />
+              <MiniStat icon={<BookOpen size={12} style={{ color: "var(--gold)" }} />} label="Páginas lidas" value={`${selectedUser.totalPages}`} />
+              <MiniStat icon={<BookMarked size={12} style={{ color: "var(--accent-purple)" }} />} label="Cap. bíblia" value={`${selectedUser.totalChapters}`} />
+              <MiniStat icon={<Clock size={12} style={{ color: "var(--success)" }} />} label="Min. foco" value={`${selectedUser.totalFocusMin}`} />
+              <MiniStat icon={selectedUser.blocked ? <UserX size={12} style={{ color: "var(--danger)" }} /> : <UserCheck size={12} style={{ color: "var(--success)" }} />} label="Status" value={selectedUser.blocked ? "Bloqueado" : "Ativo"} />
             </div>
 
             {selectedUser.blocked && selectedUser.blockedReason && (
               <div className="p-3 rounded-xl text-xs" style={{ background: "rgba(217,79,79,0.05)", border: "1px solid rgba(217,79,79,0.1)" }}>
-                <span style={{ color: "#D94F4F" }}>Motivo do bloqueio: </span>
-                <span style={{ color: "#8B95A5" }}>{selectedUser.blockedReason}</span>
+                <span style={{ color: "var(--danger)" }}>Motivo do bloqueio: </span>
+                <span style={{ color: "var(--text-muted)" }}>{selectedUser.blockedReason}</span>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex flex-wrap gap-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="flex flex-wrap gap-2 pt-2" style={{ borderTop: "1px solid var(--border-light)" }}>
               {!selectedUser.isAdmin && (
                 <button onClick={() => { setConfirmAction({ userId: selectedUser.id, action: "add_admin" }); setSelectedUser(null); }}
-                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#D4AF37" }}>
+                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--gold)" }}>
                   <Shield size={12} /> Tornar Admin
                 </button>
               )}
               {selectedUser.isAdmin && (
                 <button onClick={() => { setConfirmAction({ userId: selectedUser.id, action: "remove_admin" }); setSelectedUser(null); }}
-                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#555E6E" }}>
+                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
                   <Shield size={12} /> Remover Admin
                 </button>
               )}
               <button onClick={() => { setPlanModal({ userId: selectedUser.id, currentPlan: selectedUser.plan }); setSelectedUser(null); }}
-                className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#7C6BBD" }}>
+                className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--accent-purple)" }}>
                 <Crown size={12} /> Alterar Plano
               </button>
               {selectedUser.blocked ? (
                 <button onClick={() => { setConfirmAction({ userId: selectedUser.id, action: "unblock" }); setSelectedUser(null); }}
-                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#3ABAB4" }}>
+                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--success)" }}>
                   <Unlock size={12} /> Desbloquear
                 </button>
               ) : (
                 <button onClick={() => { setConfirmAction({ userId: selectedUser.id, action: "block" }); setSelectedUser(null); }}
-                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#E8844A" }}>
+                  className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--warning)" }}>
                   <Ban size={12} /> Bloquear
                 </button>
               )}
               <button onClick={() => { setConfirmAction({ userId: selectedUser.id, action: "reset_data" }); setSelectedUser(null); }}
-                className="btn-ghost text-xs flex items-center gap-1" style={{ color: "#7C6BBD" }}>
+                className="btn-ghost text-xs flex items-center gap-1" style={{ color: "var(--accent-purple)" }}>
                 <RotateCcw size={12} /> Resetar Dados
               </button>
             </div>
@@ -918,7 +918,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setPlanModal(null)}>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}
-            style={{ background: "#141820", border: "1px solid rgba(255,255,255,0.08)" }}>
+            style={{ background: "var(--surface)", border: "1px solid var(--border-light)" }}>
             <h3 className="font-semibold text-white">Alterar Plano</h3>
             <div className="grid grid-cols-3 gap-2">
               {(["free", "pro", "premium"] as const).map((plan) => (
@@ -927,7 +927,7 @@ export default function AdminPage() {
                   style={{
                     background: planModal.currentPlan === plan ? "rgba(212,175,55,0.1)" : "rgba(255,255,255,0.02)",
                     border: planModal.currentPlan === plan ? "1px solid rgba(212,175,55,0.3)" : "1px solid rgba(255,255,255,0.05)",
-                    color: planModal.currentPlan === plan ? "#D4AF37" : "#8B95A5",
+                    color: planModal.currentPlan === plan ? "var(--gold)" : "var(--text-muted)",
                   }}>
                   <p className="text-sm font-semibold capitalize">{plan}</p>
                   {planModal.currentPlan === plan && <p className="text-[9px] mt-0.5">(atual)</p>}
@@ -961,10 +961,10 @@ export default function AdminPage() {
 
 function HealthBadge({ status }: { status: "healthy" | "warning" | "error" | "loading" }) {
   const config = {
-    healthy: { color: "#3ABAB4", bg: "rgba(58,186,180,0.1)", text: "Saudável", icon: <Wifi size={12} /> },
-    warning: { color: "#E8844A", bg: "rgba(232,132,74,0.1)", text: "Atenção", icon: <AlertTriangle size={12} /> },
-    error: { color: "#D94F4F", bg: "rgba(217,79,79,0.1)", text: "Problemas", icon: <WifiOff size={12} /> },
-    loading: { color: "#555E6E", bg: "rgba(255,255,255,0.03)", text: "Verificando", icon: <RefreshCw size={12} className="animate-spin" /> },
+    healthy: { color: "var(--success)", bg: "rgba(58,186,180,0.1)", text: "Saudável", icon: <Wifi size={12} /> },
+    warning: { color: "var(--warning)", bg: "rgba(232,132,74,0.1)", text: "Atenção", icon: <AlertTriangle size={12} /> },
+    error: { color: "var(--danger)", bg: "rgba(217,79,79,0.1)", text: "Problemas", icon: <WifiOff size={12} /> },
+    loading: { color: "var(--text-secondary)", bg: "var(--border)", text: "Verificando", icon: <RefreshCw size={12} className="animate-spin" /> },
   }[status];
 
   return (
@@ -978,11 +978,11 @@ function AdminStat({ icon, label, value, sub, cardClass }: { icon: React.ReactNo
   return (
     <div className={clsx("stat-card", cardClass)}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#555E6E" }}>{label}</span>
+        <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>{label}</span>
         {icon}
       </div>
       <p className="text-xl font-bold text-white count-up">{value}</p>
-      {sub && <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>{sub}</p>}
+      {sub && <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{sub}</p>}
     </div>
   );
 }
@@ -991,19 +991,19 @@ function MetricBar({ label, value, max, color }: { label: string; value: number;
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
-      <span className="text-[10px] w-8 text-right" style={{ color: "#555E6E" }}>{label}</span>
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+      <span className="text-[10px] w-8 text-right" style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-[10px] w-6 text-right" style={{ color: "#8B95A5" }}>{value}</span>
+      <span className="text-[10px] w-6 text-right" style={{ color: "var(--text-muted)" }}>{value}</span>
     </div>
   );
 }
 
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200 hover:scale-105"
-      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", color: "#8B95A5" }}>
+    <button onClick={onClick} className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200 hover:scale-105 glass"
+      style={{ color: "var(--text-muted)" }}>
       {icon}
       <span className="text-[10px]">{label}</span>
     </button>
@@ -1012,10 +1012,10 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
 
 function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="p-2.5 rounded-xl flex items-center gap-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+    <div className="p-2.5 rounded-xl flex items-center gap-2 glass">
       {icon}
       <div className="min-w-0">
-        <p className="text-[9px] uppercase tracking-wider" style={{ color: "#555E6E" }}>{label}</p>
+        <p className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</p>
         <p className="text-xs text-white truncate">{value}</p>
       </div>
     </div>
@@ -1032,10 +1032,10 @@ function ActionButton({ icon, color, title, onClick }: { icon: React.ReactNode; 
 
 function DiagnosticCard({ check, expanded, onToggle }: { check: DiagnosticCheck; expanded: boolean; onToggle: () => void }) {
   const statusConfig = {
-    healthy: { icon: <CheckCircle size={18} />, color: "#3ABAB4", bg: "rgba(58,186,180,0.06)", border: "rgba(58,186,180,0.12)", label: "Saudável" },
-    warning: { icon: <AlertTriangle size={18} />, color: "#E8844A", bg: "rgba(232,132,74,0.06)", border: "rgba(232,132,74,0.12)", label: "Atenção" },
-    error: { icon: <XCircle size={18} />, color: "#D94F4F", bg: "rgba(217,79,79,0.06)", border: "rgba(217,79,79,0.12)", label: "Erro" },
-    disabled: { icon: <Info size={18} />, color: "#555E6E", bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.05)", label: "Desativado" },
+    healthy: { icon: <CheckCircle size={18} />, color: "var(--success)", bg: "rgba(58,186,180,0.06)", border: "rgba(58,186,180,0.12)", label: "Saudável" },
+    warning: { icon: <AlertTriangle size={18} />, color: "var(--warning)", bg: "rgba(232,132,74,0.06)", border: "rgba(232,132,74,0.12)", label: "Atenção" },
+    error: { icon: <XCircle size={18} />, color: "var(--danger)", bg: "rgba(217,79,79,0.06)", border: "rgba(217,79,79,0.12)", label: "Erro" },
+    disabled: { icon: <Info size={18} />, color: "var(--text-secondary)", bg: "var(--surface)", border: "var(--border-light)", label: "Desativado" },
   }[check.status];
 
   return (
@@ -1050,42 +1050,42 @@ function DiagnosticCard({ check, expanded, onToggle }: { check: DiagnosticCheck;
               {statusConfig.label}
             </span>
             {check.latency_ms !== undefined && (
-              <span className="text-[10px]" style={{ color: "#555E6E" }}>{check.latency_ms}ms</span>
+              <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{check.latency_ms}ms</span>
             )}
           </div>
-          <p className="text-xs mt-0.5 truncate" style={{ color: "#555E6E" }}>{check.description}</p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>{check.description}</p>
         </div>
-        <ChevronDown size={16} className={clsx("transition-transform duration-200 flex-shrink-0", expanded && "rotate-180")} style={{ color: "#555E6E" }} />
+        <ChevronDown size={16} className={clsx("transition-transform duration-200 flex-shrink-0", expanded && "rotate-180")} style={{ color: "var(--text-secondary)" }} />
       </button>
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 animate-slide-up">
           {/* Explanation */}
-          <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="p-3 rounded-xl glass">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Info size={12} style={{ color: statusConfig.color }} />
-              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#555E6E" }}>O que isso significa</span>
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>O que isso significa</span>
             </div>
-            <p className="text-xs leading-relaxed" style={{ color: "#8B95A5" }}>{check.explanation}</p>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{check.explanation}</p>
           </div>
 
           {/* Suggestion */}
-          <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="p-3 rounded-xl glass">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Settings size={12} style={{ color: "#D4AF37" }} />
-              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#555E6E" }}>Como resolver</span>
+              <Settings size={12} style={{ color: "var(--gold)" }} />
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>Como resolver</span>
             </div>
-            <p className="text-xs leading-relaxed" style={{ color: "#8B95A5" }}>{check.suggestion}</p>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{check.suggestion}</p>
           </div>
 
           {/* Details (raw) */}
           {check.details && Object.keys(check.details).length > 0 && (
-            <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+            <div className="p-3 rounded-xl glass">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <Database size={12} style={{ color: "#7C6BBD" }} />
-                <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "#555E6E" }}>Detalhes técnicos</span>
+                <Database size={12} style={{ color: "var(--accent-purple)" }} />
+                <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>Detalhes técnicos</span>
               </div>
-              <pre className="text-[10px] font-mono whitespace-pre-wrap" style={{ color: "#555E6E" }}>
+              <pre className="text-[10px] font-mono whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>
                 {JSON.stringify(check.details, null, 2)}
               </pre>
             </div>
@@ -1098,13 +1098,13 @@ function DiagnosticCard({ check, expanded, onToggle }: { check: DiagnosticCheck;
 
 function AnalyticsMetric({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number; sub?: string }) {
   return (
-    <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+    <div className="p-3 rounded-xl glass">
       <div className="flex items-center gap-2 mb-1">
         {icon}
-        <span className="text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>{label}</span>
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</span>
       </div>
       <p className="text-xl font-bold text-white">{typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(1)) : value}</p>
-      {sub && <p className="text-[10px] mt-0.5" style={{ color: "#555E6E" }}>{sub}</p>}
+      {sub && <p className="text-[10px] mt-0.5" style={{ color: "var(--text-secondary)" }}>{sub}</p>}
     </div>
   );
 }
@@ -1113,13 +1113,13 @@ function RetentionBar({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs" style={{ color: "#8B95A5" }}>{label}</span>
-        <span className="text-sm font-semibold" style={{ color: value >= 40 ? "#3ABAB4" : value >= 20 ? "#E8844A" : "#D94F4F" }}>{value}%</span>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</span>
+        <span className="text-sm font-semibold" style={{ color: value >= 40 ? "var(--success)" : value >= 20 ? "var(--warning)" : "var(--danger)" }}>{value}%</span>
       </div>
-      <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
         <div className="h-full rounded-full transition-all duration-700" style={{
           width: `${value}%`,
-          background: value >= 40 ? "#3ABAB4" : value >= 20 ? "#E8844A" : "#D94F4F",
+          background: value >= 40 ? "var(--success)" : value >= 20 ? "var(--warning)" : "var(--danger)",
         }} />
       </div>
     </div>

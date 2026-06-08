@@ -203,9 +203,9 @@ export function AmbientControls({ ambient }: { ambient: ReturnType<typeof useAmb
   ];
 
   return (
-    <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <p className="text-[10px] uppercase tracking-wider font-medium mb-2" style={{ color: "#555E6E" }}>
-        Som ambiente {!ambient.audioUnlocked && <span style={{ color: "#E8844A" }}>(toque p/ ativar)</span>}
+    <div className="glass rounded-xl p-3">
+      <p className="text-[10px] uppercase tracking-wider font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
+        Som ambiente {!ambient.audioUnlocked && <span style={{ color: "var(--warning)" }}>(toque p/ ativar)</span>}
       </p>
       <div className="flex items-center gap-2">
         {sounds.map(({ key, icon: Icon, label }) => (
@@ -216,7 +216,7 @@ export function AmbientControls({ ambient }: { ambient: ReturnType<typeof useAmb
             style={{
               background: ambient.type === key && ambient.playing ? "rgba(212,175,55,0.1)" : "rgba(255,255,255,0.03)",
               border: ambient.type === key && ambient.playing ? "1px solid rgba(212,175,55,0.2)" : "1px solid rgba(255,255,255,0.04)",
-              color: ambient.type === key && ambient.playing ? "#D4AF37" : "#555E6E",
+              color: ambient.type === key && ambient.playing ? "var(--gold)" : "var(--text-secondary)",
             }}
           >
             <Icon size={13} />
@@ -231,11 +231,11 @@ export function AmbientControls({ ambient }: { ambient: ReturnType<typeof useAmb
             step={0.05}
             value={ambient.volume}
             onChange={(e) => ambient.setVolume(parseFloat(e.target.value))}
-            className="w-16 h-1 accent-[#D4AF37] ml-1"
+            className="w-16 h-1 accent-[var(--gold)] ml-1"
           />
         )}
         {ambient.playing && (
-          <button onClick={ambient.stop} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+          <button onClick={ambient.stop} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
             <VolumeX size={13} />
           </button>
         )}

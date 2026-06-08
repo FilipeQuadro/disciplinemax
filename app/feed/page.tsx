@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   Trophy, Target, Flame, BookOpen, Users
 } from "lucide-react";
@@ -10,6 +11,9 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SkeletonFeed } from "@/components/Skeleton";
 import { ErrorCard } from "@/components/ErrorCard";
+import { EmptyState } from "@/components/EmptyState";
+import { HeroHeader } from "@/components/ui/HeroHeader";
+import { Badge } from "@/components/ui/Badge";
 
 interface FeedEvent {
   id: string;
@@ -22,10 +26,10 @@ interface FeedEvent {
 }
 
 const EVENT_ICONS: Record<string, { icon: typeof Trophy; color: string; label: string }> = {
-  achievement_unlocked: { icon: Trophy, color: "#D4AF37", label: "Conquista" },
-  challenge_completed: { icon: Target, color: "#3ABAB4", label: "Desafio" },
-  streak_record: { icon: Flame, color: "#E8844A", label: "Streak" },
-  book_finished: { icon: BookOpen, color: "#7C6BBD", label: "Livro" },
+  achievement_unlocked: { icon: Trophy, color: "var(--gold)", label: "Conquista" },
+  challenge_completed: { icon: Target, color: "var(--accent-teal)", label: "Desafio" },
+  streak_record: { icon: Flame, color: "var(--warning)", label: "Streak" },
+  book_finished: { icon: BookOpen, color: "var(--accent-purple)", label: "Livro" },
 };
 
 export default function FeedPage() {
@@ -33,14 +37,11 @@ export default function FeedPage() {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
 
   const loadFeed = useCallback(() => {
     setLoading(true);
     setError(false);
-    fetch(`/api/feed?userId=${user!.id}&limit=50`)
+    authFetch(`/api/feed?userId=${user!.id}&limit=50`)
       .then((r) => r.json())
       .then((data) => { if (data.events) setEvents(data.events); })
       .catch(() => setError(true))
@@ -52,10 +53,10 @@ export default function FeedPage() {
     loadFeed();
   }, [loadFeed, user]);
 
-  if (!mounted || loading) {
+  if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 rounded bg-white/[0.04] animate-pulse" />
+        <HeroHeader title="Feed Social" icon={Users} iconColor="var(--accent-teal)" />
         <SkeletonFeed count={5} />
       </div>
     );
@@ -64,36 +65,26 @@ export default function FeedPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-          <Users size={24} style={{ color: "#3ABAB4" }} /> Feed Social
-        </h1>
+        <HeroHeader title="Feed Social" icon={Users} iconColor="var(--accent-teal)" />
         <ErrorCard onRetry={loadFeed} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 page-enter">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-          <Users size={24} style={{ color: "#3ABAB4" }} />
-          Feed Social
-        </h1>
-      </div>
+    <div className="page-enter space-y-6">
+      <HeroHeader title="Feed Social" icon={Users} iconColor="var(--accent-teal)" />
 
       {events.length === 0 ? (
-        <div className="card text-center py-12">
-          <Users size={48} className="mx-auto mb-4" style={{ color: "#6B7585" }} />
-          <h3 className="text-lg font-medium text-white mb-2">Nenhuma atividade ainda</h3>
-          <p className="text-sm" style={{ color: "#8B95A5" }}>
-            Adicione amigos para ver suas conquistas aqui!
-          </p>
-          <Link href="/ranking" className="btn-primary mt-4 inline-flex text-sm">
-            Ver Ranking
-          </Link>
-        </div>
+        <EmptyState
+          icon={Users}
+          iconColor="var(--text-secondary)"
+          title="Nenhuma atividade ainda"
+          description="Adicione amigos para ver suas conquistas aqui!"
+          primaryAction={{ label: "Ver Ranking", href: "/ranking" }}
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="stagger-children space-y-3">
           {events.map((event) => {
             const config = EVENT_ICONS[event.event_type] ?? EVENT_ICONS.achievement_unlocked;
             const Icon = config.icon;
@@ -111,16 +102,13 @@ export default function FeedPage() {
                     <Link href={`/u/${event.username || ""}`} className="text-sm font-medium text-white hover:underline">
                       {userName}
                     </Link>
-                    <span className="text-xs" style={{ color: "#6B7585" }}>{timeAgo}</span>
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{timeAgo}</span>
                   </div>
-                  <p className="text-sm mt-0.5" style={{ color: "#8B95A5" }}>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
                     {getEventMessage(event)}
                   </p>
                 </div>
-                <span className="text-[10px] px-2 py-1 rounded-lg shrink-0"
-                  style={{ background: `${config.color}10`, color: config.color }}>
-                  {config.label}
-                </span>
+                <Badge>{config.label}</Badge>
               </div>
             );
           })}

@@ -29,6 +29,10 @@ vi.mock("@/lib/ai", () => ({
   callOllama: vi.fn().mockResolvedValue("Ollama response"),
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 import { POST as aiHandler } from "@/app/api/ai/route";
 
 describe("Integration: /api/ai", () => {

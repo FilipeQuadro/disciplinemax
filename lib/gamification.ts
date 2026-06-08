@@ -1,4 +1,5 @@
 import { useStore } from "@/store/useStore";
+import { authFetch } from "@/lib/auth-fetch";
 import type { GamificationAction } from "@/app/api/gamification/route";
 
 interface GamificationResult {
@@ -22,7 +23,7 @@ export async function processGamification(
   if (!userId) return null;
 
   try {
-    const res = await fetch("/api/gamification", {
+    const res = await authFetch("/api/gamification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, userId, data: data ?? {} }),

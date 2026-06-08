@@ -6,6 +6,7 @@ import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { aiPromptSchema } from "@/lib/schemas";
 import { RateLimitService } from "@/lib/rate-limit";
 import { initRequestId } from "@/lib/logger";
+import { getAuthUserId } from "@/lib/auth-helpers";
 
 const STATIC_MESSAGES = [
   "Hoje é o primeiro dia do resto da sua jornada. Comece agora! 🚀",
@@ -37,6 +38,11 @@ async function getApiKey(): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   initRequestId(req);
+
+  const callerId = await getAuthUserId(req);
+  if (!callerId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const rateLimited = RateLimitService.checkRequest(req, "ai");
   if (rateLimited) return rateLimited;

@@ -1,14 +1,17 @@
 import { StreakRepository, type UserStreak } from "@/lib/repositories/streak-repository";
+import { SettingsRepository } from "@/lib/repositories/settings-repository";
 import { EventTrackingService } from "@/lib/repositories/event-tracking-repository";
 import { EVENT_TYPES } from "@/lib/repositories/event-tracking-repository";
 
 export class StreakService {
   private streakRepo: StreakRepository;
+  private settingsRepo: SettingsRepository;
   private eventService: EventTrackingService;
 
-  constructor(streakRepo?: StreakRepository, eventService?: EventTrackingService) {
+  constructor(streakRepo?: StreakRepository, eventService?: EventTrackingService, settingsRepo?: SettingsRepository) {
     this.streakRepo = streakRepo ?? new StreakRepository();
     this.eventService = eventService ?? new EventTrackingService();
+    this.settingsRepo = settingsRepo ?? new SettingsRepository();
   }
 
   /** Called when user completes a goal-qualifying action (pages read, pomodoro, bible chapter) */
@@ -78,17 +81,13 @@ export class StreakService {
 
   private async getFreezeSettings(userId: string): Promise<{ available: number; maxPerMonth: number }> {
     try {
-      const { getServiceClient } = await import("@/lib/db-client");
-      const client = getServiceClient();
-      const { data } = await client
-        .from("user_settings")
-        .select("streak_freeze_available, streak_freeze_used")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (data) {
+      const settings = await this.settingsRepo.getSettingsByUserId(userId);
+      if (settings) {
+        const freezeAvail = (settings.streak_freeze_available ?? 1);
+        const freezeUsed = (settings.streak_freeze_used ?? 0);
         return {
-          available: (data.streak_freeze_available ?? 1) - (data.streak_freeze_used ?? 0),
-          maxPerMonth: data.streak_freeze_available ?? 1,
+          available: freezeAvail - freezeUsed,
+          maxPerMonth: freezeAvail,
         };
       }
     } catch { /* fallback to defaults */ }

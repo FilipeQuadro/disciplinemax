@@ -8,6 +8,7 @@ import { FeedService, FEED_EVENT_TYPES } from "@/lib/services/feed-service";
 import { XpRepository } from "@/lib/repositories/xp-repository";
 import { logger } from "@/lib/logger";
 import { MetricsService } from "@/lib/metrics";
+import { getAuthUserId } from "@/lib/auth-helpers";
 
 export type GamificationAction = "page_read" | "pomodoro_completed" | "bible_chapter" | "book_finished" | "goal_completed";
 
@@ -29,6 +30,12 @@ interface GamificationResponse {
 
 export async function POST(req: Request) {
   try {
+    // Authenticate the caller
+    const callerId = await getAuthUserId(req);
+    if (!callerId) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const body = await req.json() as GamificationRequest;
     const { action, userId, data } = body;
 
@@ -41,16 +48,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    // Verify user exists
-    const client = getServiceClient();
-    const { data: userExists } = await client
-      .from("user_settings")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!userExists) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // Ownership check: caller can only gamify as themselves
+    if (userId !== callerId) {
+      return NextResponse.json({ error: "Can only process your own gamification" }, { status: 403 });
     }
 
     const result = await processGamificationAction(action, userId, data ?? {});

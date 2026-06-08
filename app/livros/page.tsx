@@ -20,6 +20,12 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
 import { processGamification } from "@/lib/gamification";
 import { SkeletonList } from "@/components/Skeleton";
+import { HeroHeader } from "@/components/ui/HeroHeader";
+import { GoalBadge } from "@/components/ui/GoalBadge";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { GradientCard } from "@/components/ui/GradientCard";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorCard } from "@/components/ErrorCard";
 
 const BOOK_COLORS = ["#7C6BBD", "#3ABAB4", "#D4AF37", "#E8844A", "#D94F4F", "#7C6BBD"];
 
@@ -28,19 +34,13 @@ const emptyBook = {
   daily_goal: 20, cover_url: "", color: BOOK_COLORS[0], target_date: "",
 };
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Bom dia";
-  if (h < 18) return "Boa tarde";
-  return "Boa noite";
-}
-
 export default function LivrosPage() {
   const { books, setBooks, updateBook, settings, streak } = useStore();
   const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...emptyBook });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [readingInput, setReadingInput] = useState<Record<string, number>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -49,11 +49,13 @@ export default function LivrosPage() {
   useEffect(() => { setMounted(true); }, []);
   const loadBooks = useCallback(async () => {
     if (!user) return;
+    setError(null);
     try {
       const { data, error } = await dataFetch({ action: "select", table: "books", filters: { eq: { user_id: user.id }, order: { column: "created_at", ascending: true } } });
       if (error) { errorToast(error, loadBooks); return; }
       if (data) setBooks(data as Book[]);
     } catch {
+      setError("Não foi possível carregar os livros. Tente novamente.");
       toast.error("Erro ao carregar livros");
     }
   }, [user, setBooks]);
@@ -167,30 +169,48 @@ export default function LivrosPage() {
     return <SkeletonList count={4} />;
   }
 
+  // ─── Error State ─────────────────────────────────────────────
+  if (error && books.length === 0) {
+    return (
+      <div className="space-y-6 page-enter">
+        <HeroHeader
+          icon={BookOpen}
+          iconColor="var(--accent-purple)"
+          title="Meus Livros"
+        />
+        <ErrorCard
+          title="Erro ao carregar"
+          message={error}
+          onRetry={loadBooks}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs mb-1" style={{ color: "#6B7585" }}>
-            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </p>
-          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-            <BookOpen size={24} style={{ color: "#7C6BBD" }} /> Meus Livros
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
+        <HeroHeader
+          icon={BookOpen}
+          iconColor="var(--accent-purple)"
+          title="Meus Livros"
+        />
+        <div className="flex items-center gap-2 shrink-0">
           {todayGoalMet ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
-              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
-              <Check size={16} style={{ color: "#3ABAB4" }} />
-              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Meta atingida!</span>
-            </div>
+            <GoalBadge met={true} metLabel="Meta atingida!" />
           ) : totalPagesGoal > 0 ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-              style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
-              <Target size={16} style={{ color: "#D4AF37" }} />
-              <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>{todayPct}% hoje</span>
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: "rgba(212,175,55,0.06)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <Target size={16} style={{ color: "var(--gold)" }} />
+              <span className="text-sm font-medium" style={{ color: "var(--gold)" }}>
+                {todayPct}% hoje
+              </span>
             </div>
           ) : null}
           {!showForm && (
@@ -206,76 +226,67 @@ export default function LivrosPage() {
       {books.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
           {/* Progress Ring */}
-          <div className="card-purple rounded-2xl flex flex-col items-center justify-center py-6 shimmer"
-            style={{ border: "1px solid rgba(124,107,189,0.15)" }}>
-            <div className="relative">
-              <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
-                <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="7" />
-                <circle cx="60" cy="60" r="50" fill="none" stroke="url(#bookGrad)" strokeWidth="7"
-                  strokeLinecap="round" strokeDasharray={`${50 * 2 * Math.PI}`}
-                  strokeDashoffset={`${50 * 2 * Math.PI * (1 - Math.min(1, overallProgress / 100))}`}
-                  className="transition-all duration-1000 ease-out" />
-                <defs>
-                  <linearGradient id="bookGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#7C6BBD" />
-                    <stop offset="100%" stopColor="#9B8FD4" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <GradientCard variant="purple" className="flex flex-col items-center justify-center py-6 shimmer">
+            <ProgressRing value={overallProgress} max={100} color="var(--accent-purple)">
+              <div className="flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-white">{overallProgress}%</span>
-                <span className="text-[9px] uppercase tracking-wider" style={{ color: "#6B7585" }}>Total</span>
+                <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Total</span>
               </div>
-            </div>
-          </div>
+            </ProgressRing>
+          </GradientCard>
 
           {/* Stats Cards */}
           <div className="md:col-span-2 grid grid-cols-3 gap-3">
-            <div className="rounded-2xl p-4 text-center glow-border"
-              style={{ background: "rgba(124,107,189,0.04)", border: "1px solid rgba(124,107,189,0.1)" }}>
-              <p className="text-2xl font-bold count-up" style={{ color: "#7C6BBD" }}>{pagesReadToday}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Páginas hoje</p>
+            <GradientCard variant="purple" className="text-center p-4 glow-border">
+              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-purple)" }}>{pagesReadToday}</p>
+              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Páginas hoje</p>
               <div className="progress-bar mt-2">
-                <div className="progress-fill" style={{ width: `${Math.min(100, todayPct)}%`, background: "#7C6BBD" }} />
+                <div className="progress-fill" style={{ width: `${Math.min(100, todayPct)}%`, background: "var(--accent-purple)" }} />
               </div>
-            </div>
-            <div className="rounded-2xl p-4 text-center glow-border"
-              style={{ background: "rgba(58,186,180,0.04)", border: "1px solid rgba(58,186,180,0.1)" }}>
-              <p className="text-2xl font-bold count-up" style={{ color: "#3ABAB4" }}>{booksCompleted}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Concluídos</p>
-            </div>
-            <div className="rounded-2xl p-4 text-center glow-border"
-              style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.1)" }}>
-              <p className="text-2xl font-bold count-up" style={{ color: "#E8844A" }}>{streak}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#6B7585" }}>Streak</p>
-              {streak >= 7 && <span className="text-[9px]" style={{ color: "#E8844A" }}>🔥</span>}
-            </div>
+            </GradientCard>
+            <GradientCard variant="teal" className="text-center p-4 glow-border">
+              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-teal)" }}>{booksCompleted}</p>
+              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Concluídos</p>
+            </GradientCard>
+            <GradientCard variant="orange" className="text-center p-4 glow-border">
+              <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-orange)" }}>{streak}</p>
+              <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
+              {streak >= 7 && <span className="text-[9px]" style={{ color: "var(--accent-orange)" }}>🔥</span>}
+            </GradientCard>
 
             {/* Today's Goal Banner */}
-            <div className="md:col-span-3 rounded-2xl p-4 flex items-center gap-4"
-              style={{
-                background: todayGoalMet
-                  ? "linear-gradient(135deg, rgba(58,186,180,0.06), rgba(20,24,32,0.9))"
-                  : "linear-gradient(135deg, rgba(124,107,189,0.04), rgba(20,24,32,0.9))",
-                border: todayGoalMet ? "1px solid rgba(58,186,180,0.15)" : "1px solid rgba(124,107,189,0.1)",
-              }}>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: todayGoalMet ? "rgba(58,186,180,0.12)" : "rgba(124,107,189,0.1)" }}>
-                {todayGoalMet ? <Check size={24} style={{ color: "#3ABAB4" }} /> : <TrendingUp size={24} style={{ color: "#7C6BBD" }} />}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-white">
-                  {todayGoalMet ? "Meta diária atingida! 🎉" : `${pagesReadToday}/${totalPagesGoal} páginas hoje`}
-                </p>
-                <p className="text-xs" style={{ color: "#6B7585" }}>
-                  {todayGoalMet ? "Continue lendo para aumentar seu streak!" : `Faltam ${totalPagesGoal - pagesReadToday} páginas para completar`}
-                </p>
-              </div>
-              {!todayGoalMet && (
-                <div className="w-16 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${todayPct}%`, background: "linear-gradient(90deg, #7C6BBD, #9B8FD4)" }} />
+            <div className="md:col-span-3">
+              <GradientCard variant={todayGoalMet ? "teal" : "purple"} className="flex items-center gap-4 p-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: todayGoalMet
+                      ? "rgba(58,186,180,0.12)"
+                      : "rgba(124,107,189,0.1)",
+                  }}
+                >
+                  {todayGoalMet
+                    ? <Check size={24} style={{ color: "var(--success)" }} />
+                    : <TrendingUp size={24} style={{ color: "var(--accent-purple)" }} />
+                  }
                 </div>
-              )}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">
+                    {todayGoalMet ? "Meta diária atingida! 🎉" : `${pagesReadToday}/${totalPagesGoal} páginas hoje`}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    {todayGoalMet ? "Continue lendo para aumentar seu streak!" : `Faltam ${totalPagesGoal - pagesReadToday} páginas para completar`}
+                  </p>
+                </div>
+                {!todayGoalMet && (
+                  <div className="w-16 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{
+                      width: `${todayPct}%`,
+                      background: "linear-gradient(90deg, var(--accent-purple), #9B8FD4)"
+                    }} />
+                  </div>
+                )}
+              </GradientCard>
             </div>
           </div>
         </div>
@@ -286,7 +297,7 @@ export default function LivrosPage() {
         <div className="card animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#6B7585" }}>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
               <X size={18} />
             </button>
           </div>
@@ -353,18 +364,12 @@ export default function LivrosPage() {
 
       {/* Empty State */}
       {books.length === 0 && !showForm ? (
-        <div className="card text-center py-16 shimmer" style={{ border: "1px solid rgba(124,107,189,0.1)" }}>
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ background: "linear-gradient(135deg, rgba(124,107,189,0.12), rgba(124,107,189,0.04))" }}>
-            <BookOpen size={36} style={{ color: "#7C6BBD" }} />
-          </div>
-          <h3 className="text-lg font-serif font-semibold text-white mb-2">Nenhum livro ainda</h3>
-          <p className="text-sm mb-5" style={{ color: "#6B7585" }}>Adicione seu primeiro livro para começar a acompanhar sua leitura</p>
-          <button onClick={() => { setShowForm(true); setForm({ ...emptyBook }); }}
-            className="btn-primary inline-flex items-center gap-2">
-            <Plus size={16} /> Adicionar Livro
-          </button>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          iconColor="var(--accent-purple)"
+          title="Nenhum livro ainda"
+          description="Adicione seu primeiro livro para começar a acompanhar sua leitura"
+        />
       ) : (
         <div className="space-y-3 stagger-children">
           {books.map((book) => (
@@ -410,12 +415,9 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
   return (
     <div className={clsx(
       "rounded-2xl p-5 transition-all duration-300 hover:scale-[1.005] glow-border",
+      done ? "card-teal" : "card",
     )}
     style={{
-      background: done
-        ? "linear-gradient(145deg, rgba(58,186,180,0.04), rgba(20,24,32,0.8))"
-        : "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(20,24,32,0.8))",
-      border: done ? "1px solid rgba(58,186,180,0.12)" : "1px solid rgba(255,255,255,0.05)",
       borderLeft: `3px solid ${book.color}40`,
     }}>
       <div className="flex items-start gap-4">
@@ -430,15 +432,10 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
             </div>
           )}
           <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: "#141820", border: `2px solid ${book.color}30` }}>
-            <svg width="28" height="28" viewBox="0 0 28 28" className="absolute transform -rotate-90">
-              <circle cx="14" cy="14" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2.5" />
-              <circle cx="14" cy="14" r="10" fill="none" stroke={book.color} strokeWidth="2.5"
-                strokeLinecap="round" strokeDasharray={`${10 * 2 * Math.PI}`}
-                strokeDashoffset={`${10 * 2 * Math.PI * (1 - progress / 100)}`}
-                className="transition-all duration-700" />
-            </svg>
-            <span className="text-[7px] font-bold relative" style={{ color: book.color }}>{progress}%</span>
+            style={{ background: "var(--surface)", border: `2px solid ${book.color}30` }}>
+            <ProgressRing value={progress} max={100} size={28} strokeWidth={2.5} color={book.color} trackColor="rgba(255,255,255,0.04)">
+              <span className="text-[7px] font-bold" style={{ color: book.color }}>{progress}%</span>
+            </ProgressRing>
           </div>
         </div>
 
@@ -446,13 +443,13 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-bold text-white">{book.title}</h3>
-              {book.author && <p className="text-xs" style={{ color: "#6B7585" }}>{book.author}</p>}
+              {book.author && <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{book.author}</p>}
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#6B7585" }}>
+              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
                 <Edit2 size={13} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "#6B7585" }}>
+              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "var(--text-secondary)" }}>
                 <Trash2 size={13} />
               </button>
             </div>
@@ -460,9 +457,9 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
             <MiniStat label="Progresso" value={`${progress}%`} color={book.color} />
-            <MiniStat label="Página" value={`${book.current_page}/${book.total_pages}`} color="#8B95A5" />
-            <MiniStat label="Meta hoje" value={`${book.pages_read_today}/${book.daily_goal}`} color={dailyLeft === 0 ? "#3ABAB4" : "#D4AF37"} />
-            {finishDate && <MiniStat label="Previsão" value={format(finishDate, "dd/MM")} color="#3ABAB4" />}
+            <MiniStat label="Página" value={`${book.current_page}/${book.total_pages}`} color="var(--text-muted)" />
+            <MiniStat label="Meta hoje" value={`${book.pages_read_today}/${book.daily_goal}`} color={dailyLeft === 0 ? "var(--success)" : "var(--gold)"} />
+            {finishDate && <MiniStat label="Previsão" value={format(finishDate, "dd/MM")} color="var(--success)" />}
           </div>
 
           <div className="progress-bar mt-3">
@@ -477,16 +474,15 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           )}
 
           <div className="flex items-center gap-2 mt-4">
-            <div className="flex items-center gap-0.5 rounded-xl overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="flex items-center gap-0.5 rounded-xl overflow-hidden glass">
               <button onClick={() => onReadingChange(Math.max(0, readingValue - 5))}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#6B7585" }}>−</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }}>−</button>
               <input type="number" value={readingValue} onChange={(e) => onReadingChange(+e.target.value)}
                 className="w-14 text-center bg-transparent text-white text-sm py-2 focus:outline-none" placeholder="0" />
               <button onClick={() => onReadingChange(readingValue + 5)}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "#6B7585" }}>+</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }}>+</button>
             </div>
-            <span className="text-xs" style={{ color: "#6B7585" }}>págs</span>
+            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>págs</span>
             <button onClick={onLog} disabled={!readingValue}
               className="btn-primary text-xs py-2 px-4 disabled:opacity-30">
               + Registrar
@@ -494,7 +490,7 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
             {dailyLeft > 0 ? (
               <span className="text-xs ml-auto" style={{ color: "rgba(232,132,74,0.7)" }}>{dailyLeft} faltam</span>
             ) : (
-              <span className="text-xs ml-auto flex items-center gap-1" style={{ color: "#3ABAB4" }}>
+              <span className="text-xs ml-auto flex items-center gap-1" style={{ color: "var(--success)" }}>
                 <Check size={10} /> Meta! ✨
               </span>
             )}
@@ -507,8 +503,8 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
 
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)" }}>
-      <p className="text-[10px] mb-0.5" style={{ color: "#6B7585" }}>{label}</p>
+    <div className="glass rounded-lg p-2">
+      <p className="text-[10px] mb-0.5" style={{ color: "var(--text-secondary)" }}>{label}</p>
       <p className="text-sm font-semibold" style={{ color }}>{value}</p>
     </div>
   );

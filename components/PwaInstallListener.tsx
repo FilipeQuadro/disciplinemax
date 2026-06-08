@@ -63,11 +63,13 @@ export function PwaInstallListener() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button onClick={handleInstall}
             className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
-            style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}>
+            style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}
+            aria-label="Instalar aplicativo">
             <Download size={14} className="text-[#0B0E14]" />
           </button>
           <button onClick={handleDismiss}
-            className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+            className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}
+            aria-label="Fechar">
             <X size={14} />
           </button>
         </div>

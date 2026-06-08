@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/db-client";
 import { logger } from "@/lib/logger";
+import { verifyAdminOrCron } from "@/lib/admin-auth";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
   try {
+    // Require admin or cron authentication
+    const { isAdmin } = await verifyAdminOrCron(req);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
     const client = getServiceClient();
 
     // Get growth metrics from the last 30 days

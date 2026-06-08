@@ -42,10 +42,16 @@ export class NotificationOrchestrator {
   private dedupService: NotificationDedupService;
   private deliveryService: NotificationDeliveryService;
   private eventService: EventTrackingService;
+  private xpRepo: XpRepository;
+  private achievementRepo: AchievementRepository;
+  private challengeRepo: ChallengeRepository;
 
   constructor(
     notificationRepo?: NotificationRepository,
-    subscriptionRepo?: SubscriptionRepository
+    subscriptionRepo?: SubscriptionRepository,
+    xpRepo?: XpRepository,
+    achievementRepo?: AchievementRepository,
+    challengeRepo?: ChallengeRepository,
   ) {
     const nRepo = notificationRepo ?? new NotificationRepository();
     const sRepo = subscriptionRepo ?? new SubscriptionRepository();
@@ -53,6 +59,9 @@ export class NotificationOrchestrator {
     this.dedupService = new NotificationDedupService(nRepo);
     this.deliveryService = new NotificationDeliveryService(sRepo, qRepo);
     this.eventService = new EventTrackingService();
+    this.xpRepo = xpRepo ?? new XpRepository();
+    this.achievementRepo = achievementRepo ?? new AchievementRepository();
+    this.challengeRepo = challengeRepo ?? new ChallengeRepository();
   }
 
   /**
@@ -230,9 +239,9 @@ export class NotificationOrchestrator {
     let challengesCompleted = 0;
     try {
       const [xpRes, achRes, chalRes] = await Promise.all([
-        new XpRepository().getXp(userId),
-        new AchievementRepository().getUnlocked(userId),
-        new ChallengeRepository().getCompleted(userId, 30),
+        this.xpRepo.getXp(userId),
+        this.achievementRepo.getUnlocked(userId),
+        this.challengeRepo.getCompleted(userId, 30),
       ]);
       if (xpRes) {
         xpData = { xp: xpRes.total_xp, level: xpRes.current_level };

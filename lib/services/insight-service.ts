@@ -2,7 +2,6 @@ import { InsightRepository, type UserInsight } from "@/lib/repositories/insight-
 import { StreakRepository } from "@/lib/repositories/streak-repository";
 import { XpRepository } from "@/lib/repositories/xp-repository";
 import { AchievementRepository } from "@/lib/repositories/achievement-repository";
-import { getServiceClient } from "@/lib/db-client";
 
 export type InsightType = "best_study_hour" | "productivity_trend" | "near_achievement" | "streak_risk" | "weekly_comparison" | "consistency_tip";
 
@@ -118,14 +117,7 @@ export class InsightService {
 
   private async computeBestStudyHour(userId: string): Promise<number | null> {
     try {
-      const client = getServiceClient();
-      const { data } = await client
-        .from("pomodoro_sessions")
-        .select("started_at")
-        .eq("user_id", userId)
-        .eq("completed", true)
-        .gte("started_at", new Date(Date.now() - 30 * 86400000).toISOString())
-        .limit(100);
+      const data = await this.insightRepo.getCompletedPomodoros(userId, 30, 100);
 
       if (!data || data.length < 3) return null;
 
@@ -150,17 +142,16 @@ export class InsightService {
 
   private async computeProductivityTrend(userId: string): Promise<"up" | "down" | "same" | null> {
     try {
-      const client = getServiceClient();
       const thisWeek = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
       const lastWeek = new Date(Date.now() - 14 * 86400000).toISOString().split("T")[0];
 
       const [thisWeekData, lastWeekData] = await Promise.all([
-        client.from("daily_stats").select("goals_completed").eq("user_id", userId).gte("date", thisWeek),
-        client.from("daily_stats").select("goals_completed").eq("user_id", userId).gte("date", lastWeek).lt("date", thisWeek),
+        this.insightRepo.getDailyStatsInRange(userId, thisWeek),
+        this.insightRepo.getDailyStatsInRange(userId, lastWeek, thisWeek),
       ]);
 
-      const thisCount = (thisWeekData.data || []).filter((s: any) => s.goals_completed).length;
-      const lastCount = (lastWeekData.data || []).filter((s: any) => s.goals_completed).length;
+      const thisCount = (thisWeekData || []).filter((s) => s.goals_completed).length;
+      const lastCount = (lastWeekData || []).filter((s) => s.goals_completed).length;
 
       if (thisCount > lastCount) return "up";
       if (thisCount < lastCount) return "down";

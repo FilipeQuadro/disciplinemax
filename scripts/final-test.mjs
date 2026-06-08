@@ -3,10 +3,10 @@
 // Roda: node scripts/final-test.mjs
 // ============================================
 
-const APP = "https://disciplinemax.onrender.com";
-const SB_URL = "https://sigpkpgibybgnszpxyzq.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM3MTkzNSwiZXhwIjoyMDk0OTQ3OTM1fQ.g5tS-3iavhOGq3JCorPzfRBfGx4rYS4zPzgYDUNnDts";
-const CRON_SECRET = "040623ls";
+const APP = process.env.APP_URL || "https://disciplinemax.onrender.com";
+const SB_URL = process.env.SUPABASE_URL || "";
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const CRON_SECRET = process.env.CRON_SECRET || "";
 
 let passed = 0, failed = 0, total = 0;
 
@@ -120,7 +120,7 @@ async function testSupabase() {
   } catch (e) { fail("UPDATE user_settings", e.message); }
 
   // RLS check — verify anon key works
-  const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzE5MzUsImV4cCI6MjA5NDk0NzkzNX0.kG-vsXaeb9Jlzp9DuC9aAkXf32jElxuhTsniyF1OIh8";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   try {
     const r = await fetch(`${SB_URL}/rest/v1/books?select=id&limit=1`, {
       headers: { "apikey": anonKey, "Authorization": `Bearer ${anonKey}` },

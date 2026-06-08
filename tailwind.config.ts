@@ -38,6 +38,10 @@ const config: Config = {
           400: "#353f58",
           300: "#555E6E",
         },
+        surface: "#141820",
+        success: "#3ABAB4",
+        warning: "#E8844A",
+        danger: "#D94F4F",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -51,6 +55,24 @@ const config: Config = {
         "fade-in": "fadeIn 0.5s ease-in-out",
         "slide-up": "slideUp 0.4s ease-out",
         "glow": "glow 2s ease-in-out infinite alternate",
+      },
+      borderRadius: {
+        sm: "8px",
+        md: "12px",
+        lg: "16px",
+        xl: "20px",
+        "2xl": "24px",
+      },
+      boxShadow: {
+        sm: "0 2px 8px rgba(0,0,0,0.2)",
+        md: "0 4px 16px rgba(0,0,0,0.25)",
+        lg: "0 8px 24px rgba(0,0,0,0.3)",
+        xl: "0 12px 40px rgba(0,0,0,0.4)",
+      },
+      transitionDuration: {
+        fast: "150ms",
+        normal: "200ms",
+        slow: "300ms",
       },
       keyframes: {
         fadeIn: {

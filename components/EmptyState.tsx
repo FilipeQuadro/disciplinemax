@@ -20,7 +20,7 @@ interface EmptyStateProps {
 
 export function EmptyState({
   icon: Icon,
-  iconColor = "#6B7585",
+  iconColor = "var(--text-secondary)",
   title,
   description,
   primaryAction,
@@ -33,7 +33,7 @@ export function EmptyState({
         <Icon size={32} style={{ color: iconColor }} />
       </div>
       <h3 className="text-lg font-serif font-semibold text-white mb-2">{title}</h3>
-      <p className="text-sm max-w-xs mx-auto" style={{ color: "#8B95A5" }}>{description}</p>
+      <p className="text-sm max-w-xs mx-auto" style={{ color: "var(--text-muted)" }}>{description}</p>
       {primaryAction && (
         <Link href={primaryAction.href}
           className="btn-primary mt-5 inline-flex text-sm">
@@ -42,7 +42,7 @@ export function EmptyState({
       )}
       {secondaryAction && (
         <Link href={secondaryAction.href}
-          className="block mt-3 text-xs hover:underline" style={{ color: "#6B7585" }}>
+          className="block mt-3 text-xs hover:underline" style={{ color: "var(--text-secondary)" }}>
           {secondaryAction.label}
         </Link>
       )}

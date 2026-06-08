@@ -3,20 +3,31 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
-import { Timer, Play, Pause, RotateCcw, SkipForward, BarChart3, Target, Check, Flame } from "lucide-react";
+import { Timer, Play, Pause, RotateCcw, SkipForward, BarChart3, Target, Flame } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { AmbientControls, useAmbientSound } from "@/components/AmbientSound";
 import { useAuth } from "@/components/AuthProvider";
 import { trackPomodoroCompleted } from "@/lib/stats";
 import { processGamification } from "@/lib/gamification";
+import { HeroHeader } from "@/components/ui/HeroHeader";
+import { GoalBadge } from "@/components/ui/GoalBadge";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { GradientCard } from "@/components/ui/GradientCard";
+import { ErrorCard } from "@/components/ErrorCard";
+import { SkeletonPage } from "@/components/Skeleton";
 
 const COLORS = {
-  focus: { primary: "#D94F4F", bg: "linear-gradient(145deg, rgba(217,79,79,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(217,79,79,0.12)", ring: "#D94F4F" },
-  shortBreak: { primary: "#3ABAB4", bg: "linear-gradient(145deg, rgba(58,186,180,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(58,186,180,0.12)", ring: "#3ABAB4" },
-  longBreak: { primary: "#7C6BBD", bg: "linear-gradient(145deg, rgba(124,107,189,0.06) 0%, rgba(20,24,32,0.9) 100%)", border: "rgba(124,107,189,0.12)", ring: "#7C6BBD" },
+  focus: { primary: "var(--danger)", ring: "var(--danger)" },
+  shortBreak: { primary: "var(--success)", ring: "var(--success)" },
+  longBreak: { primary: "var(--accent-purple)", ring: "var(--accent-purple)" },
+};
+
+const VARIANT_MAP = {
+  focus: "red" as const,
+  shortBreak: "teal" as const,
+  longBreak: "purple" as const,
 };
 
 export default function PomodoroPage() {
@@ -33,6 +44,7 @@ export default function PomodoroPage() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const ambient = useAmbientSound();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -96,6 +108,7 @@ export default function PomodoroPage() {
         processGamification("pomodoro_completed").catch(() => {});
       } catch {
         toast.error("Erro ao salvar sessão — o pomodoro pode não ter sido registrado");
+        setHasError(true);
       }
       toast.success(`🍅 Pomodoro #${newCount} concluído!`, { duration: 5000 });
 
@@ -149,14 +162,9 @@ export default function PomodoroPage() {
   }
 
   const totalSeconds = getModeTime();
-  const progress = ((totalSeconds - pomodoroTimeLeft) / totalSeconds) * 100;
   const minutes = Math.floor(pomodoroTimeLeft / 60);
   const seconds = pomodoroTimeLeft % 60;
   const colors = COLORS[mode];
-
-  const size = 260; const strokeWidth = 5; const r = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * r;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const totalFocusToday = todaySessions.filter((s) => s.completed).length;
   const totalMinutesToday = todaySessions.filter((s) => s.completed).reduce((sum, s) => sum + s.duration_minutes, 0);
@@ -165,12 +173,18 @@ export default function PomodoroPage() {
 
   // ─── Loading Skeleton ──────────────────────────────────────────
   if (!mounted) {
+    return <SkeletonPage className="max-w-2xl mx-auto" />;
+  }
+
+  // ─── Error State ───────────────────────────────────────────────
+  if (hasError) {
     return (
-      <div className="space-y-6 max-w-2xl mx-auto animate-pulse">
-        <div className="h-7 w-64 rounded bg-white/5" />
-        <div className="h-3 w-48 rounded bg-white/5" />
-        <div className="h-64 rounded-2xl bg-white/[0.02] mx-auto w-64" />
-        {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-2xl bg-white/[0.02]" />)}
+      <div className="max-w-2xl mx-auto page-enter">
+        <ErrorCard
+          title="Erro ao salvar sessão"
+          message="Não foi possível registrar o pomodoro no servidor. Toque em tentar novamente quando quiser continuar."
+          onRetry={() => setHasError(false)}
+        />
       </div>
     );
   }
@@ -179,26 +193,15 @@ export default function PomodoroPage() {
     <div className="space-y-6 max-w-2xl mx-auto page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
-            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </p>
-          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-            <Timer size={24} style={{ color: "#D94F4F" }} /> Pomodoro
-          </h1>
-        </div>
+        <HeroHeader title="Pomodoro" icon={Timer} iconColor="var(--danger)" />
         <div className="flex items-center gap-2">
           {goalMet ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
-              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
-              <Check size={16} style={{ color: "#3ABAB4" }} />
-              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Meta atingida!</span>
-            </div>
+            <GoalBadge met={true} metLabel="Meta atingida!" />
           ) : (
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
               style={{ background: "rgba(217,79,79,0.06)", border: "1px solid rgba(217,79,79,0.12)" }}>
-              <Target size={16} style={{ color: "#D94F4F" }} />
-              <span className="text-sm font-medium" style={{ color: "#D94F4F" }}>{pomodoroCount}/{pomodoroGoal}</span>
+              <Target size={16} style={{ color: "var(--danger)" }} />
+              <span className="text-sm font-medium" style={{ color: "var(--danger)" }}>{pomodoroCount}/{pomodoroGoal}</span>
             </div>
           )}
           <button onClick={() => setShowSettings(!showSettings)} className="btn-ghost text-sm">⚙️ Tempos</button>
@@ -217,13 +220,13 @@ export default function PomodoroPage() {
       )}
 
       {/* Mode selector */}
-      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex gap-1 p-1 rounded-2xl glass">
         {(["focus", "shortBreak", "longBreak"] as const).map((m) => (
           <button key={m} onClick={() => { if (!pomodoroActive) setMode(m); }} disabled={pomodoroActive}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300")}
             style={{
               background: mode === m ? "rgba(255,255,255,0.06)" : "transparent",
-              color: mode === m ? "#F0F0F0" : "#555E6E",
+              color: mode === m ? "var(--text-primary)" : "var(--text-secondary)",
               cursor: pomodoroActive ? "not-allowed" : "pointer",
             }}>
             {m === "focus" ? "🎯 Foco" : m === "shortBreak" ? "☕ Pausa" : "🎉 Longa"}
@@ -235,23 +238,23 @@ export default function PomodoroPage() {
       <AmbientControls ambient={ambient} />
 
       {/* Timer */}
-      <div className="rounded-2xl flex flex-col items-center py-8 shimmer"
-        style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
+      <GradientCard variant={VARIANT_MAP[mode]} className="flex flex-col items-center py-8 shimmer">
         <input className="input text-center mb-6 max-w-xs text-sm" placeholder="Em que está trabalhando?"
           value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} />
 
-        <div className="relative" style={{ width: size, height: size }}>
-          <svg width={size} height={size} className="timer-ring absolute top-0 left-0">
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth={strokeWidth} />
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.ring} strokeWidth={strokeWidth}
-              strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-              style={{ transition: "stroke-dashoffset 1s linear", filter: `drop-shadow(0 0 12px ${colors.ring}50)` }} />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <ProgressRing
+          value={totalSeconds - pomodoroTimeLeft}
+          max={totalSeconds}
+          size={260}
+          strokeWidth={5}
+          color={colors.ring}
+          trackColor="rgba(255,255,255,0.03)"
+        >
+          <div className="flex flex-col items-center justify-center">
             <div className="text-6xl font-bold text-white font-mono tracking-tight">
               {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
             </div>
-            <p className="text-sm mt-2" style={{ color: "#555E6E" }}>
+            <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
               {mode === "focus" ? "Foco" : mode === "shortBreak" ? "Pausa curta" : "Pausa longa"}
             </p>
             <div className="flex gap-1.5 mt-3">
@@ -259,47 +262,46 @@ export default function PomodoroPage() {
                 <div key={i} className={clsx("w-2 h-2 rounded-full transition-all duration-300")}
                   style={{
                     background: i < (pomodoroCount % pomosUntilLong) ? colors.ring : "rgba(255,255,255,0.08)",
-                    boxShadow: i < (pomodoroCount % pomosUntilLong) ? `0 0 6px ${colors.ring}50` : "none",
+                    boxShadow: i < (pomodoroCount % pomosUntilLong) ? `0 0 6px ${colors.ring}` : "none",
                   }} />
               ))}
             </div>
           </div>
-        </div>
+        </ProgressRing>
 
         {/* Controls */}
         <div className="flex items-center gap-4 mt-6">
-          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
             <RotateCcw size={18} />
           </button>
           <button onClick={toggleTimer}
             className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold transition-all duration-300 active:scale-95"
             style={!pomodoroActive ? {
-              background: colors.ring,
-              boxShadow: `0 8px 40px ${colors.ring}30`,
+              background: colors.primary,
+              boxShadow: `0 8px 40px ${colors.ring}`,
             } : { background: "rgba(255,255,255,0.06)" }}>
             {pomodoroActive ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
           </button>
-          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
             <SkipForward size={18} />
           </button>
         </div>
-      </div>
+      </GradientCard>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 stagger-children">
         {[
-          { value: totalFocusToday, label: "Pomodoros hoje", color: "#D94F4F", icon: <Timer size={14} /> },
-          { value: totalMinutesToday, label: "Minutos focados", color: "#3ABAB4", icon: <BarChart3 size={14} /> },
-          { value: streak, label: "Streak", color: "#E8844A", icon: <Flame size={14} /> },
+          { value: totalFocusToday, label: "Pomodoros hoje", color: "var(--danger)", icon: <Timer size={14} /> },
+          { value: totalMinutesToday, label: "Minutos focados", color: "var(--success)", icon: <BarChart3 size={14} /> },
+          { value: streak, label: "Streak", color: "var(--accent-orange)", icon: <Flame size={14} /> },
         ].map((stat, i) => (
-          <div key={i} className="rounded-2xl p-4 text-center glow-border"
-            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div key={i} className="glass rounded-2xl p-4 text-center glow-border">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2"
               style={{ background: `${stat.color}12`, color: stat.color }}>
               {stat.icon}
             </div>
             <p className="text-2xl font-bold count-up" style={{ color: stat.color }}>{stat.value}</p>
-            <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>{stat.label}</p>
+            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{stat.label}</p>
           </div>
         ))}
       </div>
@@ -308,7 +310,7 @@ export default function PomodoroPage() {
       {todaySessions.length > 0 && (
         <div>
           <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <BarChart3 size={16} style={{ color: "#D94F4F" }} /> Sessões de Hoje
+            <BarChart3 size={16} style={{ color: "var(--danger)" }} /> Sessões de Hoje
           </h3>
           <div className="space-y-2 stagger-children">
             {todaySessions.slice(-8).reverse().map((s) => (
@@ -318,12 +320,12 @@ export default function PomodoroPage() {
                     style={{ background: "rgba(217,79,79,0.08)" }}>🍅</div>
                   <div>
                     <p className="text-sm font-medium text-white">{s.task_name || "Sessão de foco"}</p>
-                    <p className="text-[10px]" style={{ color: "#555E6E" }}>{format(new Date(s.started_at), "HH:mm")}</p>
+                    <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{format(new Date(s.started_at), "HH:mm")}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-white">{s.duration_minutes} min</p>
-                  <span className="badge text-[10px]" style={{ background: "rgba(58,186,180,0.1)", color: "#3ABAB4" }}>✓</span>
+                  <span className="badge text-[10px]" style={{ background: "rgba(58,186,180,0.1)", color: "var(--success)" }}>✓</span>
                 </div>
               </div>
             ))}

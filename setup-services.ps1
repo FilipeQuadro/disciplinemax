@@ -3,7 +3,7 @@
 # Execute: ./setup-services.ps1
 # ============================================
 
-$CRON_URL = "https://disciplinemax.onrender.com/api/cron?secret=040623ls"
+$CRON_URL = "https://disciplinemax.onrender.com/api/cron?secret=$($env:CRON_SECRET)"
 $APP_URL  = "https://disciplinemax.onrender.com"
 
 # ============================================
@@ -99,13 +99,13 @@ if ($RENDER_API_KEY) {
 
             $envKeys   = @("NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "CRON_SECRET", "GEMINI_API_KEY")
             $envValues = @(
-                "https://sigpkpgibybgnszpxyzq.supabase.co",
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzE5MzUsImV4cCI6MjA5NDk0NzkzNX0.kG-vsXaeb9Jlzp9DuC9aAkXf32jElxuhTsniyF1OIh8",
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM3MTkzNSwiZXhwIjoyMDk0OTQ3OTM1fQ.g5tS-3iavhOGq3JCorPzfRBfGx4rYS4zPzgYDUNnDts",
-                "BJNUDPbL7V3A23KvF52WBerw8Dr--hSHZAhaHB_0igyPT1am5didIZ45-Wej8QWWDAqmC12n0iRdNSjokObOgCA",
-                "p9xUSyBeegVyUqcLK3iAECek9f0DjTdG10cz_u0OE4k",
-                "040623ls",
-                "AIzaSyADBnnVmf3zn_0h4B4Tw15KfAp5qOOrLTs"
+                $env:NEXT_PUBLIC_SUPABASE_URL,
+                $env:NEXT_PUBLIC_SUPABASE_ANON_KEY,
+                $env:SUPABASE_SERVICE_ROLE_KEY,
+                $env:NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+                $env:VAPID_PRIVATE_KEY,
+                $env:CRON_SECRET,
+                $env:GEMINI_API_KEY
             )
 
             for ($i = 0; $i -lt $envKeys.Count; $i++) {

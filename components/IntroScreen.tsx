@@ -206,8 +206,7 @@ export function IntroScreen() {
       className={`intro-screen ${fadeOut ? "fade-out" : ""}`}
       onClick={dismiss}
       onTouchEnd={dismiss}
-      role="button"
-      tabIndex={0}
+      tabIndex={-1}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") dismiss(); }}
       aria-label="Carregando aplicativo — toque para pular"
       style={{ cursor: "pointer" }}
@@ -221,12 +220,12 @@ export function IntroScreen() {
         <div className="intro-loader-bar" />
       </div>
       {serverStatus === "waking" && (
-        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(212,175,55,0.4)" }}>
+        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(212,175,55,0.7)" }}>
           Servidor está acordando, aguarde...
         </p>
       )}
       {serverStatus === "loading" && (
-        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.15)" }}>
+        <p className="text-[10px] mt-4 tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
           toque para pular
         </p>
       )}

@@ -8,6 +8,10 @@ vi.mock("@/lib/db-client", () => ({
   getServiceClient: vi.fn().mockImplementation(() => ({ from: mockFrom })),
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -22,7 +26,7 @@ describe("POST /api/share", () => {
 
   it("returns 400 when userId missing", async () => {
     const res = await POST(new Request("https://test.com/api/share", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ shareType: "profile" }),
     }));
     expect(res.status).toBe(400);
@@ -30,7 +34,7 @@ describe("POST /api/share", () => {
 
   it("returns 400 when shareType missing", async () => {
     const res = await POST(new Request("https://test.com/api/share", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1" }),
     }));
     expect(res.status).toBe(400);
@@ -38,7 +42,7 @@ describe("POST /api/share", () => {
 
   it("returns success on valid request", async () => {
     const res = await POST(new Request("https://test.com/api/share", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", shareType: "profile", data: { username: "filipe" } }),
     }));
     expect(res.status).toBe(200);
@@ -48,7 +52,7 @@ describe("POST /api/share", () => {
   it("returns success even on DB error (best effort)", async () => {
     mockFrom.mockReturnValue({ insert: vi.fn().mockReturnValue({ error: { message: "fail" } }) });
     const res = await POST(new Request("https://test.com/api/share", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", shareType: "streak" }),
     }));
     expect(res.status).toBe(200);

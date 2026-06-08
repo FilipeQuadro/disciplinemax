@@ -18,6 +18,10 @@ vi.mock("@/lib/services/friendship-service", () => ({
   },
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -29,7 +33,7 @@ describe("POST /api/friends", () => {
 
   it("returns 400 on invalid input", async () => {
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({}),
     }));
     expect(res.status).toBe(400);
@@ -37,7 +41,7 @@ describe("POST /api/friends", () => {
 
   it("send — 400 when targetUserId missing", async () => {
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "send" }),
     }));
     expect(res.status).toBe(400);
@@ -46,7 +50,7 @@ describe("POST /api/friends", () => {
   it("send — 409 when request exists", async () => {
     mocks.mockSendRequest.mockResolvedValueOnce(null);
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "send", targetUserId: "u2" }),
     }));
     expect(res.status).toBe(409);
@@ -55,7 +59,7 @@ describe("POST /api/friends", () => {
   it("send — 200 on success", async () => {
     mocks.mockSendRequest.mockResolvedValueOnce({ id: "f1", status: "pending" });
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "send", targetUserId: "u2" }),
     }));
     expect(res.status).toBe(200);
@@ -63,7 +67,7 @@ describe("POST /api/friends", () => {
 
   it("accept — 400 when targetUserId missing", async () => {
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "accept" }),
     }));
     expect(res.status).toBe(400);
@@ -72,8 +76,8 @@ describe("POST /api/friends", () => {
   it("accept — 404 when no pending request", async () => {
     mocks.mockAcceptRequest.mockResolvedValueOnce(null);
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "u2", action: "accept", targetUserId: "u1" }),
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
+      body: JSON.stringify({ userId: "u1", action: "accept", targetUserId: "u2" }),
     }));
     expect(res.status).toBe(404);
   });
@@ -81,7 +85,7 @@ describe("POST /api/friends", () => {
   it("remove — 200 with success", async () => {
     mocks.mockRemoveFriend.mockResolvedValueOnce(true);
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "remove", targetUserId: "u2" }),
     }));
     expect(res.status).toBe(200);
@@ -90,7 +94,7 @@ describe("POST /api/friends", () => {
 
   it("remove — 400 when targetUserId missing", async () => {
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "remove" }),
     }));
     expect(res.status).toBe(400);
@@ -99,7 +103,7 @@ describe("POST /api/friends", () => {
   it("list — returns friends", async () => {
     mocks.mockGetFriends.mockResolvedValueOnce([{ id: "f1" }]);
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(200);
@@ -109,7 +113,7 @@ describe("POST /api/friends", () => {
   it("list_pending — returns pending", async () => {
     mocks.mockGetPendingRequests.mockResolvedValueOnce([{ id: "f2" }]);
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list_pending" }),
     }));
     expect(res.status).toBe(200);
@@ -118,7 +122,7 @@ describe("POST /api/friends", () => {
 
   it("returns 400 on invalid action", async () => {
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "hack" }),
     }));
     expect(res.status).toBe(400);
@@ -127,7 +131,7 @@ describe("POST /api/friends", () => {
   it("returns 500 on unexpected error", async () => {
     mocks.mockGetFriends.mockRejectedValueOnce(new Error("fail"));
     const res = await POST(new Request("https://test.com/api/friends", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(500);

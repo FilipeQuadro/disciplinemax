@@ -33,10 +33,10 @@ export function ConfirmDialog({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className="relative rounded-2xl p-6 max-w-sm w-full mx-4 animate-slide-up"
-        style={{ background: "#141820", border: `1px solid ${destructive ? "rgba(217,79,79,0.2)" : "rgba(212,175,55,0.12)"}` }}
+        style={{ background: "var(--surface)", border: `1px solid ${destructive ? "rgba(217,79,79,0.2)" : "rgba(212,175,55,0.12)"}` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onCancel} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}>
+        <button onClick={onCancel} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
           <X size={16} />
         </button>
         <div className="flex items-start gap-3 mb-4">
@@ -46,7 +46,7 @@ export function ConfirmDialog({
           </div>
           <div>
             <h3 className="font-semibold text-white text-sm">{title}</h3>
-            <p className="text-sm mt-1" style={{ color: "#8B95A5" }}>{message}</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{message}</p>
           </div>
         </div>
         <div className="flex gap-3 justify-end">

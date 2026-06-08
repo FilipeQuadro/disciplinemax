@@ -12,6 +12,10 @@ vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
+vi.mock("@/lib/admin-auth", () => ({
+  verifyAdminOrCron: vi.fn().mockResolvedValue({ isAdmin: true, actorId: "admin-test" }),
+}));
+
 function createFullChain(finalValue: any = { data: [], error: null, count: 0 }) {
   const chain: any = new Proxy(() => {}, {
     get(target, prop) {
@@ -22,6 +26,12 @@ function createFullChain(finalValue: any = { data: [], error: null, count: 0 }) 
     },
   });
   return chain;
+}
+
+function createAuthRequest(): Request {
+  return new Request("http://localhost:3000/api/admin/growth", {
+    headers: { authorization: "Bearer test-cron-secret" },
+  });
 }
 
 import { GET } from "@/app/api/admin/growth/route";
@@ -41,7 +51,7 @@ describe("GET /api/admin/growth", () => {
     mockFrom.mockReturnValueOnce(countChain).mockReturnValueOnce(countChain)
       .mockReturnValueOnce(countChain).mockReturnValueOnce(metricsChain);
 
-    const res = await GET();
+    const res = await GET(createAuthRequest());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.period).toBe("30d");
@@ -55,14 +65,21 @@ describe("GET /api/admin/growth", () => {
     mockFrom.mockReturnValueOnce(countChain).mockReturnValueOnce(countChain)
       .mockReturnValueOnce(countChain).mockReturnValueOnce(metricsChain);
 
-    const res = await GET();
+    const res = await GET(createAuthRequest());
     expect(res.status).toBe(200);
     expect((await res.json()).metrics).toEqual({});
   });
 
   it("returns 500 on error", async () => {
     mockFrom.mockImplementation(() => { throw new Error("fail"); });
-    const res = await GET();
+    const res = await GET(createAuthRequest());
     expect(res.status).toBe(500);
+  });
+
+  it("returns 403 without auth", async () => {
+    const { verifyAdminOrCron } = await import("@/lib/admin-auth");
+    (verifyAdminOrCron as any).mockResolvedValueOnce({ isAdmin: false, actorId: "" });
+    const res = await GET(createAuthRequest());
+    expect(res.status).toBe(403);
   });
 });

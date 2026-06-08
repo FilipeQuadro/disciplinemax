@@ -41,7 +41,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page" id="main-content">
       {/* Particles */}
       <div className="bg-particles">
         {[...Array(8)].map((_, i) => (
@@ -125,8 +125,9 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: "#555E6E" }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-colors"
+                  style={{ color: "var(--text-secondary)" }}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -157,7 +158,7 @@ export default function LoginPage() {
 
           {/* Toggle */}
           <div className="login-toggle">
-            <span style={{ color: "#8B95A5" }}>
+            <span style={{ color: "var(--text-muted)" }}>
               {isSignUp ? "Já tem conta?" : "Ainda não tem conta?"}
             </span>
             <button

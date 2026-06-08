@@ -96,4 +96,31 @@ export class ProfileRepository {
       return !!data;
     }, { table: "user_profiles" });
   }
+
+  /** Aggregate stats from books, pomodoro_sessions, and bible_readings for profile sync */
+  async getAggregatedStats(userId: string): Promise<{
+    booksCompleted: number;
+    totalPages: number;
+    pomodorosTotal: number;
+    bibleChaptersTotal: number;
+  }> {
+    return MetricsService.measure("profile_getAggregatedStats", async () => {
+      const [booksRes, pomodoroRes, bibleRes] = await Promise.all([
+        this.client.from("books").select("current_page, total_pages").eq("user_id", userId),
+        this.client.from("pomodoro_sessions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("completed", true),
+        this.client.from("bible_readings").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      ]);
+
+      const books = (booksRes.data as Array<{ current_page: number; total_pages: number }>) ?? [];
+      const totalPages = books.reduce((s, b) => s + b.current_page, 0);
+      const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
+
+      return {
+        booksCompleted,
+        totalPages,
+        pomodorosTotal: pomodoroRes.count ?? 0,
+        bibleChaptersTotal: bibleRes.count ?? 0,
+      };
+    }, { table: "profile_stats_aggregation" });
+  }
 }

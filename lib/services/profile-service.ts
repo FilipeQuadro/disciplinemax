@@ -61,24 +61,12 @@ export class ProfileService {
   /** Sync profile stats from gamification data */
   async syncStats(userId: string): Promise<UserProfile | null> {
     try {
-      const { getServiceClient } = await import("@/lib/db-client");
-      const client = getServiceClient();
-
-      const [booksRes, pomodoroRes, bibleRes] = await Promise.all([
-        client.from("books").select("current_page, total_pages").eq("user_id", userId),
-        client.from("pomodoro_sessions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("completed", true),
-        client.from("bible_readings").select("id", { count: "exact", head: true }).eq("user_id", userId),
-      ]);
-
-      const books = (booksRes.data as Array<{ current_page: number; total_pages: number }>) ?? [];
-      const totalPages = books.reduce((s, b) => s + b.current_page, 0);
-      const booksCompleted = books.filter((b) => b.current_page >= b.total_pages).length;
-
+      const stats = await this.repo.getAggregatedStats(userId);
       return this.repo.updateStats(userId, {
-        books_completed: booksCompleted,
-        total_pages: totalPages,
-        pomodoros_total: pomodoroRes.count ?? 0,
-        bible_chapters_total: bibleRes.count ?? 0,
+        books_completed: stats.booksCompleted,
+        total_pages: stats.totalPages,
+        pomodoros_total: stats.pomodorosTotal,
+        bible_chapters_total: stats.bibleChaptersTotal,
       });
     } catch {
       return null;

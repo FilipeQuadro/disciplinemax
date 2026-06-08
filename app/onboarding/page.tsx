@@ -23,10 +23,10 @@ interface OnboardingData {
 }
 
 const STUDY_AREAS = [
-  { id: "theology", label: "Teologia", icon: BookMarked, color: "#D4AF37" },
-  { id: "devotional", label: "Devocional", icon: Sparkles, color: "#7C6BBD" },
-  { id: "academic", label: "Acadêmico", icon: BookOpen, color: "#3ABAB4" },
-  { id: "personal", label: "Pessoal", icon: Target, color: "#E8844A" },
+  { id: "theology", label: "Teologia", icon: BookMarked, color: "var(--gold)" },
+  { id: "devotional", label: "Devocional", icon: Sparkles, color: "var(--accent-purple)" },
+  { id: "academic", label: "Acadêmico", icon: BookOpen, color: "var(--accent-teal)" },
+  { id: "personal", label: "Pessoal", icon: Target, color: "var(--accent-orange)" },
 ];
 
 const OBJECTIVES = [
@@ -37,9 +37,9 @@ const OBJECTIVES = [
 ];
 
 const TIME_OPTIONS = [
-  { id: "morning", label: "Manhã", time: "07:00", icon: Sun, color: "#D4AF37" },
-  { id: "afternoon", label: "Tarde", time: "12:00", icon: Zap, color: "#E8844A" },
-  { id: "evening", label: "Noite", time: "19:00", icon: Moon, color: "#7C6BBD" },
+  { id: "morning", label: "Manhã", time: "07:00", icon: Sun, color: "var(--gold)" },
+  { id: "afternoon", label: "Tarde", time: "12:00", icon: Zap, color: "var(--accent-orange)" },
+  { id: "evening", label: "Noite", time: "19:00", icon: Moon, color: "var(--accent-purple)" },
 ];
 
 const FREQUENCIES = [
@@ -49,9 +49,9 @@ const FREQUENCIES = [
 ];
 
 const FIRST_ACTIONS = [
-  { id: "book", label: "Adicionar meu primeiro livro", desc: "Comece a acompanhar sua leitura", href: "/livros", icon: BookOpen, color: "#7C6BBD" },
-  { id: "pomodoro", label: "Iniciar primeiro foco", desc: "25 minutos de concentração", href: "/pomodoro", icon: Timer, color: "#D94F4F" },
-  { id: "bible", label: "Ler primeiro capítulo", desc: "Comece seu hábito bíblico", href: "/biblia", icon: BookMarked, color: "#D4AF37" },
+  { id: "book", label: "Adicionar meu primeiro livro", desc: "Comece a acompanhar sua leitura", href: "/livros", icon: BookOpen, color: "var(--accent-purple)" },
+  { id: "pomodoro", label: "Iniciar primeiro foco", desc: "25 minutos de concentração", href: "/pomodoro", icon: Timer, color: "var(--accent-red)" },
+  { id: "bible", label: "Ler primeiro capítulo", desc: "Comece seu hábito bíblico", href: "/biblia", icon: BookMarked, color: "var(--gold)" },
 ];
 
 // ── Main Component ─────────────────────────────────────────────
@@ -196,9 +196,14 @@ export default function OnboardingPage() {
   // ── Loading while restoring progress ───────────────────────
   if (restoring) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0B0E14" }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--bg-primary)" }}
+        role="status"
+        aria-label="Carregando configurações salvas"
+      >
         <div className="w-full max-w-md space-y-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="progressbar" aria-label="Progresso do carregamento">
             {steps.map((_, i) => (
               <div key={i} className="flex-1 h-1 rounded-full bg-white/[0.04]" />
             ))}
@@ -211,38 +216,49 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#0B0E14" }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 page-enter"
+      style={{ background: "var(--bg-primary)" }}
+    >
       <div className="w-full max-w-md space-y-6">
         {/* Progress */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="progressbar" aria-label={`Passo ${step + 1} de ${steps.length}`}>
           {steps.map((_, i) => (
             <div key={i} className="flex-1 h-1 rounded-full" style={{
-              background: i <= step ? "linear-gradient(90deg, #A8892B, #D4AF37)" : "rgba(255,255,255,0.04)",
+              background: i <= step
+                ? "linear-gradient(90deg, var(--gold-dark), var(--gold))"
+                : "var(--border)",
             }} />
           ))}
         </div>
 
         {/* Header */}
         <div className="text-center">
-          <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: "#D4AF37" }}>
+          <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: "var(--gold)" }}>
             Passo {step + 1} de {steps.length}
           </p>
           <h2 className="text-2xl font-serif font-bold text-white">{steps[step].title}</h2>
-          <p className="text-sm mt-1" style={{ color: "#8B95A5" }}>{steps[step].desc}</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{steps[step].desc}</p>
         </div>
 
         {/* Step Content */}
-        <div className="space-y-3">
+        <div className="space-y-3 stagger-children" role="group" aria-label={steps[step].title}>
           {/* Step 0: Study Area */}
           {step === 0 && (
             <div className="grid grid-cols-2 gap-3">
               {STUDY_AREAS.map((area) => (
-                <button key={area.id} onClick={() => setData({ ...data, studyArea: area.id })}
-                  className={clsx("p-4 rounded-2xl text-center transition-all duration-200 hover:scale-[1.02]")}
-                  style={{
-                    background: data.studyArea === area.id ? `${area.color}12` : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${data.studyArea === area.id ? `${area.color}30` : "rgba(255,255,255,0.05)"}`,
-                  }}>
+                <button key={area.id}
+                  onClick={() => setData({ ...data, studyArea: area.id })}
+                  aria-label={`Selecionar área: ${area.label}`}
+                  aria-pressed={data.studyArea === area.id}
+                  className={clsx(
+                    "p-4 rounded-2xl text-center transition-all duration-200 hover:scale-[1.02] min-h-[44px]",
+                    data.studyArea === area.id ? undefined : "glass"
+                  )}
+                  style={data.studyArea === area.id ? {
+                    background: `${area.color}12`,
+                    border: `1px solid ${area.color}30`,
+                  } : undefined}>
                   <area.icon size={28} className="mx-auto mb-2" style={{ color: area.color }} />
                   <p className="text-sm font-medium text-white">{area.label}</p>
                   {data.studyArea === area.id && (
@@ -257,17 +273,23 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div className="space-y-2">
               {OBJECTIVES.map((obj) => (
-                <button key={obj.id} onClick={() => setData({ ...data, objective: obj.id })}
-                  className="w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3"
-                  style={{
-                    background: data.objective === obj.id ? "rgba(212,175,55,0.06)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${data.objective === obj.id ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.05)"}`,
-                  }}>
+                <button key={obj.id}
+                  onClick={() => setData({ ...data, objective: obj.id })}
+                  aria-label={`Selecionar objetivo: ${obj.label} - ${obj.desc}`}
+                  aria-pressed={data.objective === obj.id}
+                  className={clsx(
+                    "w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3 min-h-[44px]",
+                    data.objective === obj.id ? undefined : "glass"
+                  )}
+                  style={data.objective === obj.id ? {
+                    background: "var(--gold-glow)",
+                    border: "1px solid var(--gold-border)",
+                  } : undefined}>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-white">{obj.label}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{obj.desc}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{obj.desc}</p>
                   </div>
-                  {data.objective === obj.id && <CheckCircle2 size={18} style={{ color: "#D4AF37" }} />}
+                  {data.objective === obj.id && <CheckCircle2 size={18} style={{ color: "var(--gold)" }} />}
                 </button>
               ))}
             </div>
@@ -276,7 +298,7 @@ export default function OnboardingPage() {
           {/* Step 2: Preferred Times */}
           {step === 2 && (
             <div className="space-y-2">
-              <p className="text-xs mb-2" style={{ color: "#6B7585" }}>Selecione um ou mais horários</p>
+              <p className="text-xs mb-2" style={{ color: "var(--text-secondary)" }}>Selecione um ou mais horários</p>
               {TIME_OPTIONS.map((time) => {
                 const isSelected = data.preferredTimes.includes(time.id);
                 return (
@@ -287,15 +309,20 @@ export default function OnboardingPage() {
                         : [...data.preferredTimes, time.id];
                       setData({ ...data, preferredTimes: times });
                     }}
-                    className="w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3"
-                    style={{
-                      background: isSelected ? `${time.color}10` : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${isSelected ? `${time.color}30` : "rgba(255,255,255,0.05)"}`,
-                    }}>
+                    aria-label={`${isSelected ? "Remover" : "Adicionar"} horário: ${time.label} (${time.time})`}
+                    aria-pressed={isSelected}
+                    className={clsx(
+                      "w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3 min-h-[44px]",
+                      isSelected ? undefined : "glass"
+                    )}
+                    style={isSelected ? {
+                      background: `${time.color}10`,
+                      border: `1px solid ${time.color}30`,
+                    } : undefined}>
                     <time.icon size={20} style={{ color: time.color }} />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">{time.label}</p>
-                      <p className="text-xs" style={{ color: "#6B7585" }}>Notificação às {time.time}</p>
+                      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Notificação às {time.time}</p>
                     </div>
                     {isSelected && <CheckCircle2 size={18} style={{ color: time.color }} />}
                   </button>
@@ -308,50 +335,61 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div className="space-y-2">
               {FREQUENCIES.map((freq) => (
-                <button key={freq.id} onClick={() => setData({ ...data, frequency: freq.id })}
-                  className="w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3"
-                  style={{
-                    background: data.frequency === freq.id ? "rgba(212,175,55,0.06)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${data.frequency === freq.id ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.05)"}`,
-                  }}>
+                <button key={freq.id}
+                  onClick={() => setData({ ...data, frequency: freq.id })}
+                  aria-label={`Selecionar frequência: ${freq.label} - ${freq.desc}${freq.recommended ? " (Recomendado)" : ""}`}
+                  aria-pressed={data.frequency === freq.id}
+                  className={clsx(
+                    "w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3 min-h-[44px]",
+                    data.frequency === freq.id ? undefined : "glass"
+                  )}
+                  style={data.frequency === freq.id ? {
+                    background: "var(--gold-glow)",
+                    border: "1px solid var(--gold-border)",
+                  } : undefined}>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-white">{freq.label}</p>
                       {freq.recommended && (
-                        <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.12)", color: "#D4AF37" }}>
+                        <span className="badge text-[9px]" style={{ background: "var(--gold-glow)", color: "var(--gold)" }}>
                           Recomendado
                         </span>
                       )}
                     </div>
-                    <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{freq.desc}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{freq.desc}</p>
                   </div>
-                  {data.frequency === freq.id && <CheckCircle2 size={18} style={{ color: "#D4AF37" }} />}
+                  {data.frequency === freq.id && <CheckCircle2 size={18} style={{ color: "var(--gold)" }} />}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Step 4: First Action (NEW) */}
+          {/* Step 4: First Action */}
           {step === 4 && (
             <div className="space-y-3">
-              <p className="text-xs mb-2" style={{ color: "#6B7585" }}>Escolha por onde começar sua jornada</p>
+              <p className="text-xs mb-2" style={{ color: "var(--text-secondary)" }}>Escolha por onde começar sua jornada</p>
               {FIRST_ACTIONS.map((action) => {
                 const Icon = action.icon;
                 return (
                   <button key={action.id}
                     onClick={() => setData({ ...data, firstAction: action.id })}
-                    className="w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3"
-                    style={{
-                      background: data.firstAction === action.id ? `${action.color}10` : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${data.firstAction === action.id ? `${action.color}30` : "rgba(255,255,255,0.05)"}`,
-                    }}>
+                    aria-label={`Selecionar primeira ação: ${action.label}`}
+                    aria-pressed={data.firstAction === action.id}
+                    className={clsx(
+                      "w-full p-4 rounded-xl text-left transition-all duration-200 flex items-center gap-3 min-h-[44px]",
+                      data.firstAction === action.id ? undefined : "glass"
+                    )}
+                    style={data.firstAction === action.id ? {
+                      background: `${action.color}10`,
+                      border: `1px solid ${action.color}30`,
+                    } : undefined}>
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: `${action.color}15` }}>
                       <Icon size={20} style={{ color: action.color }} />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">{action.label}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "#6B7585" }}>{action.desc}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{action.desc}</p>
                     </div>
                     {data.firstAction === action.id && <CheckCircle2 size={18} style={{ color: action.color }} />}
                   </button>
@@ -365,29 +403,22 @@ export default function OnboardingPage() {
         <div className="flex items-center gap-3">
           {step > 0 && (
             <button onClick={() => goToStep(step - 1)}
-              className="flex-1 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "#8B95A5" }}>
+              aria-label="Voltar ao passo anterior"
+              className="glass flex-1 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px]"
+              style={{ color: "var(--text-muted)" }}>
               <ChevronLeft size={14} /> Voltar
             </button>
           )}
           {step < steps.length - 1 ? (
             <button onClick={() => goToStep(step + 1)} disabled={!canProceed()}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-              style={{
-                background: canProceed() ? "linear-gradient(135deg, #A8892B, #D4AF37)" : "rgba(255,255,255,0.03)",
-                color: canProceed() ? "#0B0E14" : "#6B7585",
-                opacity: canProceed() ? 1 : 0.5,
-              }}>
+              aria-label={canProceed() ? "Ir para o próximo passo" : "Selecione uma opção para continuar"}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
               Próximo <ChevronRight size={14} />
             </button>
           ) : (
             <button onClick={handleComplete} disabled={loading || !canProceed()}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-              style={{
-                background: canProceed() ? "linear-gradient(135deg, #A8892B, #D4AF37)" : "rgba(255,255,255,0.03)",
-                color: canProceed() ? "#0B0E14" : "#6B7585",
-                opacity: canProceed() ? 1 : 0.5,
-              }}>
+              aria-label={loading ? "Salvando configuração" : "Finalizar configuração"}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "Salvando..." : "Começar! 🚀"} <Sparkles size={14} />
             </button>
           )}
@@ -396,7 +427,9 @@ export default function OnboardingPage() {
         {/* Skip link */}
         <p className="text-center">
           <button onClick={() => window.location.href = "/"}
-            className="text-xs hover:underline" style={{ color: "#6B7585" }}>
+            aria-label="Pular configuração e ir direto ao app"
+            className="text-xs hover:underline min-h-[44px] inline-flex items-center"
+            style={{ color: "var(--text-secondary)" }}>
             Pular configuração e ir direto ao app →
           </button>
         </p>

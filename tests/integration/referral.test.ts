@@ -14,6 +14,10 @@ vi.mock("@/lib/services/referral-service", () => ({
   },
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -25,7 +29,7 @@ describe("POST /api/referral", () => {
 
   it("returns 400 on invalid input", async () => {
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({}),
     }));
     expect(res.status).toBe(400);
@@ -35,7 +39,7 @@ describe("POST /api/referral", () => {
     mocks.mockGetReferralCode.mockResolvedValueOnce("ABC123");
     mocks.mockGetReferralCount.mockResolvedValueOnce(3);
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "get_code" }),
     }));
     expect(res.status).toBe(200);
@@ -46,7 +50,7 @@ describe("POST /api/referral", () => {
 
   it("track — 400 when code missing", async () => {
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "track" }),
     }));
     expect(res.status).toBe(400);
@@ -55,7 +59,7 @@ describe("POST /api/referral", () => {
   it("track — 400 on invalid/duplicate referral", async () => {
     mocks.mockTrackReferral.mockResolvedValueOnce(null);
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "track", code: "ABC" }),
     }));
     expect(res.status).toBe(400);
@@ -64,7 +68,7 @@ describe("POST /api/referral", () => {
   it("track — 200 on success", async () => {
     mocks.mockTrackReferral.mockResolvedValueOnce({ id: "r1", referral_code: "ABC" });
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "track", code: "ABC" }),
     }));
     expect(res.status).toBe(200);
@@ -73,7 +77,7 @@ describe("POST /api/referral", () => {
 
   it("returns 400 on invalid action", async () => {
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "hack" }),
     }));
     expect(res.status).toBe(400);
@@ -82,7 +86,7 @@ describe("POST /api/referral", () => {
   it("returns 500 on error", async () => {
     mocks.mockGetReferralCode.mockRejectedValueOnce(new Error("fail"));
     const res = await POST(new Request("https://test.com/api/referral", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "get_code" }),
     }));
     expect(res.status).toBe(500);

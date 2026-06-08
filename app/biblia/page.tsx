@@ -5,14 +5,22 @@ import { dataFetch } from "@/lib/data-fetch";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/components/AuthProvider";
 import { getBibleVerseOfDay } from "@/lib/ai";
-import { BookMarked, Check, Plus, Calendar, TrendingUp, Star, ChevronDown, Sparkles, Target, ArrowRight } from "lucide-react";
+import { BookMarked, Check, Plus, Calendar, TrendingUp, Star, ChevronDown, Sparkles, Target } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { clsx } from "clsx";
 import { trackBibleChapter } from "@/lib/stats";
 import { checkAndNotifyGoalCompletion } from "@/lib/notifications";
 import { processGamification } from "@/lib/gamification";
+
+import { HeroHeader } from "@/components/ui/HeroHeader";
+import { GoalBadge } from "@/components/ui/GoalBadge";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { GradientCard } from "@/components/ui/GradientCard";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorCard } from "@/components/ErrorCard";
+import { SkeletonPage } from "@/components/Skeleton";
 
 const BIBLE_BOOKS = [
   "Gênesis","Êxodo","Levítico","Números","Deuteronômio","Josué","Juízes","Rute",
@@ -45,22 +53,28 @@ export default function BibliaPage() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [goalError, setGoalError] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [weeklyError, setWeeklyError] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
   const loadGoal = useCallback(async () => {
     if (!user) return;
     try {
+      setGoalError(false);
       const { data } = await dataFetch({ action: "select", table: "bible_goals", filters: { eq: { user_id: user.id }, maybeSingle: true } });
       if (data) { setBibleGoal(data as any); setGoalForm((prev) => ({ ...prev, ...(data as any) })); }
     } catch {
       toast.error("Erro ao carregar meta bíblica");
+      setGoalError(true);
     }
   }, [user, setBibleGoal]);
 
   const loadHistory = useCallback(async () => {
     if (!user) return;
     try {
+      setHistoryError(false);
       const today = format(new Date(), "yyyy-MM-dd");
       const { data } = await dataFetch({ action: "select", table: "bible_readings", filters: { eq: { user_id: user.id }, order: { column: "read_at", ascending: false }, limit: 20 } });
       if (data) {
@@ -69,16 +83,19 @@ export default function BibliaPage() {
       }
     } catch {
       toast.error("Erro ao carregar histórico");
+      setHistoryError(true);
     }
   }, [user, setTodayBibleChapters]);
 
   const loadWeekly = useCallback(async () => {
     if (!user) return;
     try {
+      setWeeklyError(false);
       const { data } = await dataFetch({ action: "select", table: "daily_stats", filters: { eq: { user_id: user.id }, order: { column: "date", ascending: false }, limit: 7, select: "date, bible_chapters_read" } });
       if (data) setWeeklyStats((data as any[]).reverse());
     } catch {
       toast.error("Erro ao carregar estatísticas semanais");
+      setWeeklyError(true);
     }
   }, [user]);
 
@@ -128,43 +145,31 @@ export default function BibliaPage() {
 
   // ─── Loading Skeleton ──────────────────────────────────────────
   if (!mounted) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-7 w-64 rounded bg-white/5" />
-        <div className="h-3 w-48 rounded bg-white/5" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="h-44 rounded-2xl bg-white/[0.02]" />
-          <div className="md:col-span-2 h-44 rounded-2xl bg-white/[0.02]" />
-        </div>
-        {[0, 1, 2].map((i) => <div key={i} className="h-32 rounded-2xl bg-white/[0.02]" />)}
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   return (
     <div className="space-y-6 page-enter">
       {/* Hero Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs mb-1" style={{ color: "#555E6E" }}>
-            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </p>
-          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-            <BookMarked size={24} style={{ color: "#D4AF37" }} /> Leitura Bíblica
-          </h1>
-        </div>
+        <HeroHeader
+          title="Leitura Bíblica"
+          icon={BookMarked}
+          iconColor="var(--gold)"
+        />
         <div className="flex items-center gap-2">
           {goalMet ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl pulse-glow"
-              style={{ background: "rgba(58,186,180,0.08)", border: "1px solid rgba(58,186,180,0.15)" }}>
-              <Check size={16} style={{ color: "#3ABAB4" }} />
-              <span className="text-sm font-medium" style={{ color: "#3ABAB4" }}>Meta cumprida!</span>
-            </div>
+            <GoalBadge met={true} metLabel="Meta cumprida!" />
           ) : (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-              style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.12)" }}>
-              <Target size={16} style={{ color: "#D4AF37" }} />
-              <span className="text-sm font-medium" style={{ color: "#D4AF37" }}>{pct}%</span>
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: "rgba(212,175,55,0.06)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <Target size={16} style={{ color: "var(--gold)" }} />
+              <span className="text-sm font-medium" style={{ color: "var(--gold)" }}>{pct}%</span>
             </div>
           )}
           <button onClick={() => setShowGoalForm(!showGoalForm)} className="btn-ghost text-sm flex items-center gap-2">
@@ -173,93 +178,110 @@ export default function BibliaPage() {
         </div>
       </div>
 
+      {/* Error: goal loading */}
+      {goalError && (
+        <ErrorCard
+          title="Erro ao carregar meta"
+          message="Não foi possível carregar sua meta de leitura bíblica."
+          onRetry={loadGoal}
+        />
+      )}
+
       {/* Progress Overview: Ring + Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
         {/* Central Progress Ring */}
-        <div className="card-gold rounded-2xl flex flex-col items-center justify-center py-6 shimmer"
-          style={{ border: "1px solid rgba(212,175,55,0.15)" }}>
-          <div className="relative">
-            <svg width="130" height="130" viewBox="0 0 130 130" className="transform -rotate-90">
-              <circle cx="65" cy="65" r="54" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="7" />
-              <circle cx="65" cy="65" r="54" fill="none" stroke="url(#bibleGrad)" strokeWidth="7"
-                strokeLinecap="round" strokeDasharray={`${54 * 2 * Math.PI}`}
-                strokeDashoffset={`${54 * 2 * Math.PI * (1 - Math.min(1, pct / 100))}`}
-                className="transition-all duration-1000 ease-out" />
-              <defs>
-                <linearGradient id="bibleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#A8892B" />
-                  <stop offset="100%" stopColor="#D4AF37" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <GradientCard variant="gold" className="flex flex-col items-center justify-center py-6 shimmer">
+          <ProgressRing
+            value={todayBibleChapters}
+            max={bibleGoal?.daily_chapters ?? 1}
+            size={130}
+            strokeWidth={7}
+            color="var(--gold)"
+            trackColor="rgba(255,255,255,0.03)"
+          >
+            <div className="flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-white">{todayBibleChapters}</span>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: "#555E6E" }}>de {bibleGoal?.daily_chapters ?? 0}</span>
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
+                de {bibleGoal?.daily_chapters ?? 0}
+              </span>
             </div>
-          </div>
-          <p className="text-xs mt-3" style={{ color: "#555E6E" }}>Capítulos hoje</p>
-        </div>
+          </ProgressRing>
+          <p className="text-xs mt-3" style={{ color: "var(--text-secondary)" }}>Capítulos hoje</p>
+        </GradientCard>
 
         {/* Right column */}
         <div className="md:col-span-2 grid grid-cols-2 gap-3">
           {/* Status Card */}
-          <div className="col-span-2 rounded-2xl p-5 flex items-center gap-4 glow-border"
-            style={{
-              background: goalMet
-                ? "linear-gradient(145deg, rgba(58,186,180,0.06) 0%, rgba(20,24,32,0.9) 100%)"
-                : "linear-gradient(145deg, rgba(212,175,55,0.04) 0%, rgba(20,24,32,0.9) 100%)",
-              border: goalMet ? "1px solid rgba(58,186,180,0.15)" : "1px solid rgba(212,175,55,0.1)",
-            }}>
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: goalMet ? "rgba(58,186,180,0.12)" : "rgba(212,175,55,0.08)" }}>
-              {goalMet ? <Check size={28} style={{ color: "#3ABAB4" }} /> : <BookMarked size={28} style={{ color: "#D4AF37" }} />}
+          <GradientCard
+            variant={goalMet ? "teal" : "gold"}
+            className="col-span-2 flex items-center gap-4 glow-border"
+          >
+            <div
+              className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: goalMet
+                  ? "rgba(58,186,180,0.12)"
+                  : "rgba(212,175,55,0.08)",
+              }}
+            >
+              {goalMet ? (
+                <Check size={28} style={{ color: "var(--accent-teal)" }} />
+              ) : (
+                <BookMarked size={28} style={{ color: "var(--gold)" }} />
+              )}
             </div>
             <div className="flex-1">
               <p className="font-semibold text-white">
                 {goalMet ? "Meta bíblica cumprida! 🙌" : `${todayBibleChapters} de ${bibleGoal?.daily_chapters ?? 0} capítulos`}
               </p>
-              <p className="text-sm" style={{ color: "#8B95A5" }}>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                 {goalMet ? "A Palavra habita em você abundantemente." : `Faltam ${chaptersLeft} capítulo(s)`}
               </p>
             </div>
             <div className="text-right">
               <p className="text-3xl font-bold gradient-text-gold">{pct}%</p>
-              <p className="text-[10px]" style={{ color: "#555E6E" }}>do dia</p>
+              <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>do dia</p>
             </div>
-          </div>
+          </GradientCard>
 
           {/* Mini stats */}
-          <div className="rounded-2xl p-4 text-center glow-border"
-            style={{ background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.1)" }}>
-            <p className="text-2xl font-bold count-up" style={{ color: "#D4AF37" }}>{history.length}</p>
-            <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Total registradas</p>
-          </div>
-          <div className="rounded-2xl p-4 text-center glow-border"
-            style={{ background: "rgba(232,132,74,0.04)", border: "1px solid rgba(232,132,74,0.1)" }}>
-            <p className="text-2xl font-bold count-up" style={{ color: "#E8844A" }}>{streak}</p>
-            <p className="text-[10px] mt-1" style={{ color: "#555E6E" }}>Streak</p>
-          </div>
+          <GradientCard variant="gold" className="p-4 text-center">
+            <p className="text-2xl font-bold count-up" style={{ color: "var(--gold)" }}>{history.length}</p>
+            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Total registradas</p>
+          </GradientCard>
+          <GradientCard variant="orange" className="p-4 text-center">
+            <p className="text-2xl font-bold count-up" style={{ color: "var(--accent-orange, #E8844A)" }}>{streak}</p>
+            <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>Streak</p>
+          </GradientCard>
         </div>
       </div>
 
       {/* Versículo do Dia */}
       {verse && (
-        <div className="rounded-2xl p-5 relative overflow-hidden shimmer"
-          style={{
-            background: "linear-gradient(145deg, rgba(212,175,55,0.06) 0%, rgba(20,24,32,0.9) 60%, rgba(124,107,189,0.03) 100%)",
-            border: "1px solid rgba(212,175,55,0.15)",
-          }}
-        >
-          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
+        <GradientCard variant="gold" className="relative overflow-hidden shimmer">
+          <div
+            className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)",
+            }}
+          />
           <div className="relative">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "#D4AF37" }}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "var(--gold)" }}>
               <Star size={11} /> Versículo do Dia
             </p>
             <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
             <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
           </div>
-        </div>
+        </GradientCard>
+      )}
+
+      {/* Error: history loading */}
+      {historyError && (
+        <ErrorCard
+          title="Erro ao carregar histórico"
+          message="Não foi possível carregar o histórico de leituras."
+          onRetry={loadHistory}
+        />
       )}
 
       {/* Config meta */}
@@ -276,7 +298,7 @@ export default function BibliaPage() {
                     style={{
                       borderColor: goalForm.plan_name === plan.id ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.05)",
                       background: goalForm.plan_name === plan.id ? "rgba(212,175,55,0.05)" : "transparent",
-                      color: goalForm.plan_name === plan.id ? "#D4AF37" : "#8B95A5",
+                      color: goalForm.plan_name === plan.id ? "var(--gold)" : "var(--text-muted)",
                     }}>
                     <p className="text-sm font-medium">{plan.name}</p>
                     {plan.duration && <p className="text-[10px] opacity-50">{plan.chapters} cap/dia · {plan.duration}</p>}
@@ -288,10 +310,10 @@ export default function BibliaPage() {
               <label className="label">Capítulos por dia</label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: Math.max(1, p.daily_chapters - 1) }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "#8B95A5" }}>−</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>−</button>
                 <span className="text-2xl font-bold text-white w-12 text-center">{goalForm.daily_chapters}</span>
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: p.daily_chapters + 1 }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "#8B95A5" }}>+</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-bold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>+</button>
               </div>
             </div>
             <button onClick={saveGoal} className="btn-primary">Salvar Plano</button>
@@ -302,7 +324,7 @@ export default function BibliaPage() {
       {/* Registrar Leitura */}
       <div className="card shimmer">
         <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Plus size={16} style={{ color: "#D4AF37" }} /> Registrar Leitura
+          <Plus size={16} style={{ color: "var(--gold)" }} /> Registrar Leitura
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -330,34 +352,32 @@ export default function BibliaPage() {
       {/* Histórico */}
       <div>
         <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-          <Calendar size={16} style={{ color: "#D4AF37" }} /> Leituras Recentes
+          <Calendar size={16} style={{ color: "var(--gold)" }} /> Leituras Recentes
         </h3>
         <div className="space-y-2 stagger-children">
           {history.length === 0 ? (
-            <div className="card text-center py-10" style={{ border: "1px solid rgba(212,175,55,0.08)" }}>
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: "rgba(212,175,55,0.06)" }}>
-                <BookMarked size={24} style={{ color: "#D4AF37" }} />
-              </div>
-              <p className="text-sm" style={{ color: "#555E6E" }}>Nenhuma leitura registrada</p>
-              <p className="text-xs mt-1" style={{ color: "#555E6E" }}>Registre seu primeiro capítulo acima</p>
-            </div>
+            <EmptyState
+              icon={BookMarked}
+              iconColor="var(--gold)"
+              title="Nenhuma leitura registrada"
+              description="Registre seu primeiro capítulo acima"
+            />
           ) : (
             history.map((r: any) => (
               <div key={r.id} className="glass-hover rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center"
                     style={{ background: "rgba(212,175,55,0.08)" }}>
-                    <BookMarked size={14} style={{ color: "#D4AF37" }} />
+                    <BookMarked size={14} style={{ color: "var(--gold)" }} />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{r.book_name} {r.chapter}</p>
-                    {r.notes && <p className="text-xs truncate max-w-xs" style={{ color: "#555E6E" }}>{r.notes}</p>}
+                    {r.notes && <p className="text-xs truncate max-w-xs" style={{ color: "var(--text-secondary)" }}>{r.notes}</p>}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px]" style={{ color: "#555E6E" }}>{format(new Date(r.read_at), "dd/MM HH:mm")}</p>
-                  <span className="badge text-[10px] mt-0.5" style={{ background: "rgba(58,186,180,0.1)", color: "#3ABAB4" }}>✓ Lido</span>
+                  <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{format(new Date(r.read_at), "dd/MM HH:mm")}</p>
+                  <span className="badge text-[10px] mt-0.5" style={{ background: "rgba(58,186,180,0.1)", color: "var(--accent-teal)" }}>✓ Lido</span>
                 </div>
               </div>
             ))
@@ -365,11 +385,20 @@ export default function BibliaPage() {
         </div>
       </div>
 
+      {/* Error: weekly stats loading */}
+      {weeklyError && (
+        <ErrorCard
+          title="Erro ao carregar estatísticas"
+          message="Não foi possível carregar as estatísticas semanais."
+          onRetry={loadWeekly}
+        />
+      )}
+
       {/* Stats semanais */}
       {weeklyStats.length > 0 && (
         <div className="card shimmer">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp size={16} style={{ color: "#D4AF37" }} /> Capítulos por Dia
+            <TrendingUp size={16} style={{ color: "var(--gold)" }} /> Capítulos por Dia
           </h3>
           <div className="flex items-end gap-2 h-28">
             {weeklyStats.map((s: any, i: number) => {
@@ -378,7 +407,7 @@ export default function BibliaPage() {
               const isToday = i === weeklyStats.length - 1;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-bold" style={{ color: isToday ? "#D4AF37" : "#555E6E" }}>
+                  <span className="text-[10px] font-bold" style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
                     {s.bible_chapters_read || 0}
                   </span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
@@ -392,7 +421,7 @@ export default function BibliaPage() {
                         boxShadow: isToday ? "0 0 12px rgba(212,175,55,0.2)" : "none",
                       }} />
                   </div>
-                  <p className={clsx("text-[10px]", isToday && "font-bold")} style={{ color: isToday ? "#D4AF37" : "#555E6E" }}>
+                  <p className={clsx("text-[10px]", isToday && "font-bold")} style={{ color: isToday ? "var(--gold)" : "var(--text-secondary)" }}>
                     {format(new Date(s.date), "EEE", { locale: ptBR })}
                   </p>
                 </div>

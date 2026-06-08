@@ -117,8 +117,13 @@ describe("NotificationOrchestrator", () => {
       sendPushToUser: vi.fn().mockResolvedValue({ sent: 1, expiredEndpoints: [] }),
     } as unknown as NotificationDeliveryService;
 
+    // Create mock repos for constructor injection
+    const mockXpRepo = { getXp: vi.fn().mockResolvedValue(null) } as any;
+    const mockAchievementRepo = { getUnlocked: vi.fn().mockResolvedValue([]) } as any;
+    const mockChallengeRepo = { getCompleted: vi.fn().mockResolvedValue([]) } as any;
+
     // Inject mocks into orchestrator
-    orchestrator = new NotificationOrchestrator();
+    orchestrator = new NotificationOrchestrator(undefined, undefined, mockXpRepo, mockAchievementRepo, mockChallengeRepo);
     (orchestrator as unknown as { dedupService: NotificationDedupService }).dedupService = mockDedupService;
     (orchestrator as unknown as { deliveryService: NotificationDeliveryService }).deliveryService = mockDeliveryService;
   });

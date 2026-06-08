@@ -35,14 +35,14 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
-        <div className="flex items-center justify-center min-h-[50vh]" style={{ background: "#0B0E14" }}>
+        <div className="flex items-center justify-center min-h-[50vh]" style={{ background: "var(--bg-primary)" }}>
           <div className="flex flex-col items-center gap-4 text-center max-w-sm px-6">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(217,79,79,0.1)" }}>
               <span className="text-2xl">⚠️</span>
             </div>
             <h2 className="text-xl font-serif font-bold text-white">Algo deu errado</h2>
-            <p className="text-sm" style={{ color: "#8B95A5" }}>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               Ocorreu um erro inesperado. Tente novamente ou recarregue a página.
             </p>
             <div className="flex items-center gap-3 mt-2">
@@ -61,11 +61,10 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             {process.env.NODE_ENV === "development" && this.state.errorInfo && (
               <details className="mt-4 w-full text-left">
-                <summary className="text-xs cursor-pointer" style={{ color: "#6B7585" }}>
+                <summary className="text-xs cursor-pointer" style={{ color: "var(--text-secondary)" }}>
                   Detalhes do erro
                 </summary>
-                <pre className="mt-2 p-3 rounded-xl text-xs overflow-auto max-h-32"
-                  style={{ background: "rgba(255,255,255,0.02)", color: "#D94F4F" }}>
+                <pre className="mt-2 p-3 rounded-xl text-xs overflow-auto max-h-32 glass" style={{ color: "var(--danger)" }}>
                   {this.state.errorInfo}
                 </pre>
               </details>

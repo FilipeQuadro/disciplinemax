@@ -3,8 +3,8 @@
 
 import { readFileSync } from "fs";
 
-const SUPABASE_REF = "sigpkpgibybgnszpxyzq";
-const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ3BrcGdpYnliZ25zenB4eXpxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM3MTkzNSwiZXhwIjoyMDk0OTQ3OTM1fQ.g5tS-3iavhOGq3JCorPzfRBfGx4rYS4zPzgYDUNnDts";
+const SUPABASE_REF = process.env.SUPABASE_REF || "";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const sql = readFileSync("scripts/create-tables.sql", "utf-8");
 

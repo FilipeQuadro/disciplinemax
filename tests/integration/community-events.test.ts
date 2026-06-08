@@ -14,6 +14,10 @@ vi.mock("@/lib/services/community-event-service", () => ({
   },
 }));
 
+vi.mock("@/lib/auth-helpers", () => ({
+  getAuthUserId: vi.fn().mockResolvedValue("u1"),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -47,7 +51,7 @@ describe("POST /api/community-events", () => {
 
   it("returns 400 on invalid input", async () => {
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({}),
     }));
     expect(res.status).toBe(400);
@@ -56,7 +60,7 @@ describe("POST /api/community-events", () => {
   it("list — returns challenges", async () => {
     mocks.mockGetActiveChallenges.mockResolvedValueOnce([{ id: "c1" }]);
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(200);
@@ -65,7 +69,7 @@ describe("POST /api/community-events", () => {
 
   it("contribute — 400 when challengeId missing", async () => {
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "contribute", contribution: 5 }),
     }));
     expect(res.status).toBe(400);
@@ -73,7 +77,7 @@ describe("POST /api/community-events", () => {
 
   it("contribute — 400 when contribution missing", async () => {
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "contribute", challengeId: "c1" }),
     }));
     expect(res.status).toBe(400);
@@ -82,7 +86,7 @@ describe("POST /api/community-events", () => {
   it("contribute — 200 on success", async () => {
     mocks.mockContribute.mockResolvedValueOnce(true);
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "contribute", challengeId: "c1", contribution: 5 }),
     }));
     expect(res.status).toBe(200);
@@ -92,7 +96,7 @@ describe("POST /api/community-events", () => {
   it("contribute — 200 success:false on reject", async () => {
     mocks.mockContribute.mockResolvedValueOnce(false);
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "contribute", challengeId: "c1", contribution: 5 }),
     }));
     expect(res.status).toBe(200);
@@ -101,7 +105,7 @@ describe("POST /api/community-events", () => {
 
   it("returns 400 on invalid action", async () => {
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "hack" }),
     }));
     expect(res.status).toBe(400);
@@ -110,7 +114,7 @@ describe("POST /api/community-events", () => {
   it("returns 500 on error", async () => {
     mocks.mockGetActiveChallenges.mockRejectedValueOnce(new Error("fail"));
     const res = await POST(new Request("https://test.com/api/community-events", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
       body: JSON.stringify({ userId: "u1", action: "list" }),
     }));
     expect(res.status).toBe(500);

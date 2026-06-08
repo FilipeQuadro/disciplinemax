@@ -20,3 +20,6 @@ export { GroupRepository, type Group, type GroupMember } from "./group-repositor
 export { CommunityEventRepository, type CommunityChallenge, type CommunityChallengeProgress } from "./community-event-repository";
 export { OnboardingRepository, type OnboardingProgress } from "./onboarding-repository";
 export { DashboardRepository, type DashboardData } from "./dashboard-repository";
+export { EventTrackingRepository, EventTrackingService, EVENT_TYPES } from "./event-tracking-repository";
+export { MetricsRepository } from "./metrics-repository";
+export { ProductAnalyticsRepository } from "./product-analytics-repository";

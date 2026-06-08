@@ -1,4 +1,5 @@
 import { toast } from "react-hot-toast";
+import { authFetch } from "@/lib/auth-fetch";
 
 const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://disciplinemax.onrender.com";
 
@@ -47,7 +48,7 @@ export function shareLevel(level: number, totalXp: number): void {
 
 function doShare(data: ShareData): void {
   // Track sharing event (fire-and-forget)
-  fetch("/api/share", {
+  authFetch("/api/share", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ shareType: data.title, data: { text: data.text } }),
