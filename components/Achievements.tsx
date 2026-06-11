@@ -127,11 +127,11 @@ export function AchievementGrid({ unlocked, compact }: { unlocked: string[]; com
               {isUnlocked ? (
                 <Icon size={compact ? 16 : 20} style={{ color: badge.color }} />
               ) : (
-                <Lock size={compact ? 14 : 16} style={{ color: "#555E6E" }} />
+                <Lock size={compact ? 14 : 16} style={{ color: "#7E8E9F" }} />
               )}
             </div>
             {!compact && (
-              <p className="text-[10px] mt-2 text-center font-medium" style={{ color: isUnlocked ? badge.color : "#555E6E" }}>
+              <p className="text-[10px] mt-2 text-center font-medium" style={{ color: isUnlocked ? badge.color : "#7E8E9F" }}>
                 {isUnlocked ? badge.label : "???"}
               </p>
             )}
@@ -149,7 +149,7 @@ export function AchievementNotification({ badgeKey }: { badgeKey: string | null 
   const Icon = badge.icon;
 
   return (
-    <div className="fixed top-6 right-6 z-50 animate-slide-up"
+    <div className="fixed top-6 right-6 z-50 animate-slide-up" role="status"
       style={{
         background: `linear-gradient(145deg, ${badge.color}15, rgba(20,24,32,0.95))`,
         border: `1px solid ${badge.color}30`,

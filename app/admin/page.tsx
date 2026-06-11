@@ -250,9 +250,11 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-2xl overflow-x-auto glass">
+      <div className="flex gap-1 p-1 rounded-2xl overflow-x-auto glass" role="tablist">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => { setTab(t.key); if (t.key === "diagnostics") loadDiagnostics(); if (t.key === "analytics") loadAnalytics(); }}
+            role="tab"
+            aria-selected={tab === t.key}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 min-w-0 whitespace-nowrap px-2")}
             style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "var(--text-primary)" : "var(--text-secondary)" }}>
             <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
@@ -819,12 +821,13 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
+            role="dialog" aria-modal="true" aria-labelledby="admin-user-detail-title"
             style={{ background: "var(--surface)", border: "1px solid var(--border-light)" }}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-white flex items-center gap-2">
+              <h3 id="admin-user-detail-title" className="font-semibold text-white flex items-center gap-2">
                 <Eye size={16} style={{ color: "var(--gold)" }} /> Detalhes do Usuário
               </h3>
-              <button onClick={() => setSelectedUser(null)} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: "var(--text-secondary)" }}>✕</button>
+              <button onClick={() => setSelectedUser(null)} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5" style={{ color: "var(--text-secondary)" }} aria-label="Fechar">✕</button>
             </div>
 
             {/* User Identity */}
@@ -850,7 +853,7 @@ export default function AdminPage() {
                   {selectedUser.id}
                 </span>
                 <button onClick={() => { navigator.clipboard.writeText(selectedUser.id); toast.success("ID copiado!"); }}
-                  className="p-1 rounded hover:bg-white/5" style={{ color: "var(--text-secondary)" }}><Copy size={12} /></button>
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-white/5" style={{ color: "var(--text-secondary)" }} aria-label="Copiar ID do usuário"><Copy size={12} /></button>
               </div>
             </div>
 
@@ -918,8 +921,9 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setPlanModal(null)}>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}
+            role="dialog" aria-modal="true" aria-labelledby="admin-plan-change-title"
             style={{ background: "var(--surface)", border: "1px solid var(--border-light)" }}>
-            <h3 className="font-semibold text-white">Alterar Plano</h3>
+            <h3 id="admin-plan-change-title" className="font-semibold text-white">Alterar Plano</h3>
             <div className="grid grid-cols-3 gap-2">
               {(["free", "pro", "premium"] as const).map((plan) => (
                 <button key={plan} onClick={() => { manageUser(planModal.userId, "change_plan", { new_plan: plan }); setPlanModal(null); }}
@@ -1024,7 +1028,7 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
 
 function ActionButton({ icon, color, title, onClick }: { icon: React.ReactNode; color: string; title: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color }} title={title}>
+    <button onClick={onClick} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors" style={{ color }} title={title} aria-label={title}>
       {icon}
     </button>
   );

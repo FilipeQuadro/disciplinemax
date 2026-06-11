@@ -78,7 +78,7 @@ export default function RankingPage() {
       />
 
       {/* Category Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-2" role="tablist">
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           const isActive = cat.id === activeCategory;
@@ -86,6 +86,8 @@ export default function RankingPage() {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
+              role="tab"
+              aria-selected={isActive}
               className={
                 isActive
                   ? "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap"
@@ -109,6 +111,7 @@ export default function RankingPage() {
       </div>
 
       {/* Leaderboard */}
+      <div role="tabpanel">
       {loading ? (
         <SkeletonList count={6} />
       ) : error ? (
@@ -207,6 +210,7 @@ export default function RankingPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

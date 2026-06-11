@@ -99,7 +99,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}>
             <div className="w-4 h-4 rounded-full bg-[#0B0E14]" />
           </div>
-          <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#555E6E" }}>Carregando...</p>
+          <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#7E8E9F" }}>Carregando...</p>
         </div>
       </div>
     );

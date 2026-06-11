@@ -238,19 +238,19 @@ export default function ConfiguracoesPage() {
             <label className="label">Nome de usuário</label>
             <div className="flex items-center gap-1">
               <span className="text-sm" style={{ color: "var(--text-muted)" }}>/u/</span>
-              <input className="input flex-1" placeholder="seu_nome" value={profileForm.username}
+              <input className="input flex-1" aria-label="Nome de usuário" placeholder="seu_nome" value={profileForm.username}
                 onChange={(e) => setProfileForm((p) => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") }))} />
             </div>
             <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>3-20 caracteres, apenas letras minúsculas, números e _</p>
           </div>
           <div>
             <label className="label">Nome de exibição</label>
-            <input className="input" placeholder="Seu Nome" value={profileForm.displayName}
+            <input className="input" aria-label="Nome de exibição" placeholder="Seu Nome" value={profileForm.displayName}
               onChange={(e) => setProfileForm((p) => ({ ...p, displayName: e.target.value }))} />
           </div>
           <div>
             <label className="label">Bio</label>
-            <input className="input" placeholder="Uma frase sobre você..." maxLength={300} value={profileForm.bio}
+            <input className="input" aria-label="Bio" placeholder="Uma frase sobre você..." maxLength={300} value={profileForm.bio}
               onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))} />
           </div>
           <div className="flex items-center justify-between p-3 rounded-xl card">
@@ -260,6 +260,9 @@ export default function ConfiguracoesPage() {
             </div>
             <button
               onClick={() => setProfileForm((p) => ({ ...p, isPublic: !p.isPublic }))}
+              role="switch"
+              aria-checked={profileForm.isPublic}
+              aria-label="Perfil público"
               className="w-12 h-6 rounded-full transition-all duration-200 relative"
               style={{ background: profileForm.isPublic ? "#3ABAB4" : "rgba(255,255,255,0.1)" }}
             >
@@ -336,12 +339,12 @@ export default function ConfiguracoesPage() {
           <div className="space-y-2">
             {form.notification_times.map((t, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="time" className="input w-32" value={t}
+                <input type="time" className="input w-32" aria-label="Horário de notificação" value={t}
                   onChange={(e) => setForm((p) => ({
                     ...p,
                     notification_times: p.notification_times.map((x, idx) => idx === i ? e.target.value : x)
                   }))} />
-                <button onClick={() => removeNotifTime(i)} className="text-sm" style={{ color: "#D94F4F" }}>× Remover</button>
+                <button onClick={() => removeNotifTime(i)} className="text-sm" aria-label="Remover horário" style={{ color: "#D94F4F" }}>× Remover</button>
               </div>
             ))}
             <button onClick={addNotifTime} className="btn-ghost text-sm mt-1">+ Adicionar horário</button>
@@ -361,12 +364,12 @@ export default function ConfiguracoesPage() {
         <div className="space-y-3">
           <div>
             <label className="label">Telegram bot token</label>
-            <input className="input" placeholder="123456:ABC-DEF1234ghIkl..." value={form.telegram_bot_token}
+            <input className="input" aria-label="Token do bot Telegram" placeholder="123456:ABC-DEF1234ghIkl..." value={form.telegram_bot_token}
               onChange={(e) => setForm((p) => ({ ...p, telegram_bot_token: e.target.value }))} />
           </div>
           <div>
             <label className="label">Telegram chat_id</label>
-            <input className="input" placeholder="123456789" value={form.telegram_chat_id}
+            <input className="input" aria-label="Chat ID do Telegram" placeholder="123456789" value={form.telegram_chat_id}
               onChange={(e) => setForm((p) => ({ ...p, telegram_chat_id: e.target.value }))} />
             <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>Seu ID numérico. Envie /start ao bot antes de testar. Use <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" style={{ color: "var(--gold)" }}>@userinfobot</a> para descobrir.</p>
           </div>
@@ -393,7 +396,7 @@ export default function ConfiguracoesPage() {
           ].map(({ label, key }) => (
             <div key={key}>
               <label className="label">{label}</label>
-              <input type="number" className="input" min={1}
+              <input type="number" className="input" aria-label={label} min={1}
                 value={(form as any)[key]}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: +e.target.value }))} />
             </div>
@@ -412,12 +415,12 @@ export default function ConfiguracoesPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Páginas de livro por dia</label>
-            <input type="number" className="input" value={form.daily_books_goal}
+            <input type="number" className="input" aria-label="Páginas de livro por dia" value={form.daily_books_goal}
               onChange={(e) => setForm((p) => ({ ...p, daily_books_goal: +e.target.value }))} />
           </div>
           <div>
             <label className="label">Capítulos da Bíblia por dia</label>
-            <input type="number" className="input" value={form.daily_bible_chapters}
+            <input type="number" className="input" aria-label="Capítulos da Bíblia por dia" value={form.daily_bible_chapters}
               onChange={(e) => setForm((p) => ({ ...p, daily_bible_chapters: +e.target.value }))} />
           </div>
         </div>
@@ -466,7 +469,7 @@ export default function ConfiguracoesPage() {
           className="text-xs flex items-center gap-1 mb-3" style={{ color: "var(--gold)" }}>
           <ExternalLink size={11} /> Obter chave gratuita no Google AI Studio
         </a>
-        <input className="input" placeholder="AIzaSy..." value={form.gemini_api_key}
+        <input className="input" aria-label="Chave da API Google Gemini" placeholder="AIzaSy..." value={form.gemini_api_key}
           onChange={(e) => setForm((p) => ({ ...p, gemini_api_key: e.target.value }))} />
         <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>Sem chave, mensagens estáticas são usadas</p>
       </GradientCard>

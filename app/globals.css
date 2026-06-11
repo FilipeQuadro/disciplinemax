@@ -19,7 +19,7 @@
 
     /* === TEXT === */
     --text-primary: #F0F0F0;
-    --text-secondary: #6B7585;
+    --text-secondary: #7E8E9F;
     --text-muted: #8B95A5;
     --text-dim: #8B95A5;
 
@@ -226,7 +226,7 @@
 
   /* ===== BUTTONS ===== */
   .btn-primary {
-    @apply font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 active:scale-95;
+    @apply font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 active:scale-95 min-h-[44px];
     background: linear-gradient(135deg, var(--gold-dark), var(--gold));
     color: #0B0E14;
     box-shadow: 0 4px 20px rgba(212,175,55,0.2);
@@ -281,7 +281,7 @@
   }
 
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 text-sm font-medium cursor-pointer;
+    @apply flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 text-sm font-medium cursor-pointer;
     color: var(--text-dim);
   }
   .nav-item:hover {

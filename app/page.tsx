@@ -857,9 +857,12 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
         <Calendar size={16} style={{ color: "var(--gold)" }} />
         Calendário de Consistência
       </h2>
-      <div className="flex flex-wrap gap-1.5">
-        {data.map((d, i) => (
-          <div key={i} className="relative group">
+      <div className="flex flex-wrap gap-1.5" role="grid" aria-label="Calendário de consistência — últimos 35 dias">
+        {data.map((d, i) => {
+          const dateLabel = format(new Date(d.date + "T12:00:00"), "dd/MM");
+          const statusLabel = d.done ? "Meta cumprida" : d.partial ? "Parcial" : "Sem registro";
+          return (
+          <div key={i} className="relative group" role="gridcell" aria-label={`${dateLabel} — ${statusLabel}`}>
             <div
               className="w-7 h-7 rounded-md transition-all duration-200 hover:scale-125 cursor-default"
               style={{
@@ -873,10 +876,11 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
             />
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"
               style={{ background: "#1a1f2e", color: "#C8CCD4", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {format(new Date(d.date + "T12:00:00"), "dd/MM")}
+              {dateLabel}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <div className="flex items-center gap-4 mt-3">
         <div className="flex items-center gap-1.5">

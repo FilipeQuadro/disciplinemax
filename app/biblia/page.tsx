@@ -329,18 +329,18 @@ export default function BibliaPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="label">Livro</label>
-            <select className="input" value={logForm.book} onChange={(e) => setLogForm((p) => ({ ...p, book: e.target.value }))}>
+            <select className="input" aria-label="Livro bíblico" value={logForm.book} onChange={(e) => setLogForm((p) => ({ ...p, book: e.target.value }))}>
               {BIBLE_BOOKS.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Capítulo</label>
-            <input type="number" min={1} className="input" value={logForm.chapter}
+            <input type="number" min={1} className="input" aria-label="Capítulo" value={logForm.chapter}
               onChange={(e) => setLogForm((p) => ({ ...p, chapter: +e.target.value }))} />
           </div>
           <div>
             <label className="label">Anotações</label>
-            <input className="input" placeholder="O que aprendeu?" value={logForm.notes}
+            <input className="input" aria-label="Anotações" placeholder="O que aprendeu?" value={logForm.notes}
               onChange={(e) => setLogForm((p) => ({ ...p, notes: e.target.value }))} />
           </div>
         </div>

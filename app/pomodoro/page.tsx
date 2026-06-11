@@ -271,18 +271,19 @@ export default function PomodoroPage() {
 
         {/* Controls */}
         <div className="flex items-center gap-4 mt-6">
-          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
+          <button onClick={resetTimer} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Reiniciar timer">
             <RotateCcw size={18} />
           </button>
           <button onClick={toggleTimer}
             className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-semibold transition-all duration-300 active:scale-95"
+            aria-label={pomodoroActive ? "Pausar" : "Iniciar"}
             style={!pomodoroActive ? {
               background: colors.primary,
               boxShadow: `0 8px 40px ${colors.ring}`,
             } : { background: "rgba(255,255,255,0.06)" }}>
             {pomodoroActive ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
           </button>
-          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
+          <button onClick={skipToBreak} className="w-12 h-12 rounded-xl glass flex items-center justify-center hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Pular para pausa">
             <SkipForward size={18} />
           </button>
         </div>

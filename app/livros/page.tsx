@@ -297,7 +297,7 @@ export default function LivrosPage() {
         <div className="card animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold tracking-tight text-white">{editingId ? "Editar Livro" : "Novo Livro"}</h2>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Fechar formulário">
               <X size={18} />
             </button>
           </div>
@@ -446,10 +446,10 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
               {book.author && <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{book.author}</p>}
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
+              <button onClick={onEdit} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Editar livro">
                 <Edit2 size={13} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "var(--text-secondary)" }}>
+              <button onClick={onDelete} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-500/10 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Remover livro">
                 <Trash2 size={13} />
               </button>
             </div>

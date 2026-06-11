@@ -235,7 +235,7 @@ export function AmbientControls({ ambient }: { ambient: ReturnType<typeof useAmb
           />
         )}
         {ambient.playing && (
-          <button onClick={ambient.stop} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }}>
+          <button onClick={ambient.stop} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-secondary)" }} aria-label="Parar som ambiente">
             <VolumeX size={13} />
           </button>
         )}

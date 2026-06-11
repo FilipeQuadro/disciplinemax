@@ -106,7 +106,7 @@ export function Sidebar() {
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hidden md:flex glass p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-auto"
+            className="hidden md:flex min-w-[44px] min-h-[44px] items-center justify-center glass rounded-lg hover:bg-white/5 transition-colors ml-auto"
             style={{ color: "var(--text-secondary)" }}
             aria-label={sidebarOpen ? "Recolher sidebar" : "Expandir sidebar"}
           >

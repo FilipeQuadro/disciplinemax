@@ -68,7 +68,7 @@ export function PwaInstallListener() {
             <Download size={14} className="text-[#0B0E14]" />
           </button>
           <button onClick={handleDismiss}
-            className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#555E6E" }}
+            className="p-2 rounded-lg hover:bg-white/5 transition-colors"             style={{ color: "#7E8E9F" }}
             aria-label="Fechar">
             <X size={14} />
           </button>
