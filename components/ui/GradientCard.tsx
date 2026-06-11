@@ -42,7 +42,7 @@ export function GradientCard({
 
   return (
     <div
-      className={`rounded-2xl p-5 transition-all duration-normal ${className}`}
+      className={`rounded-2xl p-5 transition-all duration-normal hover:-translate-y-px hover:shadow-lg ${className}`}
       style={{ background: bg, border }}
     >
       {children}

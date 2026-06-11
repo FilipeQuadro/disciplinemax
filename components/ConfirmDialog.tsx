@@ -45,15 +45,15 @@ export function ConfirmDialog({
             <AlertTriangle size={18} style={{ color: destructive ? "#D94F4F" : "#D4AF37" }} />
           </div>
           <div>
-            <h3 className="font-semibold text-white text-sm">{title}</h3>
+            <h3 className="font-semibold tracking-tight text-white text-sm">{title}</h3>
             <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{message}</p>
           </div>
         </div>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="btn-ghost text-sm px-4 py-2">{cancelLabel}</button>
+          <button onClick={onCancel} className="btn-ghost text-sm px-4 py-2 active:scale-[0.98] transition-transform duration-150">{cancelLabel}</button>
           <button
             onClick={onConfirm}
-            className="text-sm px-4 py-2 rounded-xl font-medium transition-all duration-200"
+            className="text-sm px-4 py-2 rounded-xl font-medium tracking-tight transition-all duration-200 active:scale-[0.98]"
             style={destructive
               ? { background: "rgba(217,79,79,0.15)", border: "1px solid rgba(217,79,79,0.2)", color: "#D94F4F" }
               : { background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.2)", color: "#D4AF37" }}

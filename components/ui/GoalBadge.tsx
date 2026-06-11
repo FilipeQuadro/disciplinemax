@@ -24,7 +24,7 @@ export function GoalBadge({
       >
         <Check size={16} style={{ color: "var(--success)" }} />
         <span
-          className="text-sm font-medium"
+          className="text-sm font-medium tracking-tight"
           style={{ color: "var(--success)" }}
         >
           {metLabel}

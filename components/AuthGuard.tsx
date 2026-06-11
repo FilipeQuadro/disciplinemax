@@ -83,7 +83,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             style={{ background: "rgba(212,175,55,0.1)" }}>
             <RefreshCw size={28} style={{ color: "#D4AF37" }} />
           </div>
-          <h2 className="text-xl font-serif font-bold text-white">Conexão lenta</h2>
+          <h2 className="text-xl font-serif font-semibold tracking-tight text-white">Conexão lenta</h2>
           <p className="text-sm" style={{ color: "#8B95A5" }}>Não foi possível verificar sua sessão. Verifique sua conexão e tente novamente.</p>
           <button onClick={retry} className="btn-primary text-sm mt-2">Tentar novamente</button>
         </div>
@@ -126,7 +126,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             style={{ background: "rgba(217,79,79,0.1)" }}>
             <ShieldOff size={28} style={{ color: "#D94F4F" }} />
           </div>
-          <h2 className="text-xl font-serif font-bold text-white">Conta Bloqueada</h2>
+          <h2 className="text-xl font-serif font-semibold tracking-tight text-white">Conta Bloqueada</h2>
           <p className="text-sm" style={{ color: "#8B95A5" }}>Sua conta foi bloqueada pelo administrador. Entre em contato para mais informações.</p>
           <button onClick={signOut} className="btn-primary text-sm mt-2">Sair</button>
         </div>

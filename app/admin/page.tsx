@@ -232,12 +232,12 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-serif font-semibold tracking-tight text-white flex items-center gap-2">
               <Shield size={24} style={{ color: "var(--gold)" }} /> Painel Admin
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Gerenciamento e monitoramento do sistema</p>
@@ -309,14 +309,14 @@ export default function AdminPage() {
                 <BookOpen size={14} style={{ color: "var(--gold)" }} />
                 <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Livros Cadastrados</span>
               </div>
-              <p className="text-2xl font-bold text-white">{stats.metrics.totalBooks}</p>
+              <p className="text-2xl font-semibold tracking-tight text-white">{stats.metrics.totalBooks}</p>
             </div>
             <div className="card">
               <div className="flex items-center gap-2 mb-2">
                 <Timer size={14} style={{ color: "var(--danger)" }} />
                 <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Sessões Pomodoro</span>
               </div>
-              <p className="text-2xl font-bold text-white">{stats.metrics.totalPomodoroSessions}</p>
+              <p className="text-2xl font-semibold tracking-tight text-white">{stats.metrics.totalPomodoroSessions}</p>
             </div>
           </div>
 
@@ -414,7 +414,7 @@ export default function AdminPage() {
                                 <span className="text-sm text-white truncate max-w-[150px]">{u.email || u.id.substring(0, 8) + "..."}</span>
                               )}
                               {u.isAdmin && (
-                                <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
+                                <span className="badge text-[10px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
                                   <Shield size={8} /> {u.adminRole || "admin"}
                                 </span>
                               )}
@@ -660,7 +660,7 @@ export default function AdminPage() {
                 )}
                 <Crown size={24} className="mx-auto mb-2" style={{ color: p.color }} />
                 <h3 className="font-semibold text-white text-lg">{p.label}</h3>
-                <p className="text-3xl font-bold mt-2" style={{ color: p.color }}>{p.count}</p>
+                <p className="text-3xl font-semibold tracking-tight mt-2" style={{ color: p.color }}>{p.count}</p>
                 <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>usuários ativos</p>
                 <div className="mt-3 space-y-1">
                   {p.features.map((f) => (
@@ -747,7 +747,7 @@ export default function AdminPage() {
                   <div className="mt-3 p-3 rounded-xl glass">
                     <div className="flex items-center justify-between">
                       <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Total de Usuários</span>
-                      <span className="text-lg font-bold text-white">{analyticsData.total_users}</span>
+                      <span className="text-lg font-semibold tracking-tight text-white">{analyticsData.total_users}</span>
                     </div>
                     <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
                       <div className="h-full rounded-full" style={{ width: `${Math.min(100, (analyticsData.weekly_active_users / Math.max(analyticsData.total_users, 1)) * 100)}%`, background: "linear-gradient(90deg, var(--accent-purple), var(--gold))" }} />
@@ -833,7 +833,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg font-semibold text-white">{selectedUser.name}</span>
                   {selectedUser.isAdmin && (
-                    <span className="badge text-[9px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
+                    <span className="badge text-[10px]" style={{ background: "rgba(212,175,55,0.15)", color: "var(--gold)" }}>
                       <Shield size={8} /> Admin
                     </span>
                   )}
@@ -930,7 +930,7 @@ export default function AdminPage() {
                     color: planModal.currentPlan === plan ? "var(--gold)" : "var(--text-muted)",
                   }}>
                   <p className="text-sm font-semibold capitalize">{plan}</p>
-                  {planModal.currentPlan === plan && <p className="text-[9px] mt-0.5">(atual)</p>}
+                  {planModal.currentPlan === plan && <p className="text-[10px] mt-0.5">(atual)</p>}
                 </button>
               ))}
             </div>
@@ -981,7 +981,7 @@ function AdminStat({ icon, label, value, sub, cardClass }: { icon: React.ReactNo
         <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-secondary)" }}>{label}</span>
         {icon}
       </div>
-      <p className="text-xl font-bold text-white count-up">{value}</p>
+      <p className="text-xl font-semibold tracking-tight text-white count-up">{value}</p>
       {sub && <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{sub}</p>}
     </div>
   );
@@ -1015,7 +1015,7 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
     <div className="p-2.5 rounded-xl flex items-center gap-2 glass">
       {icon}
       <div className="min-w-0">
-        <p className="text-[9px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</p>
+        <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</p>
         <p className="text-xs text-white truncate">{value}</p>
       </div>
     </div>
@@ -1046,7 +1046,7 @@ function DiagnosticCard({ check, expanded, onToggle }: { check: DiagnosticCheck;
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-white text-sm">{check.name}</span>
-            <span className="badge text-[9px]" style={{ background: statusConfig.bg, color: statusConfig.color, border: `1px solid ${statusConfig.border}` }}>
+            <span className="badge text-[10px]" style={{ background: statusConfig.bg, color: statusConfig.color, border: `1px solid ${statusConfig.border}` }}>
               {statusConfig.label}
             </span>
             {check.latency_ms !== undefined && (
@@ -1103,7 +1103,7 @@ function AnalyticsMetric({ icon, label, value, sub }: { icon: React.ReactNode; l
         {icon}
         <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</span>
       </div>
-      <p className="text-xl font-bold text-white">{typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(1)) : value}</p>
+      <p className="text-xl font-semibold tracking-tight text-white">{typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(1)) : value}</p>
       {sub && <p className="text-[10px] mt-0.5" style={{ color: "var(--text-secondary)" }}>{sub}</p>}
     </div>
   );

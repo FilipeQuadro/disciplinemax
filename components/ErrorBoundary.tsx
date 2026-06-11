@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
               style={{ background: "rgba(217,79,79,0.1)" }}>
               <span className="text-2xl">⚠️</span>
             </div>
-            <h2 className="text-xl font-serif font-bold text-white">Algo deu errado</h2>
+            <h2 className="text-xl font-serif font-semibold tracking-tight text-white">Algo deu errado</h2>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               Ocorreu um erro inesperado. Tente novamente ou recarregue a página.
             </p>

@@ -168,7 +168,7 @@ export function AchievementNotification({ badgeKey }: { badgeKey: string | null 
           <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: badge.color }}>
             🏆 Conquista desbloqueada!
           </p>
-          <p className="text-sm font-bold text-white">{badge.label}</p>
+          <p className="text-sm font-semibold tracking-tight text-white">{badge.label}</p>
           <p className="text-xs" style={{ color: "#8B95A5" }}>{badge.description}</p>
         </div>
       </div>

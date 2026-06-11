@@ -65,7 +65,7 @@ export default function PublicProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Star size={48} className="mb-4" style={{ color: "var(--text-secondary)" }} />
-        <h2 className="text-xl font-bold text-white mb-2">Perfil não encontrado</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-white mb-2">Perfil não encontrado</h2>
         <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>Este perfil não existe ou não é público.</p>
         <Link href="/" className="btn-primary">Voltar ao Dashboard</Link>
       </div>
@@ -77,7 +77,7 @@ export default function PublicProfilePage() {
   const xpToNext = LevelService.xpToNextLevel(profile.xp);
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/" className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>
@@ -107,7 +107,7 @@ export default function PublicProfilePage() {
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">{displayName}</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-white">{displayName}</h2>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>Nível {profile.level}</p>
           </div>
         </div>

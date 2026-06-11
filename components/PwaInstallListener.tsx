@@ -57,12 +57,12 @@ export function PwaInstallListener() {
           <Smartphone size={18} className="text-[#0B0E14]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Instalar DisciplinaMax</p>
+          <p className="text-sm font-semibold tracking-tight text-white">Instalar DisciplinaMax</p>
           <p className="text-xs" style={{ color: "#8B95A5" }}>Acesse rápido, offline e notificações</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <button onClick={handleInstall}
-            className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+            className="p-2 rounded-lg active:scale-[0.98] transition-transform duration-150"
             style={{ background: "linear-gradient(135deg, #A8892B, #D4AF37)" }}
             aria-label="Instalar aplicativo">
             <Download size={14} className="text-[#0B0E14]" />

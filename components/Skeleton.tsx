@@ -6,7 +6,7 @@ interface SkeletonBaseProps {
 
 export function SkeletonPage({ className = "" }: SkeletonBaseProps) {
   return (
-    <div className={`space-y-6 animate-pulse ${className}`}>
+    <div className={`space-y-8 animate-pulse ${className}`}>
       <div className="space-y-1">
         <div className="h-3 w-40 rounded bg-white/[0.04]" />
         <div className="h-7 w-64 rounded bg-white/[0.05]" />
@@ -112,7 +112,7 @@ export function SkeletonFeed({ count = 5, className = "" }: { count?: number; cl
 
 export function SkeletonProfile({ className = "" }: SkeletonBaseProps) {
   return (
-    <div className={`space-y-6 animate-pulse ${className}`}>
+    <div className={`space-y-8 animate-pulse ${className}`}>
       <div className="flex items-center gap-3">
         <div className="h-8 w-48 rounded bg-white/[0.04]" />
       </div>

@@ -204,7 +204,7 @@ export function AmbientControls({ ambient }: { ambient: ReturnType<typeof useAmb
 
   return (
     <div className="glass rounded-xl p-3">
-      <p className="text-[10px] uppercase tracking-wider font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
+      <p className="text-[11px] uppercase tracking-wider font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
         Som ambiente {!ambient.audioUnlocked && <span style={{ color: "var(--warning)" }}>(toque p/ ativar)</span>}
       </p>
       <div className="flex items-center gap-2">

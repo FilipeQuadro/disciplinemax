@@ -89,6 +89,7 @@ export default function LoginPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required={isSignUp}
+                    aria-label="Nome"
                   />
                 </div>
               </div>
@@ -105,6 +106,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  aria-label="Email"
                 />
               </div>
             </div>
@@ -121,6 +123,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  aria-label="Senha"
                 />
                 <button
                   type="button"
@@ -143,7 +146,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-3 login-submit"
+              className="btn-primary w-full flex items-center justify-center gap-2 py-3 login-submit active:scale-[0.98] transition-transform duration-150"
             >
               {loading ? (
                 <div className="login-spinner" />
