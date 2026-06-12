@@ -212,17 +212,19 @@ export default function PomodoroPage() {
         <div className="card animate-slide-up">
           <h3 className="font-semibold tracking-tight text-white mb-4">Personalizar Tempos</h3>
           <div className="grid grid-cols-3 gap-4">
-            <div><label className="label">Foco (min)</label><input type="number" className="input" value={customFocus} onChange={(e) => setCustomFocus(+e.target.value)} min={1} max={120} /></div>
-            <div><label className="label">Pausa curta</label><input type="number" className="input" value={customShort} onChange={(e) => setCustomShort(+e.target.value)} min={1} max={30} /></div>
-            <div><label className="label">Pausa longa</label><input type="number" className="input" value={customLong} onChange={(e) => setCustomLong(+e.target.value)} min={1} max={60} /></div>
+            <div><label htmlFor="pomo-focus" className="label">Foco (min)</label><input id="pomo-focus" type="number" className="input" value={customFocus} onChange={(e) => setCustomFocus(+e.target.value)} min={1} max={120} /></div>
+            <div><label htmlFor="pomo-short" className="label">Pausa curta</label><input id="pomo-short" type="number" className="input" value={customShort} onChange={(e) => setCustomShort(+e.target.value)} min={1} max={30} /></div>
+            <div><label htmlFor="pomo-long" className="label">Pausa longa</label><input id="pomo-long" type="number" className="input" value={customLong} onChange={(e) => setCustomLong(+e.target.value)} min={1} max={60} /></div>
           </div>
         </div>
       )}
 
       {/* Mode selector */}
-      <div className="flex gap-1 p-1 rounded-2xl glass">
+      <div className="flex gap-1 p-1 rounded-2xl glass" role="tablist">
         {(["focus", "shortBreak", "longBreak"] as const).map((m) => (
           <button key={m} onClick={() => { if (!pomodoroActive) setMode(m); }} disabled={pomodoroActive}
+            role="tab"
+            aria-selected={mode === m}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300")}
             style={{
               background: mode === m ? "rgba(255,255,255,0.06)" : "transparent",
@@ -240,7 +242,7 @@ export default function PomodoroPage() {
       {/* Timer */}
       <GradientCard variant={VARIANT_MAP[mode]} className="flex flex-col items-center py-8 shimmer">
         <input className="input text-center mb-6 max-w-xs text-sm" placeholder="Em que está trabalhando?"
-          value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} />
+          value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} aria-label="Tarefa do pomodoro" />
 
         <ProgressRing
           value={totalSeconds - pomodoroTimeLeft}

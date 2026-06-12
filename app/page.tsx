@@ -429,6 +429,89 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Versículo do dia */}
+      {verse && (
+        <GradientCard variant="gold" className="relative overflow-hidden shimmer">
+          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
+          <div className="relative">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "var(--gold)" }}>
+              <Star size={11} /> Versículo do Dia
+            </p>
+            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
+            <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
+          </div>
+        </GradientCard>
+      )}
+
+      {/* Motivação da IA */}
+      {motivation && (
+        <div className="rounded-2xl p-4 flex items-start gap-3 glow-border glass">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", boxShadow: "0 4px 20px rgba(212,175,55,0.15)" }}>
+            <Sparkles size={16} className="text-[#0B0E14]" />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5" style={{ color: "var(--gold)" }}>
+              <Zap size={10} /> IA Motivacional
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "#C8CCD4" }}>{motivation}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Streak Hero */}
+      <div className="relative rounded-2xl overflow-hidden p-6 md:p-8"
+        style={{
+          background: "linear-gradient(135deg, rgba(232,132,74,0.08), rgba(20,24,32,0.95))",
+          border: "1px solid rgba(232,132,74,0.12)",
+          boxShadow: "0 0 40px rgba(232,132,74,0.06), inset 0 1px 0 rgba(255,255,255,0.03)",
+        }}>
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(232,132,74,0.12) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
+        <div className="relative flex items-center gap-6">
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, rgba(232,132,74,0.2), rgba(232,132,74,0.05))" }}>
+            <Flame size={40} style={{ color: "var(--warning)" }} className={streak > 0 ? "animate-pulse" : ""} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-5xl font-semibold tracking-tight text-white">{streak}<span className="text-lg font-normal ml-2" style={{ color: "var(--text-muted)" }}>dias seguidos</span></p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>{streak === 0 ? "Comece sua streak hoje!" : streak < 7 ? "Continue firme! A consistência constrói hábitos." : streak < 30 ? "Uma semana+ de dedicação! 🔥" : "Você é imparável! 💪"}</p>
+          </div>
+          {streak >= 7 && (
+            <Badge variant="streak">🔥 {streak}d</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* What's Next — Primary CTA */}
+      {!allGoalsMet && (
+        <Link href={nextAction.href} className="group relative rounded-2xl p-5 md:p-6 transition-all duration-300 hover:scale-[1.005]"
+          style={{
+            background: "linear-gradient(135deg, rgba(212,175,55,0.08), rgba(20,24,32,0.95))",
+            border: "1px solid rgba(212,175,55,0.15)",
+            boxShadow: "0 0 60px rgba(212,175,55,0.04), inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}>
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{
+                background: "linear-gradient(135deg, #D4AF37, #F5D060)",
+                boxShadow: "0 4px 24px rgba(212,175,55,0.2)",
+              }}>
+              <nextAction.icon size={24} className="text-[#0B0E14]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: "var(--gold)" }}>Próximo passo</p>
+              <p className="text-xl font-semibold tracking-tight text-white">{nextAction.label}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-white/5"
+              style={{ border: "1px solid rgba(212,175,55,0.15)" }}>
+              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-0.5" style={{ color: "var(--gold)" }} />
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* Daily Progress Ring + Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Progress Ring */}
@@ -446,45 +529,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Actions + Streak */}
-        <div className="md:col-span-2 grid grid-cols-1 gap-3">
-          {/* Streak Banner */}
-          <GradientCard variant="orange" className="flex items-center gap-4 shimmer p-4">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "linear-gradient(135deg, rgba(232,132,74,0.15), rgba(232,132,74,0.05))" }}>
-              <Flame size={28} style={{ color: "var(--warning)" }} className={streak > 0 ? "animate-pulse" : ""} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-2xl font-semibold tracking-tight text-white">{streak}<span className="text-sm font-normal ml-1" style={{ color: "var(--text-muted)" }}>dias</span></p>
-              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{streak === 0 ? "Comece sua streak hoje!" : streak < 7 ? "Continue firme! A consistência constrói hábitos." : streak < 30 ? "Uma semana+ de dedicação! 🔥" : "Você é imparável! 💪"}</p>
-            </div>
-            {streak >= 7 && (
-              <Badge variant="streak">🔥 {streak}d</Badge>
-            )}
-          </GradientCard>
-
-          {/* Quick Action Cards */}
-          <div className="grid grid-cols-3 gap-3">
-            <QuickAction href="/livros" icon={<BookOpen size={20} />} label="Registrar" sub="Leitura" color="#7C6BBD" done={bookProgress >= 100} />
-            <QuickAction href="/biblia" icon={<BookMarked size={20} />} label="Ler" sub="Bíblia" color="#D4AF37" done={bibleGoalMet} />
-            <QuickAction href="/pomodoro" icon={<Timer size={20} />} label="Iniciar" sub="Foco" color="#D94F4F" done={pomodoroCount >= pomodoroGoal} />
-          </div>
-
-          {/* What's Next CTA */}
-          {!allGoalsMet && (
-            <Link href={nextAction.href} className="group flex items-center gap-3 rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01] glow-border"
-              style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.06), rgba(20,24,32,0.9))", border: "1px solid rgba(212,175,55,0.12)" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", boxShadow: "0 4px 20px rgba(212,175,55,0.15)" }}>
-                <nextAction.icon size={18} className="text-[#0B0E14]" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-white">{nextAction.label}</p>
-                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Próximo passo para completar o dia</p>
-              </div>
-              <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" style={{ color: "var(--gold)" }} />
-            </Link>
-          )}
+        {/* Quick Action Cards */}
+        <div className="md:col-span-2 grid grid-cols-3 gap-3">
+          <QuickAction href="/livros" icon={<BookOpen size={20} />} label="Registrar" sub="Leitura" color="#7C6BBD" done={bookProgress >= 100} />
+          <QuickAction href="/biblia" icon={<BookMarked size={20} />} label="Ler" sub="Bíblia" color="#D4AF37" done={bibleGoalMet} />
+          <QuickAction href="/pomodoro" icon={<Timer size={20} />} label="Iniciar" sub="Foco" color="#D94F4F" done={pomodoroCount >= pomodoroGoal} />
         </div>
       </div>
 
@@ -724,37 +773,6 @@ export default function DashboardPage() {
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>{ins.message}</p>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Versículo do dia */}
-      {verse && (
-        <GradientCard variant="gold" className="relative overflow-hidden shimmer">
-          <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
-          <div className="relative">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5" style={{ color: "var(--gold)" }}>
-              <Star size={11} /> Versículo do Dia
-            </p>
-            <p className="text-white font-serif italic text-lg leading-relaxed">&ldquo;{verse.verse}&rdquo;</p>
-            <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,175,55,0.6)" }}>— {verse.reference}</p>
-          </div>
-        </GradientCard>
-      )}
-
-      {/* Motivação da IA */}
-      {motivation && (
-        <div className="rounded-2xl p-4 flex items-start gap-3 glow-border glass">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, #D4AF37, #F5D060)", boxShadow: "0 4px 20px rgba(212,175,55,0.15)" }}>
-            <Sparkles size={16} className="text-[#0B0E14]" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5" style={{ color: "var(--gold)" }}>
-              <Zap size={10} /> IA Motivacional
-            </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#C8CCD4" }}>{motivation}</p>
           </div>
         </div>
       )}

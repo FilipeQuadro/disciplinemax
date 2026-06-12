@@ -254,9 +254,12 @@ export default function AdminPage() {
         {tabs.map((t) => (
           <button key={t.key} onClick={() => { setTab(t.key); if (t.key === "diagnostics") loadDiagnostics(); if (t.key === "analytics") loadAnalytics(); }}
             role="tab"
+            id={`admin-tab-${t.key}`}
+            aria-controls={`admin-panel-${t.key}`}
             aria-selected={tab === t.key}
+            tabIndex={tab === t.key ? 0 : -1}
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 min-w-0 whitespace-nowrap px-2")}
-            style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "var(--text-primary)" : "var(--text-secondary)" }}>
+            style={{ background: tab === t.key ? "rgba(255,255,255,0.06)" : "transparent", color: tab === t.key ? "var(--text-primary)" : "var(--text-secondary)" }} >
             <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
@@ -264,7 +267,7 @@ export default function AdminPage() {
 
       {/* Overview */}
       {tab === "overview" && stats && (
-        <div className="space-y-4 stagger-children">
+        <div role="tabpanel" id="admin-panel-overview" aria-labelledby="admin-tab-overview" className="space-y-4 stagger-children">
           {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <AdminStat icon={<Users size={18} style={{ color: "var(--gold)" }} />} label="Total Usuários" value={stats.users.total} sub={`+${stats.users.newThisWeek} esta semana`} cardClass="card-gold" />
@@ -352,12 +355,13 @@ export default function AdminPage() {
 
       {/* Users */}
       {tab === "users" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="admin-panel-users" aria-labelledby="admin-tab-users" className="space-y-4">
           {/* Search */}
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-secondary)" }} />
               <input
+                aria-label="Buscar usuários"
                 className="input pl-10"
                 placeholder="Buscar por email, nome, ID ou plano..."
                 value={searchQuery}
@@ -507,7 +511,7 @@ export default function AdminPage() {
 
       {/* Diagnostics */}
       {tab === "diagnostics" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="admin-panel-diagnostics" aria-labelledby="admin-tab-diagnostics" className="space-y-4">
           {/* Summary Header */}
           {diagnostics && (
             <div className={clsx("card", diagnostics.status === "healthy" ? "card-teal" : diagnostics.status === "warning" ? "card-orange" : "card-red")}>
@@ -580,13 +584,14 @@ export default function AdminPage() {
 
       {/* Audit */}
       {tab === "audit" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="admin-panel-audit" aria-labelledby="admin-tab-audit" className="space-y-4">
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white flex items-center gap-2">
                 <FileText size={16} style={{ color: "var(--gold)" }} /> Logs de Auditoria ({auditLogs.length})
               </h3>
               <select
+                aria-label="Filtrar ações de auditoria"
                 className="input text-xs w-auto"
                 value={auditFilter}
                 onChange={(e) => setAuditFilter(e.target.value)}
@@ -649,7 +654,7 @@ export default function AdminPage() {
 
       {/* Plans */}
       {tab === "plans" && stats && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="admin-panel-plans" aria-labelledby="admin-tab-plans" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { plan: "free", label: "Free", color: "var(--text-muted)", count: stats.plans.free, features: ["5 livros", "8 pomodoros/dia", "3 mensagens IA/dia", "1 som pomodoro"] },
@@ -702,7 +707,7 @@ export default function AdminPage() {
 
       {/* Analytics */}
       {tab === "analytics" && (
-        <div className="space-y-4 stagger-children">
+        <div role="tabpanel" id="admin-panel-analytics" aria-labelledby="admin-tab-analytics" className="space-y-4 stagger-children">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <PieChart size={16} style={{ color: "var(--gold)" }} /> Analytics de Produto

@@ -291,6 +291,7 @@ export default function ConfiguracoesPage() {
             <button
               onClick={() => { navigator.clipboard?.writeText(referralCode).then(() => toast.success("Código copiado! 📋")).catch(() => {}); }}
               className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}
+              aria-label="Copiar código de convite"
             >
               <Copy size={16} />
             </button>

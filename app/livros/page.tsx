@@ -303,38 +303,38 @@ export default function LivrosPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="label">Título *</label>
-              <input className="input" placeholder="Ex: Atomic Habits" value={form.title}
+              <label htmlFor="book-title" className="label">Título *</label>
+              <input id="book-title" className="input" placeholder="Ex: Atomic Habits" value={form.title}
                 onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Autor</label>
-              <input className="input" placeholder="James Clear" value={form.author}
+              <label htmlFor="book-author" className="label">Autor</label>
+              <input id="book-author" className="input" placeholder="James Clear" value={form.author}
                 onChange={(e) => setForm((p) => ({ ...p, author: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Total de Páginas *</label>
-              <input type="number" className="input" value={form.total_pages}
+              <label htmlFor="book-total-pages" className="label">Total de Páginas *</label>
+              <input id="book-total-pages" type="number" className="input" value={form.total_pages}
                 onChange={(e) => setForm((p) => ({ ...p, total_pages: +e.target.value }))} />
             </div>
             <div>
-              <label className="label">Página Atual</label>
-              <input type="number" className="input" value={form.current_page}
+              <label htmlFor="book-current-page" className="label">Página Atual</label>
+              <input id="book-current-page" type="number" className="input" value={form.current_page}
                 onChange={(e) => setForm((p) => ({ ...p, current_page: +e.target.value }))} />
             </div>
             <div>
-              <label className="label">Meta Diária (páginas)</label>
-              <input type="number" className="input" value={form.daily_goal}
+              <label htmlFor="book-daily-goal" className="label">Meta Diária (páginas)</label>
+              <input id="book-daily-goal" type="number" className="input" value={form.daily_goal}
                 onChange={(e) => setForm((p) => ({ ...p, daily_goal: +e.target.value }))} />
             </div>
             <div>
-              <label className="label">Data Alvo</label>
-              <input type="date" className="input" value={form.target_date}
+              <label htmlFor="book-target-date" className="label">Data Alvo</label>
+              <input id="book-target-date" type="date" className="input" value={form.target_date}
                 onChange={(e) => setForm((p) => ({ ...p, target_date: e.target.value }))} />
             </div>
             <div>
-              <label className="label">URL da Capa</label>
-              <input className="input" placeholder="https://..." value={form.cover_url}
+              <label htmlFor="book-cover-url" className="label">URL da Capa</label>
+              <input id="book-cover-url" className="input" placeholder="https://..." value={form.cover_url}
                 onChange={(e) => setForm((p) => ({ ...p, cover_url: e.target.value }))} />
             </div>
             <div>
@@ -476,11 +476,11 @@ function BookCard({ book, readingValue, onReadingChange, onLog, onEdit, onDelete
           <div className="flex items-center gap-2 mt-4">
             <div className="flex items-center gap-0.5 rounded-xl overflow-hidden glass">
               <button onClick={() => onReadingChange(Math.max(0, readingValue - 5))}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }}>−</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }} aria-label="Diminuir 5 páginas">−</button>
               <input type="number" value={readingValue} onChange={(e) => onReadingChange(+e.target.value)}
-                className="w-14 text-center bg-transparent text-white text-sm py-2 focus:outline-none" placeholder="0" />
+                className="w-14 text-center bg-transparent text-white text-sm py-2 focus:outline-none" placeholder="0" aria-label="Páginas lidas" />
               <button onClick={() => onReadingChange(readingValue + 5)}
-                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }}>+</button>
+                className="px-3 py-2 hover:bg-white/5 transition-colors text-sm font-medium" style={{ color: "var(--text-secondary)" }} aria-label="Aumentar 5 páginas">+</button>
             </div>
             <span className="text-xs" style={{ color: "var(--text-secondary)" }}>págs</span>
             <button onClick={onLog} disabled={!readingValue}
