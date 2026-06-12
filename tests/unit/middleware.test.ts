@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the logger
-vi.mock("@/lib/logger", () => ({
-  generateRequestId: vi.fn(() => "test-request-id"),
-  initRequestId: vi.fn(),
-}));
+// generateRequestId is inlined in middleware.ts (no longer imported from @/lib/logger)
 
 // Mock next/server — factory must be self-contained (hoisted above class definitions)
 vi.mock("next/server", () => {
@@ -70,7 +66,8 @@ describe("middleware", () => {
   it("adds X-Request-Id header", async () => {
     const req = createMockRequest("/dashboard");
     const res = await middleware(req);
-    expect(res.headers.get("X-Request-Id")).toBe("test-request-id");
+    // Inlined generateRequestId: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8)
+    expect(res.headers.get("X-Request-Id")).toMatch(/^[a-z0-9]+-[a-z0-9]{6}$/);
   });
 
   it("propagates existing x-request-id header", async () => {

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { generateRequestId } from "@/lib/logger";
+
+// Inlined from @/lib/logger — Edge Runtime bundler rejects the module via static analysis
+// even though generateRequestId() is pure and Edge-compatible.
+function generateRequestId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // In-memory rate limiter — resets on deploy.
 // Edge Runtime cannot access filesystem; DB-backed limiting would add latency to every request.
