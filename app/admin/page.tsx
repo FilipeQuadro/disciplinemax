@@ -483,10 +483,11 @@ export default function AdminPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-4" style={{ borderTop: "1px solid var(--border-light)" }}>
+              <div className="flex items-center justify-center gap-2 pt-4" role="navigation" aria-label="Paginação de usuários" style={{ borderTop: "1px solid var(--border-light)" }}>
                 <button
                   onClick={() => loadUsersPage(pagination.page - 1)}
                   disabled={pagination.page <= 1}
+                  aria-label="Página anterior"
                   className="btn-ghost text-xs flex items-center gap-1"
                   style={{ opacity: pagination.page <= 1 ? 0.3 : 1 }}
                 >
@@ -498,6 +499,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => loadUsersPage(pagination.page + 1)}
                   disabled={pagination.page >= pagination.totalPages}
+                  aria-label="Próxima página"
                   className="btn-ghost text-xs flex items-center gap-1"
                   style={{ opacity: pagination.page >= pagination.totalPages ? 0.3 : 1 }}
                 >

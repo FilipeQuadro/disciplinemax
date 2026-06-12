@@ -875,13 +875,15 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
         <Calendar size={16} style={{ color: "var(--gold)" }} />
         Calendário de Consistência
       </h2>
-      <div className="flex flex-wrap gap-1.5" role="grid" aria-label="Calendário de consistência — últimos 35 dias">
+      <div className="flex flex-wrap gap-1.5" role="grid" tabIndex={0} aria-label="Calendário de consistência — últimos 35 dias">
         {data.map((d, i) => {
           const dateLabel = format(new Date(d.date + "T12:00:00"), "dd/MM");
           const statusLabel = d.done ? "Meta cumprida" : d.partial ? "Parcial" : "Sem registro";
           return (
-          <div key={i} className="relative group" role="gridcell" aria-label={`${dateLabel} — ${statusLabel}`}>
+          <div key={i} className="relative group" role="row">
             <div
+              role="gridcell"
+              aria-label={`${dateLabel} — ${statusLabel}`}
               className="w-7 h-7 rounded-md transition-all duration-200 hover:scale-125 cursor-default"
               style={{
                 background: d.done

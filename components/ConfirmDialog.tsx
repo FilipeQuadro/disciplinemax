@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
 interface ConfirmDialogProps {
@@ -18,13 +18,50 @@ export function ConfirmDialog({
   open, title, message, confirmLabel = "Confirmar", cancelLabel = "Cancelar",
   destructive = false, onConfirm, onCancel,
 }: ConfirmDialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
       const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
       window.addEventListener("keydown", handler);
-      return () => window.removeEventListener("keydown", handler);
+
+      requestAnimationFrame(() => {
+        const cancelBtn = panelRef.current?.querySelector('[data-dialog-cancel]') as HTMLElement | null;
+        cancelBtn?.focus();
+      });
+
+      return () => {
+        window.removeEventListener("keydown", handler);
+        previousFocusRef.current?.focus();
+      };
     }
   }, [open, onCancel]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const handleTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+
+    panel.addEventListener("keydown", handleTrap);
+    return () => panel.removeEventListener("keydown", handleTrap);
+  }, [open]);
 
   if (!open) return null;
 
@@ -32,6 +69,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
+        ref={panelRef}
         className="relative rounded-2xl p-6 max-w-sm w-full mx-4 animate-slide-up"
         role="dialog"
         aria-modal="true"
@@ -53,7 +91,7 @@ export function ConfirmDialog({
           </div>
         </div>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="btn-ghost text-sm px-4 py-2 min-h-[44px] active:scale-[0.98] transition-transform duration-150">{cancelLabel}</button>
+          <button onClick={onCancel} data-dialog-cancel className="btn-ghost text-sm px-4 py-2 min-h-[44px] active:scale-[0.98] transition-transform duration-150">{cancelLabel}</button>
           <button
             onClick={onConfirm}
             className="text-sm px-4 py-2 min-h-[44px] rounded-xl font-medium tracking-tight transition-all duration-200 active:scale-[0.98]"

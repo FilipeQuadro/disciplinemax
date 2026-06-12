@@ -291,9 +291,11 @@ export default function BibliaPage() {
           <div className="space-y-4">
             <div>
               <label className="label">Plano</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2" role="radiogroup" aria-label="Plano de leitura">
                 {READING_PLANS.map((plan) => (
                   <button key={plan.id} onClick={() => setGoalForm((p) => ({ ...p, plan_name: plan.id, daily_chapters: plan.chapters || p.daily_chapters }))}
+                    role="radio"
+                    aria-checked={goalForm.plan_name === plan.id}
                     className={clsx("p-3 rounded-xl border text-left transition-all duration-200")}
                     style={{
                       borderColor: goalForm.plan_name === plan.id ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.05)",
@@ -308,12 +310,12 @@ export default function BibliaPage() {
             </div>
             <div>
               <label className="label">Capítulos por dia</label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" role="group" aria-label="Capítulos por dia">
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: Math.max(1, p.daily_chapters - 1) }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>−</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Diminuir capítulos">−</button>
                 <span className="text-2xl font-semibold tracking-tight text-white w-12 text-center">{goalForm.daily_chapters}</span>
                 <button onClick={() => setGoalForm((p) => ({ ...p, daily_chapters: p.daily_chapters + 1 }))}
-                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }}>+</button>
+                  className="w-10 h-10 rounded-xl glass flex items-center justify-center text-lg font-semibold hover:bg-white/5 transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Aumentar capítulos">+</button>
               </div>
             </div>
             <button onClick={saveGoal} className="btn-primary">Salvar Plano</button>

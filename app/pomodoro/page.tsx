@@ -220,11 +220,13 @@ export default function PomodoroPage() {
       )}
 
       {/* Mode selector */}
-      <div className="flex gap-1 p-1 rounded-2xl glass" role="tablist">
+      <div className="flex gap-1 p-1 rounded-2xl glass" role="tablist" aria-orientation="horizontal">
         {(["focus", "shortBreak", "longBreak"] as const).map((m) => (
           <button key={m} onClick={() => { if (!pomodoroActive) setMode(m); }} disabled={pomodoroActive}
             role="tab"
+            id={`pomo-tab-${m}`}
             aria-selected={mode === m}
+            aria-controls="pomo-panel"
             className={clsx("flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300")}
             style={{
               background: mode === m ? "rgba(255,255,255,0.06)" : "transparent",
@@ -240,6 +242,7 @@ export default function PomodoroPage() {
       <AmbientControls ambient={ambient} />
 
       {/* Timer */}
+      <div role="tabpanel" id="pomo-panel" aria-labelledby={`pomo-tab-${mode}`}>
       <GradientCard variant={VARIANT_MAP[mode]} className="flex flex-col items-center py-8 shimmer">
         <input className="input text-center mb-6 max-w-xs text-sm" placeholder="Em que está trabalhando?"
           value={pomodoroTask} onChange={(e) => setPomodoroTask(e.target.value)} disabled={pomodoroActive} aria-label="Tarefa do pomodoro" />
@@ -290,6 +293,7 @@ export default function PomodoroPage() {
           </button>
         </div>
       </GradientCard>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 stagger-children">
