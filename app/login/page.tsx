@@ -183,12 +183,12 @@ export default function LoginPage() {
           <button
             onClick={async () => {
               try {
-                const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL;
-                const guestPass = process.env.NEXT_PUBLIC_GUEST_PASSWORD;
-                if (!guestEmail || !guestPass) {
-                  setError("Modo demo não disponível");
+                const res = await fetch("/api/auth/guest", { method: "POST" });
+                if (!res.ok) {
+                  setError(res.status === 429 ? "Muitas tentativas. Aguarde." : "Modo demo não disponível");
                   return;
                 }
+                const { email: guestEmail, password: guestPass } = await res.json();
                 const { error } = await signIn(guestEmail, guestPass);
                 if (error) setError("Conta demo indisponível");
               } catch { setError("Erro ao acessar demo"); }

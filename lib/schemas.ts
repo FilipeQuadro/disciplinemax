@@ -36,6 +36,12 @@ export const authConfirmSchema = z.object({
   userId: z.string().min(1),
 });
 
+// ── /api/auth/guest ───────────────────────────────────────────────
+export const guestAuthResponseSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
 // ── /api/notifications/subscribe ────────────────────────────────────
 export const notificationSubscribeSchema = z.discriminatedUnion("platform", [
   z.object({
