@@ -81,7 +81,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-4 text-center max-w-sm px-6">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{ background: "rgba(212,175,55,0.1)" }}>
-            <RefreshCw size={28} style={{ color: "#D4AF37" }} />
+            <RefreshCw size={28} style={{ color: "#D4AF37" }} aria-hidden="true" />
           </div>
           <h2 className="text-xl font-serif font-semibold tracking-tight text-white">Conexão lenta</h2>
           <p className="text-sm" style={{ color: "#8B95A5" }}>Não foi possível verificar sua sessão. Verifique sua conexão e tente novamente.</p>
@@ -100,6 +100,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             <div className="w-4 h-4 rounded-full bg-[#0B0E14]" />
           </div>
           <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#7E8E9F" }}>Carregando...</p>
+          <span className="sr-only">Carregando conteúdo autenticado</span>
         </div>
       </div>
     );
@@ -124,7 +125,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-4 text-center max-w-sm px-6">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{ background: "rgba(217,79,79,0.1)" }}>
-            <ShieldOff size={28} style={{ color: "#D94F4F" }} />
+            <ShieldOff size={28} style={{ color: "#D94F4F" }} aria-hidden="true" />
           </div>
           <h2 className="text-xl font-serif font-semibold tracking-tight text-white">Conta Bloqueada</h2>
           <p className="text-sm" style={{ color: "#8B95A5" }}>Sua conta foi bloqueada pelo administrador. Entre em contato para mais informações.</p>
@@ -134,5 +135,5 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return <div id="main-content" role="main">{children}</div>;
 }
