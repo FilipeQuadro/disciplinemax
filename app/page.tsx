@@ -486,7 +486,7 @@ export default function DashboardPage() {
 
       {/* What's Next — Primary CTA */}
       {!allGoalsMet && (
-        <Link href={nextAction.href} className="group relative rounded-2xl p-5 md:p-6 transition-all duration-300 hover:scale-[1.005]"
+        <Link href={nextAction.href} className="group relative block rounded-2xl p-5 md:p-6 transition-all duration-300 hover:scale-[1.005]"
           style={{
             background: "linear-gradient(135deg, rgba(212,175,55,0.08), rgba(20,24,32,0.95))",
             border: "1px solid rgba(212,175,55,0.15)",
