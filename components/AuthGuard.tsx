@@ -4,6 +4,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { dataFetch } from "@/lib/data-fetch";
+import { logger } from "@/lib/logger";
 import { ShieldOff, RefreshCw } from "lucide-react";
 
 const PUBLIC_PATHS = ["/login"];
@@ -28,6 +29,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Check onboarding status for authenticated users
   useEffect(() => {
+    const controller = new AbortController();
     async function checkOnboarding() {
       if (!user || onboardingChecked) return;
       try {
@@ -35,8 +37,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           action: "select",
           table: "user_settings",
           filters: { eq: { user_id: user.id }, select: "user_id", maybeSingle: true },
+          signal: controller.signal,
         });
-        if (error) return;
+        if (error) {
+          logger.warn("Onboarding check returned error", { error, userId: user.id });
+          setOnboardingChecked(true);
+          return;
+        }
         if (!data) {
           // No user_settings → onboarding not completed
           setOnboardingChecked(true);
@@ -50,29 +57,38 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         if (isOnboarding) {
           router.replace("/");
         }
-      } catch {
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        logger.warn("Onboarding check failed", {
+          error: err instanceof Error ? err.message : String(err),
+          userId: user.id,
+        });
         setOnboardingChecked(true);
       }
     }
     if (!loading && !timedOut && user) {
       checkOnboarding();
     }
+    return () => controller.abort();
   }, [user, loading, timedOut, onboardingChecked, isOnboarding, router]);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function checkBlocked() {
       if (!user) return;
       try {
-        const { data, error } = await dataFetch({ action: "select", table: "blocked_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "user_id" } });
+        const { data, error } = await dataFetch({ action: "select", table: "blocked_users", filters: { eq: { user_id: user.id }, maybeSingle: true, select: "user_id" }, signal: controller.signal });
         if (error) {
           return;
         }
         if (data) setBlocked(true);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error("Blocked user check failed:", err);
       }
     }
     if (user) checkBlocked();
+    return () => controller.abort();
   }, [user]);
 
   if (timedOut && !user) {
