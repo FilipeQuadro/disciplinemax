@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 CREATE TABLE IF NOT EXISTS books (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   title TEXT NOT NULL,
   author TEXT,
   cover_url TEXT,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS books (
 -- ============================================
 CREATE TABLE IF NOT EXISTS bible_goals (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   daily_chapters INTEGER NOT NULL DEFAULT 3,
   current_book TEXT DEFAULT 'Gênesis',
   current_chapter INTEGER DEFAULT 1,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS bible_goals (
 -- ============================================
 CREATE TABLE IF NOT EXISTS bible_readings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   book_name TEXT NOT NULL,
   chapter INTEGER NOT NULL,
   verse_start INTEGER,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS bible_readings (
 -- ============================================
 CREATE TABLE IF NOT EXISTS pomodoro_sessions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   duration_minutes INTEGER NOT NULL DEFAULT 25,
   break_minutes INTEGER DEFAULT 5,
   completed BOOLEAN DEFAULT FALSE,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS pomodoro_sessions (
 -- ============================================
 CREATE TABLE IF NOT EXISTS daily_stats (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   books_pages_read INTEGER DEFAULT 0,
   bible_chapters_read INTEGER DEFAULT 0,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS daily_stats (
 -- ============================================
 CREATE TABLE IF NOT EXISTS notification_subscriptions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   platform TEXT NOT NULL DEFAULT 'web',
   endpoint TEXT UNIQUE,
   p256dh TEXT,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS notification_subscriptions (
 -- ============================================
 CREATE TABLE IF NOT EXISTS user_settings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user' UNIQUE,
+  user_id TEXT NOT NULL UNIQUE,
   whatsapp_number TEXT,
   greenapi_instance_id TEXT,
   greenapi_token TEXT,
@@ -124,10 +124,9 @@ CREATE TABLE IF NOT EXISTS user_settings (
 );
 
 -- ============================================
--- INSERIR dados iniciais
+-- Dados iniciais criados automaticamente pelo trigger handle_new_user()
+-- Ver rls-policies.sql para definição do trigger
 -- ============================================
-INSERT INTO user_settings (user_id) VALUES ('default_user') ON CONFLICT DO NOTHING;
-INSERT INTO bible_goals (user_id) VALUES ('default_user') ON CONFLICT DO NOTHING;
 
 -- ============================================
 -- FUNÇÃO: Reset diário de páginas lidas
@@ -158,7 +157,7 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 CREATE TABLE IF NOT EXISTS notifications_sent (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   notif_key TEXT NOT NULL,
   sent_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, notif_key)
@@ -169,7 +168,7 @@ CREATE TABLE IF NOT EXISTS notifications_sent (
 -- ============================================
 CREATE TABLE IF NOT EXISTS achievements (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id TEXT DEFAULT 'default_user',
+  user_id TEXT NOT NULL,
   badge_key TEXT NOT NULL,
   unlocked_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, badge_key)
