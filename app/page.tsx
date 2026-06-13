@@ -867,7 +867,30 @@ function BookMiniCard({ book }: { book: any }) {
 }
 
 function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
-  const [tooltip, setTooltip] = useState<string | null>(null);
+  const COLS = 7;
+  const [focusedIdx, setFocusedIdx] = useState(0);
+  const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const moveFocus = useCallback((idx: number) => {
+    const clamped = Math.max(0, Math.min(idx, data.length - 1));
+    setFocusedIdx(clamped);
+    cellRefs.current[clamped]?.focus();
+  }, [data.length]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    let next = focusedIdx;
+    switch (e.key) {
+      case "ArrowRight": next = focusedIdx + 1; break;
+      case "ArrowLeft":  next = focusedIdx - 1; break;
+      case "ArrowDown":  next = focusedIdx + COLS; break;
+      case "ArrowUp":    next = focusedIdx - COLS; break;
+      case "Home":       next = 0; break;
+      case "End":        next = data.length - 1; break;
+      default: return;
+    }
+    e.preventDefault();
+    moveFocus(next);
+  }, [focusedIdx, data.length, moveFocus]);
 
   return (
     <div className="card">
@@ -875,16 +898,23 @@ function ConsistencyCalendar({ data }: { data: CalendarDay[] }) {
         <Calendar size={16} style={{ color: "var(--gold)" }} />
         Calendário de Consistência
       </h2>
-      <div className="flex flex-wrap gap-1.5" role="grid" tabIndex={0} aria-label="Calendário de consistência — últimos 35 dias">
+      <div className="flex flex-wrap gap-1.5" role="grid" aria-label="Calendário de consistência — últimos 35 dias" onKeyDown={handleKeyDown}>
         {data.map((d, i) => {
           const dateLabel = format(new Date(d.date + "T12:00:00"), "dd/MM");
           const statusLabel = d.done ? "Meta cumprida" : d.partial ? "Parcial" : "Sem registro";
+          const isFocused = i === focusedIdx;
           return (
           <div key={i} className="relative group" role="row">
             <div
+              ref={(el) => { cellRefs.current[i] = el; }}
               role="gridcell"
               aria-label={`${dateLabel} — ${statusLabel}`}
-              className="w-7 h-7 rounded-md transition-all duration-200 hover:scale-125 cursor-default"
+              tabIndex={isFocused ? 0 : -1}
+              onFocus={() => setFocusedIdx(i)}
+              className={clsx(
+                "w-7 h-7 rounded-md transition-all duration-200 cursor-default",
+                isFocused && "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[#141820]"
+              )}
               style={{
                 background: d.done
                   ? "rgba(212,175,55,0.5)"
