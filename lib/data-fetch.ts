@@ -62,6 +62,7 @@ export interface DataFetchBody {
   };
   payload?: Record<string, unknown>;
   id?: string;
+  signal?: AbortSignal;
 }
 
 export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ data: T | null; error: string | null }> {
@@ -70,7 +71,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
 
     const token = await getCachedToken();
     if (!token) return { data: null, error: "Not authenticated" };
-    const { action, table, filters, payload, id } = body;
+    const { action, table, filters, payload, id, signal } = body;
 
     // ── SELECT ──────────────────────────────────────────────────────
     if (action === "select") {
@@ -97,6 +98,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
       const qs = params.toString();
       const res = await fetchWithTimeout(`${restUrl(table)}${qs ? `?${qs}` : ""}`, {
         headers: authHeaders(token),
+        signal,
       }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
@@ -113,6 +115,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
         method: "POST",
         headers: authHeaders(token),
         body: JSON.stringify(payload),
+        signal,
       }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
@@ -126,6 +129,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
         method: "PATCH",
         headers: authHeaders(token),
         body: JSON.stringify(payload),
+        signal,
       }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
@@ -146,6 +150,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal,
       }, FETCH_TIMEOUT);
       const json = await res.json();
       if (!res.ok) return { data: null, error: json.message || json.msg || JSON.stringify(json) };
@@ -158,6 +163,7 @@ export async function dataFetch<T = unknown>(body: DataFetchBody): Promise<{ dat
       const res = await fetchWithTimeout(`${restUrl(table)}?${params}`, {
         method: "DELETE",
         headers: { ...authHeaders(token), Prefer: "return=minimal" },
+        signal,
       }, FETCH_TIMEOUT);
       if (!res.ok) {
         const json = await res.json();
