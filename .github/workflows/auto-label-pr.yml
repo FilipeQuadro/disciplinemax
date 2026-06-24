@@ -45,17 +45,39 @@ jobs:
               reviewers = reviewers.filter(r => r && r !== prAuthor);
 
               if (reviewers.length > 0) {
-<<<<<<< HEAD
-                try {
-                  await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
-                } catch (err) {
-                  const mentions = reviewers.map(r => `@${r}`).join(' ');
+                // Separa reviewers em colaboradores e não-colaboradores
+                const collaborators = [];
+                const nonCollaborators = [];
+                for (const r of reviewers) {
+                  try {
+                    await github.rest.repos.checkCollaborator({ owner, repo, username: r });
+                    collaborators.push(r);
+                  } catch (err) {
+                    nonCollaborators.push(r);
+                  }
+                }
+
+                // Solicita review apenas dos colaboradores
+                if (collaborators.length > 0) {
+                  try {
+                    await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers: collaborators });
+                  } catch (err) {
+                    // se falhar, registra um comentário com menção a todos
+                    const mentions = reviewers.map(x => `@${x}`).join(' ');
+                    const prUrl = pr.html_url || `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+                    await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: `Olá ${mentions}, por favor revise este PR: ${prUrl}` });
+                  }
+                }
+
+                // Para não-colaboradores, apenas publica um comentário (ping)
+                if (nonCollaborators.length > 0) {
+                  const mentions = nonCollaborators.map(r => `@${r}`).join(' ');
                   const prUrl = pr.html_url || `https://github.com/${owner}/${repo}/pull/${pr.number}`;
                   await github.rest.issues.createComment({
                     owner,
                     repo,
                     issue_number: pr.number,
-                    body: `Olá ${mentions}, por favor revise este PR: ${prUrl}`
+                    body: `Olá ${mentions}, por favor revise este PR: ${prUrl}\n\nObs: vocês não são colaboradores do repositório; caso queiram ser solicitados automaticamente, aceitem o convite ou peçam para ser adicionados.`
                   });
                 }
               } else {
@@ -66,9 +88,6 @@ jobs:
                   issue_number: pr.number,
                   body: 'Nenhum revisor válido encontrado em .github/auto_reviewers.txt. Por favor adicione um revisor ou convide alguém para o repositório.'
                 });
-=======
-                await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
->>>>>>> 451c6673a965789b90418bbca274c7b959aace51
               }
             } catch (e) {
               // arquivo não existe ou erro -> ignora
