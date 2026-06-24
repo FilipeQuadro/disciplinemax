@@ -32,11 +32,17 @@
     });
   };
 
-  console.log('Waiting for API at 127.0.0.1:4000...');
+  console.log('Waiting for API at localhost:4000...');
   try {
-    await waitForPort('127.0.0.1', 4000, 30, 1000);
+    // Try waiting on localhost (covers IPv6 ::1) with more attempts
+    await waitForPort('localhost', 4000, 60, 1000);
   } catch (err) {
-    console.warn('Port check failed, continuing (seed may still fail):', err.message);
+    // Fallback: try explicit IPv4 loopback if localhost resolution fails
+    try {
+      await waitForPort('127.0.0.1', 4000, 30, 1000);
+    } catch (err2) {
+      console.warn('Port checks failed, continuing (seed may still fail):', err.message, err2.message);
+    }
   }
 
   const fetchJson = async (url, opts = {}) => {

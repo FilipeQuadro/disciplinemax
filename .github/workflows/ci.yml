@@ -21,10 +21,11 @@ jobs:
         run: pnpm install
       - name: Start API and Web (background)
         run: |
-          pnpm --filter api dev &
-          pnpm --filter web dev &
+          # Start services directly in their package folders to avoid filter issues
+          (cd apps/api && pnpm dev) &
+          (cd apps/web && pnpm dev) &
           # Give services more time to boot before running E2E
-          sleep 15
+          sleep 20
       - name: Run E2E check
         run: node scripts/e2e_check.js
         env:
