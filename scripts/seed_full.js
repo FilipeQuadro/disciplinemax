@@ -3,6 +3,42 @@
   const email = 'dev+test@local.com';
   const password = 'Pass1234';
 
+  // wait for TCP port to be open (helps CI where server takes time to start)
+  const waitForPort = (host = '127.0.0.1', port = 4000, attempts = 30, delay = 1000) => {
+    const net = require('net');
+    let tries = 0;
+    return new Promise((resolve, reject) => {
+      const tryConnect = () => {
+        const socket = new net.Socket();
+        socket.setTimeout(2000);
+        socket.once('error', () => {
+          socket.destroy();
+          tries++;
+          if (tries >= attempts) return reject(new Error(`timeout waiting for ${host}:${port}`));
+          setTimeout(tryConnect, delay);
+        });
+        socket.once('timeout', () => {
+          socket.destroy();
+          tries++;
+          if (tries >= attempts) return reject(new Error(`timeout waiting for ${host}:${port}`));
+          setTimeout(tryConnect, delay);
+        });
+        socket.connect(port, host, () => {
+          socket.end();
+          resolve(true);
+        });
+      };
+      tryConnect();
+    });
+  };
+
+  console.log('Waiting for API at 127.0.0.1:4000...');
+  try {
+    await waitForPort('127.0.0.1', 4000, 30, 1000);
+  } catch (err) {
+    console.warn('Port check failed, continuing (seed may still fail):', err.message);
+  }
+
   const fetchJson = async (url, opts = {}) => {
     const res = await fetch(url, opts);
     const text = await res.text();
