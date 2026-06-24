@@ -57,5 +57,8 @@ Arquivos úteis
 
 - `scripts/generate_inject_snippet.js` — gera o snippet com token e usuário.
 - `scripts/populate_data.js` — populou dados de exemplo no banco.
+ - `scripts/seed_full.js` — seed mais abrangente (histórico, múltiplas sessões e logs).
+ - `scripts/e2e_check.js` — script de verificação E2E simples que executa o seed e valida `/api/kairos/context`.
+ - `.github/workflows/ci.yml` — workflow CI que roda a verificação E2E.
 
 Fim.
