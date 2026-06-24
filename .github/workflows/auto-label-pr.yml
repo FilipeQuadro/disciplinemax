@@ -45,6 +45,7 @@ jobs:
               reviewers = reviewers.filter(r => r && r !== prAuthor);
 
               if (reviewers.length > 0) {
+<<<<<<< HEAD
                 try {
                   await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
                 } catch (err) {
@@ -65,6 +66,9 @@ jobs:
                   issue_number: pr.number,
                   body: 'Nenhum revisor válido encontrado em .github/auto_reviewers.txt. Por favor adicione um revisor ou convide alguém para o repositório.'
                 });
+=======
+                await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
+>>>>>>> 451c6673a965789b90418bbca274c7b959aace51
               }
             } catch (e) {
               // arquivo não existe ou erro -> ignora
