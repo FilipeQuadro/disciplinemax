@@ -28,3 +28,8 @@ __pycache__/
 .vscode
 .DS_Store
 .idea
+package.json.local.backup
+.last_pr_branch
+.codely-cli/
+scripts/changes.patch
+scripts/changes2.patch
