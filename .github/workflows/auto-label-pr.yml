@@ -45,7 +45,18 @@ jobs:
               reviewers = reviewers.filter(r => r && r !== prAuthor);
 
               if (reviewers.length > 0) {
-                await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
+                try {
+                  await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
+                } catch (err) {
+                  const mentions = reviewers.map(r => `@${r}`).join(' ');
+                  const prUrl = pr.html_url || `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: pr.number,
+                    body: `Olá ${mentions}, por favor revise este PR: ${prUrl}`
+                  });
+                }
               } else {
                 // Se não houver revisores válidos, adiciona um comentário orientando como proceder
                 await github.rest.issues.createComment({
