@@ -1,0 +1,23 @@
+name: Scheduled Cron Trigger
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # every 15 minutes
+  workflow_dispatch: {}
+
+jobs:
+  call-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cron endpoint
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_URL" ]; then
+            echo "CRON_URL secret is not set. Skipping.";
+            exit 0;
+          fi
+          echo "Calling $CRON_URL/api/cron?secret=$CRON_SECRET"
+          curl -sS -X GET "$CRON_URL/api/cron?secret=$CRON_SECRET" -o /tmp/cron.out || true
+          echo "Response:"; cat /tmp/cron.out

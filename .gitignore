@@ -1,11 +1,12 @@
 node_modules
+node_modules/
+.next/
+out/
+.env.local
+.env*.local
 .env
 .env.*
-.turbo
-.turbo/**
-.vscode
-.DS_Store
-.idea
+*.pem
 logs
 *.log
 npm-debug.log*
@@ -13,6 +14,8 @@ pnpm-lock.yaml
 dist
 build
 coverage
+coverage/
+*.tsbuildinfo
 /.next
 /.venv
 __pycache__/
@@ -20,3 +23,8 @@ __pycache__/
 *.pyo
 *.pyd
 /.pytest_cache
+.turbo
+.turbo/**
+.vscode
+.DS_Store
+.idea
