@@ -1,0 +1,47 @@
+name: Auto-label and request reviewers
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  auto_label_and_review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Add labels and request reviewers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+            const title = pr.title || '';
+            const body = pr.body || '';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const labelsToAdd = [];
+
+            // Heurísticas para etiquetas
+            if (/chore\(scripts\)/i.test(title) || /seed|e2e|ci|scripts/i.test(title + '\n' + body)) {
+              labelsToAdd.push('chore', 'ci', 'docs');
+            }
+
+            if (labelsToAdd.length > 0) {
+              await github.issues.addLabels({ owner, repo, issue_number: pr.number, labels: Array.from(new Set(labelsToAdd)) });
+            }
+
+            // Tenta ler lista de reviewers em .github/auto_reviewers.txt (um por linha)
+            try {
+              const res = await github.repos.getContent({ owner, repo, path: '.github/auto_reviewers.txt' });
+              const content = Buffer.from(res.data.content, res.data.encoding).toString();
+              const reviewers = content.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+              if (reviewers.length > 0) {
+                await github.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
+              }
+            } catch (e) {
+              // arquivo não existe ou erro -> ignora
+            }
